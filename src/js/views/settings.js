@@ -121,7 +121,7 @@ export function initSettings() {
         </div>
         <div class="setting-row">
           <div class="sr-label">Persian + English</div>
-          <div class="sr-desc" style="text-align:right">Full bidirectional text support<br>این یک prompt برای AI agent است ✅</div>
+          <div class="sr-desc" style="text-align:right">Full bidirectional text support<br>Made with ❤️</div>
         </div>
       </div>
     </div>`;
