@@ -1,0 +1,36 @@
+{
+  "name": "textvault",
+  "productName": "TextVault",
+  "version": "1.0.0",
+  "description": "A modern, polished text manager for saving, organizing, searching and exporting snippets, notes and documents — with first-class Persian/English bidirectional text support.",
+  "main": "electron/main.js",
+  "author": "TextVault",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/unit.mjs",
+    "test:e2e": "electron test/e2e.js",
+    "package": "node test/make-portable.cjs all"
+  },
+  "build": {
+    "appId": "com.textvault.app",
+    "productName": "TextVault",
+    "directories": { "output": "dist" },
+    "files": ["electron/**/*", "src/**/*", "shared/**/*", "package.json"],
+    "win": {
+      "target": ["nsis"],
+      "icon": "src/assets/icons/textvault.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "docx": "^9.0.2"
+  }
+}
