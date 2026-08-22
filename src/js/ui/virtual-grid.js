@@ -81,7 +81,12 @@ export class VirtualGrid {
     // Create/update needed elements
     for (const idx of need) {
       if (this.live.has(idx)) {
-        if (rebind) this.renderItem(this.live.get(idx), this.items[idx], idx);
+        // Always reposition live elements: column count, card width and row
+        // mapping change on window resize/maximize, and recycled elements
+        // would otherwise keep their previous transform (broken layout).
+        const el = this.live.get(idx);
+        this._position(el, idx);
+        if (rebind) this.renderItem(el, this.items[idx], idx);
         continue;
       }
       const el = this.pool.pop() || this._makeCard();

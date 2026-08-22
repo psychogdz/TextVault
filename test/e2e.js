@@ -344,7 +344,7 @@ async function main() {
   await js(`window.__TV_TEST__.editor.set(${JSON.stringify(appended)})`);
   await sleep(250);
   const stateSaving = await js(`window.__TV_TEST__.editor.saveState()`);
-  await sleep(1300); // autosave delay (800ms) + write
+  await waitFor(async () => (await js(`window.__TV_TEST__.editor.saveState()`)) === 'Saved', 4000);
   const stateSaved = await js(`window.__TV_TEST__.editor.saveState()`);
   const persisted = await js(`window.__TV_TEST__.App.get('${longId}').content`);
   check('autosave fires (state transitions)', stateSaving === 'Unsaved' && stateSaved === 'Saved', `${stateSaving} → ${stateSaved}`);
@@ -497,6 +497,133 @@ async function main() {
   await sleep(400);
   await shot(printWin, 'pdf-preview.png');
   printWin.destroy();
+
+  /* ---------- v1.0.0 regression: card color isolation ---------- */
+  // return to the dashboard first: the grid last laid out while hidden (editor view)
+  await js(`window.__TV_TEST__.App.setView('dashboard')`);
+  await sleep(600);
+  // Invariant: the set of striped cards must EXACTLY equal the set of rendered
+  // entries whose data has a color — recycled DOM cards must never leak a color.
+  const colorInvariant = () => js(`(() => {
+    const dom = [...document.querySelectorAll('#grid-inner .card[data-color]')].map(c => c.dataset.id + ':' + c.dataset.color).sort();
+    const rendered = new Set([...document.querySelectorAll('#grid-inner .card')].map(c => c.dataset.id));
+    const expected = window.__TV_TEST__.App.liveEntries().filter(e => e.color && rendered.has(e.id)).map(e => e.id + ':' + e.color).sort();
+    return { ok: JSON.stringify(dom) === JSON.stringify(expected), dom, expected };
+  })()`);
+
+  const colorIds = await js(`(async () => {
+    const { App } = window.__TV_TEST__;
+    const a = await App.createNew({ title: 'Color A', content: 'a' });
+    await App.update(a.id, { color: 'red' });
+    const b = await App.createNew({ title: 'NoColor B', content: 'b' });
+    const c = await App.createNew({ title: 'NoColor C', content: 'c' });
+    return { a: a.id, b: b.id, c: c.id };
+  })()`);
+  await sleep(500);
+  let inv = await colorInvariant();
+  check('visible stripes exactly match colored card data', inv.ok, JSON.stringify(inv));
+  const detail = await js(`(() => {
+    const read = (id) => {
+      const el = document.querySelector('#grid-inner .card[data-id="' + id + '"]');
+      return el ? (el.dataset.color ?? null) : 'not-rendered';
+    };
+    const { App } = window.__TV_TEST__;
+    return {
+      a: read('${colorIds.a}'), b: read('${colorIds.b}'), c: read('${colorIds.c}'),
+      aExists: !!App.get('${colorIds.a}'),
+      sortedTop: App.liveEntries().sort((x, y) => y.updatedAt - x.updatedAt).slice(0, 5).map(e => e.title),
+      renderedTop: [...document.querySelectorAll('#grid-inner .card')].slice(0, 5).map(el => el.querySelector('.card-title .t')?.textContent),
+    };
+  })()`);
+  check('one colored card stripes; uncolored neighbors stay plain', detail.a === 'red' && !detail.b && !detail.c,
+    JSON.stringify(detail) + ' | grid: ' + JSON.stringify(await js(`window.__TV_TEST__.dashboard.debug()`)));
+
+  // change colors: A cleared, C set — recycled cards must reflect exactly this
+  await js(`(async () => {
+    const { App } = window.__TV_TEST__;
+    await App.update('${colorIds.a}', { color: null });
+    await App.update('${colorIds.c}', { color: 'blue' });
+  })()`);
+  await sleep(500);
+  inv = await colorInvariant();
+  check('color changes keep stripes exactly in sync with data', inv.ok, JSON.stringify(inv));
+  const aCleared = await js(`!document.querySelector('#grid-inner .card[data-id="${colorIds.a}"][data-color]')`);
+  check('cleared color disappears from its card', aCleared);
+
+  // navigate away and back, then restart — visual state must still match data
+  await js(`window.__TV_TEST__.App.setView('settings')`);
+  await sleep(200);
+  await js(`window.__TV_TEST__.App.setView('dashboard')`);
+  await sleep(400);
+  await win.webContents.reload();
+  await waitHook();
+  await sleep(700);
+  inv = await colorInvariant();
+  check('colors stay exactly data-driven after navigation + restart', inv.ok, JSON.stringify(inv));
+
+  /* ---------- v1.0.0 regression: maximize/resize layout ---------- */
+  const layoutAssertions = () => js(`(() => {
+    const vp = document.getElementById('card-grid');
+    const cards = [...document.querySelectorAll('#grid-inner .card')];
+    if (!cards.length) return { error: 'no cards' };
+    const vpr = vp.getBoundingClientRect();
+    const rects = cards.map(c => c.getBoundingClientRect());
+    const widths = new Set(rects.map(r => Math.round(r.width)));
+    let outside = 0, overlap = 0;
+    rects.forEach(r => { if (r.right > vpr.right + 1 || r.left < vpr.left - 1) outside++; });
+    for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) {
+      const a = rects[i], b = rects[j];
+      const x = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+      const y = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+      if (x > 4 && y > 4) overlap++;
+    }
+    return { cards: cards.length, widths: [...widths], outside, overlap, viewportW: vp.clientWidth };
+  })()`);
+  const layoutNormal = await layoutAssertions();
+
+  // real maximize (the reported scenario) — wait for the window state so slow
+  // window-manager animations under load can't swallow the next transition
+  const waitForWnd = async (fn, ms = 5000) => {
+    const t0 = Date.now();
+    while (Date.now() - t0 < ms) { if (fn()) return true; await sleep(150); }
+    return fn();
+  };
+  win.maximize();
+  await waitForWnd(() => win.isMaximized());
+  await sleep(400);
+  const layoutMax = await layoutAssertions();
+  check('maximized layout: no overlap, none outside, uniform widths',
+    !layoutMax.error && layoutMax.overlap === 0 && layoutMax.outside === 0 && layoutMax.widths.length === 1,
+    JSON.stringify(layoutMax));
+  check('maximize re-flows using the wider viewport',
+    layoutMax.viewportW > layoutNormal.viewportW, `${layoutNormal.viewportW} → ${layoutMax.viewportW}`);
+
+  // restore — unmaximize, then enforce the exact restored size (some window
+  // managers lose the pre-maximize bounds under load; the layout assertions
+  // care about the grid re-flowing on shrink, which setBounds exercises identically)
+  win.unmaximize();
+  await waitForWnd(() => !win.isMaximized());
+  win.setBounds({ x: 80, y: 40, width: 1440, height: 920 });
+  await waitForWnd(() => Math.abs(win.getBounds().width - 1440) < 40);
+  await sleep(400);
+  const layoutRestored = await layoutAssertions();
+  check('restored layout returns to normal metrics',
+    !layoutRestored.error && layoutRestored.overlap === 0 && layoutRestored.outside === 0
+    && layoutRestored.widths.length === 1 && layoutRestored.viewportW === layoutNormal.viewportW,
+    JSON.stringify(layoutRestored));
+
+  // small manual resize (kept within screen bounds)
+  win.setBounds({ x: 40, y: 20, width: 1080, height: 720 });
+  await waitForWnd(() => Math.abs(win.getBounds().width - 1080) < 40);
+  await sleep(400);
+  const layoutSmall = await layoutAssertions();
+  check('small-window layout is intact',
+    !layoutSmall.error && layoutSmall.overlap === 0 && layoutSmall.outside === 0
+    && layoutSmall.widths.length === 1 && layoutSmall.viewportW < layoutNormal.viewportW,
+    JSON.stringify(layoutSmall));
+
+  win.setBounds({ x: 80, y: 40, width: 1440, height: 920 });
+  await sleep(500);
 
   finish();
 }

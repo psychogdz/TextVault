@@ -354,6 +354,13 @@ async function boot() {
         dropdownItems: () => [...document.querySelectorAll('.dropdown .dd-item .dd-text')].map((t) => t.textContent),
         dropdownClick: (label) => { [...document.querySelectorAll('.dropdown .dd-item')].find((b) => b.querySelector('.dd-text').textContent === label)?.click(); },
         cardSelected: (id) => document.querySelector(`#grid-inner .card[data-id="${id}"]`)?.classList.contains('selected'),
+        debug: () => ({
+          countLabel: document.getElementById('entries-count').textContent,
+          cardsInDom: document.querySelectorAll('#grid-inner .card').length,
+          live: window.__TV_TEST__.App.liveEntries().length,
+          query: window.__TV_TEST__.App.query,
+          nav: window.__TV_TEST__.App.nav,
+        }),
       },
       editor: {
         open: (id) => App.openEditor(id),

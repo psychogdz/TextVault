@@ -16,6 +16,11 @@ root = fso.GetParentFolderName(WScript.ScriptFullName)
 exe = root & "\node_modules\electron\dist\electron.exe"
 
 ' Prefer the packaged portable app if present (no Node needed at all).
+If fso.FileExists(root & "\release\TextVault-1.0.0-Portable\TextVault.exe") Then
+  shell.CurrentDirectory = root & "\release\TextVault-1.0.0-Portable"
+  shell.Run """" & root & "\release\TextVault-1.0.0-Portable\TextVault.exe""", 1, False
+  WScript.Quit 0
+End If
 If fso.FileExists(root & "\dist\TextVault\TextVault.exe") Then
   shell.CurrentDirectory = root & "\dist\TextVault"
   shell.Run """" & root & "\dist\TextVault\TextVault.exe""", 1, False

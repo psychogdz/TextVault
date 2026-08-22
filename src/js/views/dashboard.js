@@ -313,7 +313,9 @@ function renderCard(el, entry) {
 
   el.className = 'card' + (selected ? ' selected' : '');
   el.dataset.id = entry.id;
+  // set AND clear: recycled elements must never keep the previous card's color
   if (entry.color) el.dataset.color = entry.color;
+  else el.removeAttribute('data-color');
   el.innerHTML = `
     <button class="card-check" title="Select" aria-label="Select"></button>
     <div class="card-actions">

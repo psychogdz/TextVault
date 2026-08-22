@@ -1,14 +1,15 @@
-// Assembles a portable Windows distribution without electron-builder:
-//   dist/TextVault/TextVault.exe  + resources/app (our code + prod deps)
-// Then zips it into dist/TextVault-Portable-<version>.zip
+// Assembles the portable Windows distribution without electron-builder:
+//   release/TextVault-<version>-Portable/TextVault.exe + resources/app
+// Then zips it into release/TextVault-<version>-Portable.zip
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const ROOT = path.resolve(__dirname, '..');
-const DIST = path.join(ROOT, 'dist');
-const APP = path.join(DIST, 'TextVault');
+const VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
+const RELEASE = path.join(ROOT, 'release');
+const APP = path.join(RELEASE, `TextVault-${VERSION}-Portable`);
 const APP_RESOURCES = path.join(APP, 'resources', 'app');
 
 /* ---- collect production node_modules (docx + transitive deps) ---- */
@@ -52,7 +53,7 @@ function collect(name, from = ROOT) {
 }
 
 function build() {
-  fs.rmSync(DIST, { recursive: true, force: true });
+  fs.rmSync(RELEASE, { recursive: true, force: true });
   fs.mkdirSync(APP_RESOURCES, { recursive: true });
 
   // 1. runtime = the exact electron dist the app was tested with
@@ -106,8 +107,7 @@ function smoke() {
 }
 
 function zip() {
-  const version = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
-  const zipPath = path.join(DIST, `TextVault-Portable-${version}.zip`);
+  const zipPath = path.join(RELEASE, `TextVault-${VERSION}-Portable.zip`);
   if (fs.existsSync(zipPath)) fs.rmSync(zipPath);
   execFileSync('powershell', ['-NoProfile', '-Command',
     `Compress-Archive -Path "${APP}" -DestinationPath "${zipPath}" -CompressionLevel Optimal`], { stdio: 'inherit' });

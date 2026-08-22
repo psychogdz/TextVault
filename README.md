@@ -34,10 +34,10 @@ Stop scattering `text.txt` files over your desktop: open TextVault, paste, save.
 
 The end user never needs Node.js, npm or a command prompt:
 
-1. Extract `dist/TextVault-Portable-1.0.0.zip` (or just copy the `dist/TextVault` folder)
-2. Double-click **`TextVault.exe`**
+- **Installer:** run `TextVault-1.0.0-Setup.exe`, install (no admin needed), launch from the Start Menu.
+- **Portable:** extract `TextVault-1.0.0-Portable.zip` (or copy the folder) and double-click **`TextVault.exe`**.
 
-That's it — it's a normal desktop app with its own window and icon.
+Both are normal desktop apps with their own window and icon.
 
 ### On this machine, from the project folder
 
@@ -140,7 +140,8 @@ Fonts: [Vazirmatn](https://github.com/rastikerdar/vazirmatn) (bundled, `src/asse
 ```
 TextVault.vbs              everyday launcher (no console; prefers packaged exe)
 start.bat                  setup/dev launcher (visible console)
-dist/TextVault/            packaged portable app (TextVault.exe + resources)
+installer.iss              Inno Setup installer script (version from package.json)
+release/                   official distributions (portable + setup), built by `npm run release`
 electron/                  Main process (Node)
   main.js                  window, app:// protocol, menu, IPC (dialogs, clipboard),
                            PDF printing (hidden Chromium window), quit-flush handshake
@@ -181,17 +182,26 @@ test/
 ## Packaging & distribution
 
 ```bash
-npm run package
+npm run release
 ```
 
-builds a self-contained portable app into `dist\TextVault\` (double-click **`TextVault.exe`** — no install, no Node.js, no console) and zips it to `dist\TextVault-Portable-<version>.zip`. The build includes only the production dependency (`docx`), smoke-tests the packaged exe, and was verified to:
+builds **both official distributions** into `release/` and verifies them:
 
-- start as a normal GUI process (independent of any launcher/terminal)
-- store data in the user's `%APPDATA%\TextVault\` (Electron userData) — never inside the install folder
+| Artifact | What it is |
+|---|---|
+| `release/TextVault-1.0.0-Portable/` (+ `.zip`) | Self-contained portable app — extract anywhere and double-click `TextVault.exe`. No admin rights, no Node.js, nothing else needed. |
+| `release/TextVault-1.0.0-Setup.exe` | Windows installer ([Inno Setup](https://jrsoftware.org/isinfo.php) — chosen because the app ships as a ready-to-copy Electron folder; a mature installer system gives us Apps & Features registration, clean uninstall and shortcuts with no extra runtime). Per-user install (no administrator required), Start Menu shortcut, optional Desktop shortcut, custom install directory, app icon and version 1.0.0. |
 
-**Recommended distribution: the portable ZIP** — extract and run; nothing else required. A shortcut to `TextVault.exe` can be pinned to Start/Taskbar for a normal desktop-app experience. (An NSIS installer via `npx electron-builder --win nsis` also works in principle, but its bundled unpacker proved unreliable in this environment — the portable build needs no downloads and is the supported path here.)
+The release pipeline (`test/make-portable.cjs` + `test/make-release.cjs` + `installer.iss`):
+1. assembles the portable app from the exact Electron runtime the app was tested with (only the production dependency `docx` included),
+2. smoke-tests the packaged `TextVault.exe`,
+3. zips the portable build,
+4. compiles the Inno Setup installer (version injected from `package.json` — single source of truth),
+5. verifies the installer end-to-end: silent install → installed app boots → data stored in `%APPDATA%\TextVault` (never inside the install directory) → Start Menu shortcut created → silent uninstall removes everything.
 
-Rebuild the ZIP any time with `npm run package`; `TextVault.vbs` automatically prefers the packaged exe when it exists.
+Both distributions store user data in `%APPDATA%\TextVault\` (Electron userData), so switching between portable and installed versions keeps your library.
+
+`TextVault.vbs` automatically prefers the packaged exe when one exists (release, then dist).
 
 ---
 
