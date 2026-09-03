@@ -172,8 +172,9 @@ function sortedLive() {
     'title-desc': (a, b) => byTitle(b, a),
   };
   arr.sort(comparators[sort] || comparators['modified-desc']);
-  // favorites float to the top within the chosen order
+  // favorites float to the top within the chosen order, pins above favorites
   arr.sort((a, b) => Number(b.favorite) - Number(a.favorite));
+  arr.sort((a, b) => Number(!!b.isPinned) - Number(!!a.isPinned));
   return arr;
 }
 
@@ -324,6 +325,7 @@ function renderCard(el, entry) {
     </div>
     <div class="card-top">
       <div class="card-title"><span class="t"></span></div>
+      ${entry.isPinned ? `<span class="card-pin" title="Pinned">${icon('pin', 13)}</span>` : ''}
     </div>
     <div class="card-preview"></div>
     <div class="card-meta">
@@ -363,6 +365,7 @@ function renderCard(el, entry) {
     const ok = await confirmDialog({
       title: 'Delete this text?',
       message: '“<b></b>” will be moved to the Trash. You can restore it later from there.',
+      messageValues: [title],
       confirmText: 'Move to Trash',
       cancelText: 'Cancel',
       danger: true,

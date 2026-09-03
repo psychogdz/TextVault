@@ -761,3 +761,72 @@
   cursor: pointer;
   user-select: none;
 }
+
+/* ================== Snippets, collections, tools (Phase 4) ================== */
+
+.card-pin { color: var(--accent); display: inline-flex; align-items: center; }
+.clip-type {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+.snippet-row .snippet-title {
+  grid-area: preview;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  unicode-bidi: plaintext;
+  text-align: start;
+  padding-right: 56px;
+}
+.snippet-row .snippet-title + .clip-preview { grid-area: preview; margin-top: 3px; }
+.snippet-row { grid-template-areas: "preview actions" "preview actions" "meta actions"; }
+.snippet-row .clip-preview { max-height: 40px; -webkit-line-clamp: 2; }
+.collection-block {
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+.collection-head { display: flex; align-items: center; gap: 10px; }
+.collection-head .spacer { flex: 1; }
+.collection-icon { color: var(--accent); display: inline-flex; }
+.collection-name { font-weight: 700; font-size: 14.5px; }
+.collection-members { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.member-row { padding: 8px 10px; }
+.modal-wide { width: min(560px, 92vw); }
+.snippet-form { display: flex; flex-direction: column; gap: 10px; }
+.snippet-form input, .snippet-form textarea {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 13.5px;
+  outline: none;
+  font-family: inherit;
+}
+.snippet-form textarea { resize: vertical; min-height: 120px; }
+.snippet-form input:focus, .snippet-form textarea:focus { border-color: var(--accent); }
+.sn-coll-label { font-size: 12px; font-weight: 700; color: var(--text-3); margin-top: 4px; }
+.sn-coll-list { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.sn-coll-item { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+.prompt-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 13.5px;
+  outline: none;
+}
+.prompt-input:focus { border-color: var(--accent); }

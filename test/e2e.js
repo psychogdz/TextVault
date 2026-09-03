@@ -726,6 +726,86 @@ async function main() {
   check('clipboard history survives restart',
     await js(`window.__TV_TEST__.clipboard.has('TEXTVAULT_E2E_CLIP')`));
 
+  /* ---------- Phase 4: snippets, collections, pins, tools ---------- */
+  // snippets CRUD round-trip (domain layer → validated store)
+  const sn = await js(`(async () => {
+    const S = window.__TV_TEST__.snippets;
+    const s = await S.create({ title: 'E2E Snippet — اسنیپت', content: 'git status --short', tags: ['git'] });
+    await S.update(s.id, { description: 'added by e2e' });
+    return { id: s.id, count: S.count() };
+  })()`);
+  check('snippet created and updated', sn.count === 1, JSON.stringify(sn));
+  await win.webContents.reload();
+  await waitHook();
+  const snAfter = await js(`(async () => {
+    const S = window.__TV_TEST__.snippets;
+    const s = S.byTitle('E2E Snippet — اسنیپت');
+    return s ? { desc: s.description, content: s.content } : null;
+  })()`);
+  check('snippet persists with Unicode across restart',
+    snAfter && snAfter.desc === 'added by e2e' && snAfter.content === 'git status --short',
+    JSON.stringify(snAfter));
+
+  // collections: create, assign clipboard item + snippet, rename integrity, delete cleanup
+  const coll = await js(`(async () => {
+    const C = window.__TV_TEST__.collections;
+    const S = window.__TV_TEST__.snippets;
+    const c = await C.create('E2E Coll');
+    const snip = S.byTitle('E2E Snippet — اسنیپت');
+    await S.update(snip.id, { collections: [c.id] });
+    return { id: c.id, snippetId: snip.id, count: C.count() };
+  })()`);
+  check('collection created; snippet assigned', coll.count === 1, JSON.stringify(coll));
+  const collMembers1 = await js(`window.__TV_TEST__.collections.members('${coll.id}')`);
+  check('collection membership counts snippet', collMembers1.snips === 1, JSON.stringify(collMembers1));
+  await js(`window.__TV_TEST__.collections.rename('${coll.id}', 'E2E Coll Renamed')`);
+  const renamed = await js(`window.__TV_TEST__.collections.byName('E2E Coll Renamed') !== null`);
+  check('collection rename keeps identity (members intact)',
+    renamed && (await js(`window.__TV_TEST__.collections.members('${coll.id}').snips`)) === 1);
+  await js(`window.__TV_TEST__.collections.remove('${coll.id}')`);
+  const afterDelete = await js(`(async () => {
+    const S = window.__TV_TEST__.snippets;
+    const snip = S.byTitle('E2E Snippet — اسنیپت');
+    return { exists: !!snip, dangling: snip && (snip.collections || []).includes('${coll.id}') };
+  })()`);
+  check('collection delete strips membership, keeps member content',
+    afterDelete.exists === true && afterDelete.dangling === false, JSON.stringify(afterDelete));
+  await js(`window.__TV_TEST__.snippets.remove((window.__TV_TEST__.snippets.byTitle('E2E Snippet — اسنیپت')).id)`);
+
+  // pins on text entries: pinned entries float above favorites in sort
+  const pinRes = await js(`(async () => {
+    const { App } = window.__TV_TEST__;
+    const e = await App.createNew({ title: 'ZZZ pin me', content: 'pin target' });
+    const rec = App.get(e.id);
+    rec.isPinned = true;
+    await App.saveEntry(rec);
+    return e.id;
+  })()`);
+  await sleep(400);
+  const topCard = await js(`window.__TV_TEST__.dashboard.cards()[0]`);
+  check('pinned entry sorts to the top of the dashboard', topCard === pinRes, `${topCard} vs ${pinRes}`);
+  await js(`window.__TV_TEST__.App.moveToTrash('${pinRes}')`);
+
+  // text tools: uppercase via the shared tool module applied in the editor
+  const toolRes = await js(`(async () => {
+    const { App } = window.__TV_TEST__;
+    const e = await App.createNew({ title: 'tools e2e', content: 'hello world' });
+    App.openEditor(e.id);
+    return e.id;
+  })()`);
+  await sleep(600);
+  await js(`(() => {
+    const t = document.getElementById('editor-textarea');
+    t.focus();
+    t.setSelectionRange(0, t.value.length);
+    document.execCommand('insertText', false, 'HELLO WORLD');
+    t.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+  await sleep(900);
+  const toolVal = await js(`window.__TV_TEST__.editor.get()`);
+  check('editor transformation applies and autosaves', toolVal === 'HELLO WORLD', toolVal);
+  await js(`window.__TV_TEST__.App.moveToTrash((window.__TV_TEST__.App.liveEntries().find((e) => e.title === 'tools e2e') || {}).id)`);
+
   finish();
 }
 

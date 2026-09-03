@@ -42,6 +42,7 @@ export const toastInfo = (msg, opts) => toast(msg, { ...opts, type: 'info' });
 export function confirmDialog({
   title = 'Are you sure?',
   message = '',
+  messageValues = [],
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   danger = false,
@@ -61,8 +62,11 @@ export function confirmDialog({
       </div>`;
     backdrop.querySelector('.modal-title').textContent = title;
     const body = backdrop.querySelector('.modal-body');
-    // Allow limited inline HTML (<b>) for emphasis; message may contain user text.
+    // Limited inline HTML (<b></b> placeholders) for emphasis; user text is
+    // ONLY ever inserted via textContent — never interpolated into HTML.
     body.innerHTML = message;
+    const slots = body.querySelectorAll('b');
+    messageValues.forEach((v, i) => { if (slots[i]) slots[i].textContent = String(v); });
     const okBtn = backdrop.querySelector('[data-act="ok"]');
     const cancelBtn = backdrop.querySelector('[data-act="cancel"]');
     okBtn.textContent = confirmText;

@@ -10,24 +10,25 @@
 //  - the schema version is persisted and migrations run on open
 //    (see shared/storage-migrations.mjs)
 
-import { validateEntryRecord, validateClipboardRecord, SCHEMA_VERSION } from '../../../shared/validation.mjs';
+import {
+  validateEntryRecord, validateClipboardRecord, validateSnippetRecord,
+  validateCollectionRecord, SCHEMA_VERSION,
+} from '../../../shared/validation.mjs';
 import { runMigrations } from '../../../shared/storage-migrations.mjs';
 
 const DB_NAME = 'textvault';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const SCHEMA_KEY = 'schema-version';
 
 let dbPromise = null;
 
-function assertValidEntry(entry) {
-  const check = validateEntryRecord(entry);
-  if (!check.ok) throw new Error(`Storage rejected an invalid record: ${check.error}`);
-}
-
-function assertValidClipboardItem(item) {
-  const check = validateClipboardRecord(item);
-  if (!check.ok) throw new Error(`Storage rejected an invalid record: ${check.error}`);
-}
+function reject(reason) { throw new Error(`Storage rejected an invalid record: ${reason}`); }
+const asserters = {
+  entries: (r) => { const c = validateEntryRecord(r); if (!c.ok) reject(c.error); },
+  clipboard: (r) => { const c = validateClipboardRecord(r); if (!c.ok) reject(c.error); },
+  snippets: (r) => { const c = validateSnippetRecord(r); if (!c.ok) reject(c.error); },
+  collections: (r) => { const c = validateCollectionRecord(r); if (!c.ok) reject(c.error); },
+};
 
 export function openDb() {
   if (dbPromise) return dbPromise;
@@ -51,6 +52,15 @@ export function openDb() {
         cb.createIndex('createdAt', 'createdAt');
         cb.createIndex('updatedAt', 'updatedAt');
         cb.createIndex('contentHash', 'contentHash');
+      }
+      if (!db.objectStoreNames.contains('snippets')) {
+        const sn = db.createObjectStore('snippets', { keyPath: 'id' });
+        sn.createIndex('updatedAt', 'updatedAt');
+        sn.createIndex('title', 'title');
+      }
+      if (!db.objectStoreNames.contains('collections')) {
+        const co = db.createObjectStore('collections', { keyPath: 'id' });
+        co.createIndex('name', 'name');
       }
     };
     req.onsuccess = async () => {
@@ -79,17 +89,27 @@ async function ensureSchemaVersion(db) {
 
   // Migrate record-level data through the pure runner. Future store-shape
   // migrations also bump DB_VERSION above and adjust onupgradeneeded.
-  const records = await listEntriesIn(db);
-  const result = runMigrations(records, current, SCHEMA_VERSION);
-  if (result.errors.length) {
-    // Fail safe: keep the old data untouched, report loudly.
-    throw new Error(`Storage migration failed: ${result.errors[0]}`);
+  const getAllIn = (store) => new Promise((resolve, reject) => {
+    const t = db.transaction(store, 'readonly');
+    const req = t.objectStore(store).getAll();
+    reqToPromise(req, t).then(resolve, reject);
+  });
+  const migrated = {};
+  for (const store of ['entries', 'clipboard']) {
+    const result = runMigrations(await getAllIn(store), current, SCHEMA_VERSION);
+    if (result.errors.length) {
+      // Fail safe: keep the old data untouched, report loudly.
+      throw new Error(`Storage migration failed: ${result.errors[0]}`);
+    }
+    migrated[store] = result.records;
   }
   await new Promise((resolve, reject) => {
-    const t = db.transaction(['entries', 'settings'], 'readwrite');
-    const entries = t.objectStore('entries');
-    entries.clear();
-    for (const rec of result.records) entries.put(rec);
+    const t = db.transaction(['entries', 'clipboard', 'settings'], 'readwrite');
+    for (const store of ['entries', 'clipboard']) {
+      const os = t.objectStore(store);
+      os.clear();
+      for (const rec of migrated[store]) os.put(rec);
+    }
     t.objectStore('settings').put(SCHEMA_VERSION, SCHEMA_KEY);
     t.oncomplete = resolve;
     t.onerror = () => reject(t.error);
@@ -129,7 +149,7 @@ export const db = {
   },
 
   async putEntry(entry) {
-    assertValidEntry(entry);
+    asserters.entries(entry);
     const d = await openDb();
     return new Promise((resolve, reject) => {
       const t = d.transaction('entries', 'readwrite');
@@ -140,7 +160,7 @@ export const db = {
 
   /** Put many entries atomically (one transaction; all or nothing). */
   async putEntries(entries) {
-    for (const e of entries) assertValidEntry(e);
+    for (const e of entries) asserters.entries(e);
     const d = await openDb();
     return new Promise((resolve, reject) => {
       const t = d.transaction('entries', 'readwrite');
@@ -157,7 +177,7 @@ export const db = {
    * operation can never leave the library half-destroyed.
    */
   async replaceEntries(entries) {
-    for (const e of entries) assertValidEntry(e);
+    for (const e of entries) asserters.entries(e);
     const d = await openDb();
     return new Promise((resolve, reject) => {
       const t = d.transaction('entries', 'readwrite');
@@ -222,7 +242,7 @@ export const db = {
   },
 
   async putClipboardItem(item) {
-    assertValidClipboardItem(item);
+    asserters.clipboard(item);
     const d = await openDb();
     return new Promise((resolve, reject) => {
       const t = d.transaction('clipboard', 'readwrite');
@@ -232,7 +252,7 @@ export const db = {
   },
 
   async putClipboardItems(items) {
-    for (const it of items) assertValidClipboardItem(it);
+    for (const it of items) asserters.clipboard(it);
     const d = await openDb();
     return new Promise((resolve, reject) => {
       const t = d.transaction('clipboard', 'readwrite');
@@ -271,6 +291,78 @@ export const db = {
       const t = d.transaction('clipboard', 'readwrite');
       const req = t.objectStore('clipboard').clear();
       reqToPromise(req, t).then(resolve, reject);
+    });
+  },
+
+  /* --------------------------- snippets store --------------------------- */
+
+  async listSnippets() {
+    const d = await openDb();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction('snippets', 'readonly');
+      const req = t.objectStore('snippets').getAll();
+      reqToPromise(req, t).then(resolve, reject);
+    });
+  },
+
+  async putSnippet(snippet) {
+    asserters.snippets(snippet);
+    const d = await openDb();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction('snippets', 'readwrite');
+      const req = t.objectStore('snippets').put(snippet);
+      reqToPromise(req, t).then(resolve, reject);
+    });
+  },
+
+  async deleteSnippet(id) {
+    const d = await openDb();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction('snippets', 'readwrite');
+      const req = t.objectStore('snippets').delete(id);
+      reqToPromise(req, t).then(resolve, reject);
+    });
+  },
+
+  /* -------------------------- collections store ------------------------- */
+
+  async listCollections() {
+    const d = await openDb();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction('collections', 'readonly');
+      const req = t.objectStore('collections').getAll();
+      reqToPromise(req, t).then(resolve, reject);
+    });
+  },
+
+  async putCollection(collection) {
+    asserters.collections(collection);
+    const d = await openDb();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction('collections', 'readwrite');
+      const req = t.objectStore('collections').put(collection);
+      reqToPromise(req, t).then(resolve, reject);
+    });
+  },
+
+  /**
+   * Delete a collection and strip its id from every member record in ONE
+   * transaction — membership can never dangle. `memberRefs` is supplied by
+   * the caller (domain layer) as [{ store, record }, ...].
+   */
+  async deleteCollection(id, memberRefs) {
+    const d = await openDb();
+    return new Promise((resolve, reject) => {
+      const stores = [...new Set(['collections', ...memberRefs.map((r) => r.store)])];
+      const t = d.transaction(stores, 'readwrite');
+      t.objectStore('collections').delete(id);
+      for (const ref of memberRefs) {
+        const rec = { ...ref.record };
+        rec.collections = (rec.collections || []).filter((c) => c !== id);
+        t.objectStore(ref.store).put(rec);
+      }
+      t.oncomplete = () => resolve(true);
+      t.onerror = () => reject(t.error);
     });
   },
 };

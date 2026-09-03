@@ -152,7 +152,7 @@ const TV_METHODS = [
   'appInfo', 'openPath', 'onFlush', 'notifyFlushed', 'markDirty', 'onMenu',
   'clipboardState', 'clipboardSetPaused', 'clipboardSetEnabled',
   'clipboardGetPending', 'clipboardAck', 'onClipboardCaptured',
-  'onClipboardStateChanged', 'onCloseRequest', 'closeResolve',
+  'onClipboardStateChanged', 'onCloseRequest', 'closeResolve', 'openExternal',
 ];
 test('preload exposes exactly the documented window.tv methods', () => {
   for (const m of TV_METHODS) {

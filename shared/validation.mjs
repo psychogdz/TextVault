@@ -16,7 +16,9 @@ export const LIMITS = Object.freeze({
 // MIGRATIONS (shared/storage-migrations.mjs) and keep both in sync.
 // v2: adds the `clipboard` object store (created in onupgradeneeded; entries
 // records themselves are unchanged).
-export const SCHEMA_VERSION = 2;
+// v3: adds `snippets` + `collections` stores; migration adds `collections`
+// membership (and `isPinned` for entries) to existing records.
+export const SCHEMA_VERSION = 3;
 
 export const THEMES = ['light', 'dark', 'system'];
 export const ACCENTS = ['violet', 'blue', 'teal', 'rose', 'amber'];
@@ -115,6 +117,71 @@ export function validateClipboardRecord(record) {
   }
   return { ok: true };
 }
+
+/**
+ * Validate a snippet record (`snippets` object store).
+ */
+export function validateSnippetRecord(record) {
+  if (!isObj(record)) return { ok: false, error: 'Record is not an object.' };
+  if (typeof record.id !== 'string' || record.id.length === 0 || record.id.length > 128) {
+    return { ok: false, error: 'Record id is missing or invalid.' };
+  }
+  if (typeof record.title !== 'string' || record.title.length > LIMITS.ENTRY_TITLE) {
+    return { ok: false, error: 'Snippet title is invalid or too long.' };
+  }
+  if (typeof record.content !== 'string') return { ok: false, error: 'Snippet content must be text.' };
+  if (record.content.length > LIMITS.ENTRY_CONTENT) {
+    return { ok: false, error: 'Snippet content exceeds the size limit.' };
+  }
+  if (record.description !== undefined
+      && (typeof record.description !== 'string' || record.description.length > LIMITS.ENTRY_DESCRIPTION)) {
+    return { ok: false, error: 'Snippet description is invalid or too long.' };
+  }
+  if (record.tags !== undefined) {
+    if (!Array.isArray(record.tags) || record.tags.length > LIMITS.ENTRY_TAGS
+        || record.tags.some((t) => typeof t !== 'string' || t.length > LIMITS.TAG_LENGTH)) {
+      return { ok: false, error: 'Snippet tags are invalid.' };
+    }
+  }
+  if (!validCollectionsField(record)) return { ok: false, error: 'Snippet collections are invalid.' };
+  if (record.isFavorite !== undefined && typeof record.isFavorite !== 'boolean') {
+    return { ok: false, error: 'Snippet isFavorite must be boolean.' };
+  }
+  for (const ts of ['createdAt', 'updatedAt']) {
+    if (!Number.isFinite(record[ts])) return { ok: false, error: `Record ${ts} must be a number.` };
+  }
+  return { ok: true };
+}
+
+/**
+ * Validate a collection record (`collections` object store).
+ */
+export function validateCollectionRecord(record) {
+  if (!isObj(record)) return { ok: false, error: 'Record is not an object.' };
+  if (typeof record.id !== 'string' || record.id.length === 0 || record.id.length > 128) {
+    return { ok: false, error: 'Record id is missing or invalid.' };
+  }
+  if (typeof record.name !== 'string' || record.name.trim().length === 0 || record.name.length > LIMITS.TAG_LENGTH * 2) {
+    return { ok: false, error: 'Collection name is invalid or too long.' };
+  }
+  if (record.description !== undefined
+      && (typeof record.description !== 'string' || record.description.length > LIMITS.ENTRY_DESCRIPTION)) {
+    return { ok: false, error: 'Collection description is invalid or too long.' };
+  }
+  if (!Number.isFinite(record.createdAt)) return { ok: false, error: 'Record createdAt must be a number.' };
+  return { ok: true };
+}
+
+/** `collections` membership must be an array of id strings. */
+function validCollectionsField(record) {
+  if (record.collections === undefined) return true;
+  return Array.isArray(record.collections)
+    && record.collections.length <= 100
+    && record.collections.every((c) => typeof c === 'string' && c.length <= 128);
+}
+
+/** Allowlist of record kinds that may carry collection membership. */
+export const COLLECTION_MEMBER_KINDS = ['clipboard', 'entry', 'snippet'];
 
 /**
  * Sanitize a settings object loaded from storage: keep known keys, repair

@@ -213,6 +213,15 @@ function registerIpcHandlers() {
     resolveCloseDisposition(action);
     return { ok: true };
   });
+
+  /* ------------- explicit external URL opening (Phase 4) ------------- */
+
+  ipcMain.handle(HANDLED.OPEN_EXTERNAL, (_ev, url) => {
+    const check = v.validateExternalUrl(url);
+    if (!check.ok) return check;
+    shell.openExternal(check.value);
+    return { ok: true };
+  });
 }
 
 function lifecycle() {

@@ -134,6 +134,27 @@ function validateNoPayload(payload) {
   return payload === undefined || payload === null;
 }
 
+/**
+ * Only http(s) URLs may be opened externally, only on an explicit user
+ * action (SECURITY.md §26). Everything else (file:, javascript:, custom
+ * schemes, whitespace tricks) is rejected.
+ */
+function validateExternalUrl(url) {
+  if (typeof url !== 'string' || url.length === 0 || url.length > 2048) {
+    return { ok: false, error: 'Invalid URL.' };
+  }
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { ok: false, error: 'Invalid URL.' };
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return { ok: false, error: 'Only http(s) URLs can be opened.' };
+  }
+  return { ok: true, value: parsed.href };
+}
+
 module.exports = {
   EXPORT_KINDS,
   EXPORT_MODES,
@@ -152,4 +173,5 @@ module.exports = {
   isPathAllowed,
   validateClipboardWrite,
   validateNoPayload,
+  validateExternalUrl,
 };

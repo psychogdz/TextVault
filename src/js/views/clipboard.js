@@ -11,6 +11,7 @@ import {
 import { icon, emptyArt } from '../ui/icons.js';
 import { toast, confirmDialog, timeAgo, formatNumber } from '../ui/components.js';
 import { escapeHtml } from '../../../shared/snippets.mjs';
+import { detectContentType } from '../../../shared/detect.mjs';
 
 const els = {};
 let query = '';
@@ -121,6 +122,8 @@ function renderRow(item) {
   const preview = masked
     ? '<span class="clip-masked">Sensitive content hidden — click to reveal</span>'
     : escapeHtml(item.preview || '');
+  const type = item.contentType && item.contentType !== 'text'
+    ? item.contentType : detectContentType(item.content || '');
 
   row.innerHTML = `
     <div class="clip-flags">
@@ -133,13 +136,26 @@ function renderRow(item) {
       <span>${timeAgo(item.updatedAt)}</span>
       <span class="meta-dot"></span>
       <span>${formatNumber(item.content.length)} chars</span>
+      ${type !== 'text' ? `<span class="meta-dot"></span><span class="clip-type">${type}</span>` : ''}
     </div>
     <div class="clip-actions">
+      ${type === 'url' ? `<button class="icon-btn icon-btn-sm" data-act="open" title="Open URL">${icon('external', 14)}</button>` : ''}
       <button class="icon-btn icon-btn-sm" data-act="copy" title="Copy">${icon('copy', 14)}</button>
       <button class="icon-btn icon-btn-sm ${item.isPinned ? 'active' : ''}" data-act="pin" title="${item.isPinned ? 'Unpin' : 'Pin'}">${icon('pin', 14)}</button>
       <button class="icon-btn icon-btn-sm ${item.isFavorite ? 'fav-on' : ''}" data-act="fav" title="${item.isFavorite ? 'Remove from favorites' : 'Favorite'}">${icon(item.isFavorite ? 'star-filled' : 'star', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="coll" title="Collections">${icon('layers', 14)}</button>
       <button class="icon-btn icon-btn-sm" data-act="del" title="Delete">${icon('trash', 14)}</button>
     </div>`;
+
+  const openBtn = row.querySelector('[data-act="open"]');
+  if (openBtn) {
+    openBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.tv.openExternal(item.content.trim()).then((r) => {
+        if (!r.ok) toastError(r.error || 'Could not open the URL.');
+      });
+    });
+  }
 
   const previewEl = row.querySelector('.clip-preview');
   previewEl.innerHTML = preview;
@@ -165,6 +181,11 @@ function renderRow(item) {
   row.querySelector('[data-act="fav"]').addEventListener('click', async (e) => {
     e.stopPropagation();
     await toggleClipboardFavorite(item.id);
+  });
+  row.querySelector('[data-act="coll"]').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const { openCollectionPickerFor } = await import('./snippets.js');
+    openCollectionPickerFor('clipboard', item);
   });
   row.querySelector('[data-act="del"]').addEventListener('click', async (e) => {
     e.stopPropagation();

@@ -23,6 +23,8 @@ const HANDLED = Object.freeze({
   CLIPBOARD_GET_PENDING: 'tv:clipboard-get-pending',
   // Window close behavior (Phase 3): renderer decides quit vs hide-to-tray
   CLOSE_RESOLVE: 'tv:close-resolve',
+  // Explicit user-initiated external URL opening (Phase 4)
+  OPEN_EXTERNAL: 'tv:open-external',
 });
 
 const EMITTED = Object.freeze({

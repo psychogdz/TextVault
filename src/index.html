@@ -51,6 +51,16 @@
         <span class="nav-icon" data-icon="clock"></span>
         <span class="nav-label">Recently Used</span>
       </button>
+      <button class="nav-item" data-nav="collections">
+        <span class="nav-icon" data-icon="layers"></span>
+        <span class="nav-label">Collections</span>
+        <span class="nav-count" data-count="collections"></span>
+      </button>
+      <button class="nav-item" data-nav="snippets">
+        <span class="nav-icon" data-icon="file-text"></span>
+        <span class="nav-label">Snippets</span>
+        <span class="nav-count" data-count="snippets"></span>
+      </button>
       <button class="nav-item" data-nav="trash">
         <span class="nav-icon" data-icon="trash"></span>
         <span class="nav-label">Trash</span>
@@ -151,6 +161,33 @@
       </div>
       <div class="clip-list" id="clip-list"></div>
       <div class="empty-state hidden" id="clipboard-empty"></div>
+    </section>
+
+    <!-- View: Snippets -->
+    <section class="view view-snippets hidden" id="view-snippets">
+      <div class="clip-head">
+        <h2 class="view-title">Snippets</h2>
+        <span class="topbar-count" id="snippet-count"></span>
+        <span class="spacer"></span>
+        <button class="btn btn-accent btn-sm" id="btn-new-snippet"><span class="btn-icon" data-icon="plus"></span>New Snippet</button>
+      </div>
+      <div class="clip-search">
+        <span class="search-icon" data-icon="search"></span>
+        <input id="snippet-search-input" type="text" placeholder="Search snippets…" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="clip-list" id="snippet-list"></div>
+      <div class="empty-state hidden" id="snippets-empty"></div>
+    </section>
+
+    <!-- View: Collections -->
+    <section class="view view-collections hidden" id="view-collections">
+      <div class="clip-head">
+        <h2 class="view-title">Collections</h2>
+        <span class="spacer"></span>
+        <button class="btn btn-accent btn-sm" id="btn-new-collection"><span class="btn-icon" data-icon="plus"></span>New Collection</button>
+      </div>
+      <div class="clip-list" id="collection-list"></div>
+      <div class="empty-state hidden" id="collections-empty"></div>
     </section>
 
     <!-- View: Editor -->

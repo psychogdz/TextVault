@@ -47,4 +47,7 @@ contextBridge.exposeInMainWorld('tv', {
   // Close disposition (Phase 3): renderer answers a close request
   onCloseRequest: (callback) => ipcRenderer.on('tv:close-request', () => callback()),
   closeResolve: (action) => ipcRenderer.invoke('tv:close-resolve', action),
+
+  // Explicit user-initiated external URL opening (Phase 4)
+  openExternal: (url) => ipcRenderer.invoke('tv:open-external', url),
 });

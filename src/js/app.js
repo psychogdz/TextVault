@@ -9,6 +9,12 @@ import { initEditor, openEditor as openEditorView, closeEditor, saveNow, openFin
 import { initTrash, refresh as refreshTrash } from './views/trash.js';
 import { initSettings, render as renderSettings, applyTheme, openSettingsHelp } from './views/settings.js';
 import { initClipboardView, refresh as refreshClipboardView } from './views/clipboard.js';
+import { initSnippetsView, refreshSnippets, refreshCollections, initCollectionsView } from './views/snippets.js';
+import {
+  initSnippets, initCollections, snippetList, collectionList,
+  createSnippet, updateSnippet, deleteSnippet, createCollection, renameCollection,
+  deleteCollection, setItemCollections, collectionMembers,
+} from './core/snippets.js';
 import {
   initClipboard, applyCapture, setMonitorState, setMonitorEnabled, clipboardCount,
   clipboardItems, getMonitorState, clearClipboardHistory,
@@ -19,6 +25,8 @@ import {
 const views = {
   dashboard: document.getElementById('view-dashboard'),
   clipboard: document.getElementById('view-clipboard'),
+  snippets: document.getElementById('view-snippets'),
+  collections: document.getElementById('view-collections'),
   editor: document.getElementById('view-editor'),
   trash: document.getElementById('view-trash'),
   settings: document.getElementById('view-settings'),
@@ -33,6 +41,8 @@ App.setView = (name) => {
   refreshSidebar();
   if (name === 'dashboard') refreshDashboard();
   if (name === 'clipboard') refreshClipboardView();
+  if (name === 'snippets') refreshSnippets();
+  if (name === 'collections') refreshCollections();
   if (name === 'trash') refreshTrash();
   if (name === 'settings') renderSettings();
 };
@@ -100,6 +110,8 @@ function refreshSidebar() {
     all: live.length,
     favorites: live.filter((e) => e.favorite).length,
     clipboard: clipboardCount(),
+    snippets: snippetList().length,
+    collections: collectionList().length,
     trash: App.trashedEntries().length,
   };
   document.querySelectorAll('[data-count]').forEach((el) => {
@@ -109,8 +121,10 @@ function refreshSidebar() {
   });
 
   document.querySelectorAll('#sidebar-nav .nav-item').forEach((btn) => {
-    const active = btn.dataset.nav === 'clipboard'
-      ? App.view === 'clipboard'
+    const viewForNav = { clipboard: 'clipboard', snippets: 'snippets', collections: 'collections', trash: 'trash' };
+    const target = viewForNav[btn.dataset.nav];
+    const active = target
+      ? App.view === target
       : App.view === 'dashboard' && App.nav === btn.dataset.nav;
     btn.classList.toggle('active', active);
   });
@@ -143,6 +157,8 @@ function wireSidebar() {
       App.nav = btn.dataset.nav;
       if (App.nav === 'trash') App.setView('trash');
       else if (App.nav === 'clipboard') App.setView('clipboard');
+      else if (App.nav === 'snippets') App.setView('snippets');
+      else if (App.nav === 'collections') App.setView('collections');
       else App.setView('dashboard');
     });
   });
@@ -360,6 +376,8 @@ async function boot() {
 
   initDashboard();
   initClipboardView();
+  initSnippetsView();
+  initCollectionsView();
   initEditor();
   initTrash();
   initSettings();
@@ -394,9 +412,12 @@ async function boot() {
   // Clipboard engine: load persisted history, drain pending captures, and
   // sync the monitor's master switch with the user's saved settings.
   await initClipboard();
+  await initSnippets();
+  await initCollections();
   window.tv.clipboardSetEnabled(App.settings.clipboard?.monitorEnabled !== false)
     .catch(() => {});
   App.on('clipboard-changed', refreshSidebar);
+  App.on('library-changed', refreshSidebar);
 
   // programmatic test hook (only when launched with ?e2e=1 by the test runner)
   if (new URLSearchParams(location.search).get('e2e') === '1') {
@@ -416,6 +437,27 @@ async function boot() {
         monitorState: () => getMonitorState(),
         pinnedCount: () => clipboardItems().filter((i) => i.isPinned).length,
         viewVisible: () => !document.getElementById('view-clipboard').classList.contains('hidden'),
+      },
+      snippets: {
+        count: () => snippetList().length,
+        create: (payload) => createSnippet(payload),
+        update: (id, patch) => updateSnippet(id, patch),
+        remove: (id) => deleteSnippet(id),
+        byTitle: (t) => snippetList().find((s) => s.title === t) || null,
+        viewVisible: () => !document.getElementById('view-snippets').classList.contains('hidden'),
+      },
+      collections: {
+        count: () => collectionList().length,
+        create: (name) => createCollection(name),
+        rename: (id, name) => renameCollection(id, name),
+        remove: (id) => deleteCollection(id),
+        byName: (n) => collectionList().find((c) => c.name === n) || null,
+        members: (id) => {
+          const m = collectionMembers(id);
+          return { clip: m.clip.length, snips: m.snips.length };
+        },
+        assign: (store, record, ids) => setItemCollections(store, record, ids),
+        viewVisible: () => !document.getElementById('view-collections').classList.contains('hidden'),
       },
       dashboard: {
         search: (q) => { const i = document.getElementById('search-input'); i.value = q; i.dispatchEvent(new Event('input', { bubbles: true })); },

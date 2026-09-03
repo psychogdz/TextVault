@@ -20,6 +20,7 @@ const files = [
   'src/js/views/trash.js',
   'src/js/views/settings.js',
   'src/js/views/clipboard.js',
+  'src/js/views/snippets.js',
 ];
 
 let failed = 0;

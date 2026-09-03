@@ -2372,3 +2372,29 @@ Decisions and properties:
 8. **Schema v2**: the `clipboard` object store (indexes: createdAt,
    updatedAt, contentHash) was added in `onupgradeneeded`; entry records
    themselves are unchanged (MIGRATIONS[2] is an explicit no-op).
+
+## 77.7 Core Library (Phase 4, as-built)
+
+1. **Schema v3**: adds `snippets` and `collections` object stores; the
+   migration adds `collections` membership (and `isPinned` for text entries)
+   to existing records — existing values are preserved, nothing is dropped.
+2. **Collections model**: a collection is `{ id, name, description,
+   createdAt }`; membership ids live ON member records (`collections: []` on
+   clipboard items, snippets — and entries structurally). Renaming a
+   collection never touches members; deleting one strips membership from all
+   members inside a single storage transaction (no dangling references).
+   Collections currently apply to clipboard items and snippets; text entries
+   keep tags/colors (documented boundary).
+3. **Pins**: distinct from favorites — Favorite = important, Pin = persistently
+   prominent. Pinned dashboard cards sort above favorites; clipboard rows and
+   the editor More menu expose pin toggles.
+4. **Text tools**: pure functions in `shared/text-tools.mjs` (16
+   transformations). The editor applies them to the WHOLE text via
+   `insertText` so the transformation stays on the native undo stack and is
+   never persisted until the user saves — source content is always
+   recoverable. Invalid input (JSON/Base64/URL) fails with a safe message.
+5. **Content detection**: `shared/detect.mjs` labels content conservatively
+   (url/email/ip/path/json/code/markdown/command/text). Clipboard rows show a
+   type badge; URLs get an explicit "Open URL" action executed by
+   `tv:open-external` — validated to http(s) only, user-initiated, never
+   automatic (SECURITY.md §26/§31).

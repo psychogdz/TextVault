@@ -10,13 +10,20 @@
 import { SCHEMA_VERSION } from './validation.mjs';
 
 /**
- * Map of target version → migration function (applied to `entries` records).
+ * Map of target version → migration function (applied to entries AND
+ * clipboard records; snippets/collections start empty).
  * Version 2: the clipboard store is created separately in onupgradeneeded;
- * entry records themselves are unchanged, so this step is an explicit no-op
- * that only records the version bump. Future record-shape changes go here.
+ * entry records themselves are unchanged.
+ * Version 3: every record gains a `collections` membership array (and text
+ * entries gain `isPinned`). Existing values are preserved; nothing is dropped.
  */
 export const MIGRATIONS = {
   2: (record) => record,
+  3: (record) => ({
+    ...record,
+    collections: Array.isArray(record.collections) ? record.collections : [],
+    isPinned: record.isPinned !== undefined ? record.isPinned : false,
+  }),
 };
 
 /**

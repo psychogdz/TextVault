@@ -1,9 +1,11 @@
 // Editor: title, tags, direction control, bidi textarea, find & replace,
-// autosave (debounced + crash-safe drafts), stats, copy/export actions.
+// autosave (debounced + crash-safe drafts), stats, text tools, pin,
+// copy/export actions.
 import { App } from '../state.js';
 import { icon } from '../ui/icons.js';
 import { toast, toastError, confirmDialog, showDropdown, formatNumber } from '../ui/components.js';
 import { applyEdits, createEntry, CARD_COLORS } from '../core/entry.js';
+import { applyTextTool, TEXT_TOOLS } from '../../../shared/text-tools.mjs';
 import { detectBaseDir } from '../../../shared/bidi.mjs';
 
 const els = {};
@@ -170,14 +172,20 @@ export function initEditor() {
   });
   els.btnMore.addEventListener('click', () => {
     if (!current) return;
+    const pinned = !!(App.get(current.entry.id)?.isPinned);
     showDropdown(els.btnMore, [
       { headerLabel: 'Text' },
       { label: 'Copy all text', icon: 'copy', onClick: copyAll },
+      { label: 'Text tools…', icon: 'type', onClick: () => showTextTools(els.btnMore) },
+      {
+        label: pinned ? 'Unpin text' : 'Pin text', icon: 'pin', onClick: togglePin,
+      },
       {
         label: 'Delete text…', icon: 'trash', danger: true, onClick: async () => {
           const ok = await confirmDialog({
             title: 'Delete this text?',
-            message: 'It will be moved to the Trash. You can restore it later from there.',
+            message: '“<b></b>” will be moved to the Trash. You can restore it later from there.',
+            messageValues: [App.titleOf(current.entry)],
             confirmText: 'Delete',
             danger: true,
           });
@@ -226,6 +234,64 @@ export function initEditor() {
   window.addEventListener('beforeunload', () => {
     if (current) writeDraft(current.entry);
   });
+}
+
+const TOOL_LABELS = {
+  'uppercase': 'UPPERCASE',
+  'lowercase': 'lowercase',
+  'title-case': 'Title Case',
+  'sentence-case': 'Sentence case',
+  'trim-lines': 'Trim lines',
+  'normalize-whitespace': 'Normalize whitespace',
+  'sort-lines': 'Sort lines A → Z',
+  'sort-lines-desc': 'Sort lines Z → A',
+  'unique-lines': 'Remove duplicate lines',
+  'reverse-lines': 'Reverse line order',
+  'json-pretty': 'JSON — format',
+  'json-minify': 'JSON — minify',
+  'base64-encode': 'Base64 — encode',
+  'base64-decode': 'Base64 — decode',
+  'url-encode': 'URL — encode',
+  'url-decode': 'URL — decode',
+};
+
+/** Open the text-tools menu anchored to the editor toolbar. */
+export function showTextTools(anchorEl) {
+  if (!current) return;
+  showDropdown(anchorEl, [
+    { headerLabel: 'Transform text (whole text)' },
+    ...TEXT_TOOLS.map((id) => ({
+      label: TOOL_LABELS[id] || id,
+      onClick: () => applyToolToEditor(id),
+    })),
+  ]);
+}
+
+/** Apply a transformation to the whole editor content (undoable, unsaved). */
+function applyToolToEditor(toolId) {
+  if (!current) return;
+  const source = els.textarea.value;
+  if (!source) { toast('Nothing to transform', { type: 'info' }); return; }
+  const res = applyTextTool(toolId, source);
+  if (!res.ok) { toastError(res.error); return; }
+  if (res.result === source) { toast('No change', { type: 'info' }); return; }
+  els.textarea.focus();
+  els.textarea.setSelectionRange(0, source.length);
+  // insertText keeps the transformation on the native undo stack (Ctrl+Z)
+  document.execCommand('insertText', false, res.result);
+  markDirty();
+  updateStats();
+  autoDirection();
+  toast('Transformed — Ctrl+Z to undo');
+}
+
+async function togglePin() {
+  if (!current) return;
+  const entry = App.get(current.entry.id);
+  if (!entry) return;
+  entry.isPinned = !entry.isPinned;
+  await App.saveEntry(entry);
+  toast(entry.isPinned ? 'Pinned — always easy to find' : 'Unpinned');
 }
 
 /* ================= open / close ================= */

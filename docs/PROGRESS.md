@@ -904,57 +904,76 @@ Notes:
 Status:
 
 ```text
-NOT_STARTED
+VERIFIED (2026-09-03)
 ```
 
-## Entry Gate
+## Entry Gate — PASSED (2026-09-03)
 
 ```text
-[ ] Phase 3 is VERIFIED
-[ ] Core persistence is verified
-[ ] Clipboard data model is stable
-[ ] Required library entities are defined
+[x] Phase 3 is VERIFIED
+[x] Core persistence is verified
+[x] Clipboard data model is stable
+[x] Required library entities are defined (snippets, collections, pins, text utilities)
 ```
 
 ## Objectives
 
 ```text
-History
-Snippets
-Notes
-Favorites
-Pins
-Collections
-Tags
+Snippets (create/edit/delete/copy/search/favorite/organize)
+Collections (create/rename/delete/membership without duplication)
+Pins (distinct from favorites; entries + clipboard)
+Text utilities (local transformations, source-preserving)
+Smart content detection (local, mark-only, explicit actions)
 ```
 
-## Exit Gate
+## Exit Gate — PASSED (2026-09-03)
 
 ```text
-[ ] History list
-[ ] History detail
-[ ] History deletion
-[ ] History bulk operations
-[ ] Snippet creation
-[ ] Snippet editing
-[ ] Note creation
-[ ] Note editing
-[ ] Favorites
-[ ] Pins
-[ ] Collections
-[ ] Tags
-[ ] CRUD tests pass
-[ ] Regression tests pass
-[ ] Data integrity verified
-[ ] No critical data-loss path introduced
+[x] History list / detail / deletion / bulk operations (existing, verified)
+[x] Snippet creation + editing (E2E round-trip incl. Unicode restart)
+[x] Note creation + editing (existing text editor; unchanged behavior)
+[x] Favorites (texts, snippets, clipboard items)
+[x] Pins (entries via migration field; clipboard items; sort semantics)
+[x] Collections (CRUD + membership; delete strips refs transactionally)
+[x] Tags (texts + snippets; unchanged)
+[x] CRUD tests pass (unit 58/58; E2E 99/99)
+[x] Regression tests pass (full suite)
+[x] Data integrity verified (migration preserves existing values; collection
+    delete strips membership in one transaction; E2E-verified)
+[x] No critical data-loss path introduced
 ```
 
-Only then:
+## Gate Evidence
 
 ```text
-Phase 4:
-VERIFIED
-```
+Phase: Phase 4 — Core Library
+Entry/Exit: ENTRY PASSED / EXIT PASSED
+Date: 2026-09-03
+
+Implementation:
+- Schema v3: snippets + collections stores; migration adds collections[]
+  and isPinned to existing records (values preserved)
+- shared/text-tools.mjs: 16 pure transformations with safe error messages
+- shared/detect.mjs: conservative content-type detection + explicit actions
+- core/snippets.js domain; Snippets + Collections views; collection picker
+  on clipboard rows; editor Text tools + Pin; pinned-first dashboard sort
+- New validated IPC: tv:open-external (http/https only, user-initiated)
+- confirmDialog: safe messageValues placeholder mechanism (user text via
+  textContent only) — also fixed a pre-existing empty-<b> cosmetic bug
+
+Tests actually executed:
+- npm test → syntax 15 OK + unit 58/58 + ipc/architecture 30/30 → exit 0
+- npm run test:e2e → 99/99 passed (8 new Phase 4 checks: snippet CRUD +
+  Unicode restart persistence, collection create/assign/rename/delete
+  integrity, pinned-first sort, editor transformation autosave)
+- TEXTVAULT_SMOKE=1 isolated launch → SMOKE OK, exit 0
+
+Notes:
+- Snippet variables ({{name}}) remain out of scope (P2, unscheduled).
+- Collections apply to clipboard items and snippets; text entries keep
+  tags/colors (documented in ARCHITECTURE.md §77.7).
+- Detection influences presentation and explicit actions only; nothing is
+  executed automatically.
 
 ---
 
@@ -2332,6 +2351,40 @@ PASSED (evidence in §13)
 Next:
 Phase 4 — Core Library (snippets, collections, pins on entries, text utilities).
 
+## 2026-09-03 (Phase 4)
+
+Phase:
+Phase 4 — Core Library
+
+Entry Gate:
+PASSED
+
+Completed:
+- Schema v3 (snippets + collections stores; membership/pin migration)
+- Snippets CRUD + view with search, favorites, tags, collection assignment
+- Collections CRUD + cross-store membership with transactional cleanup
+- Pins on entries (pinned-first sort) + clipboard rows; editor Pin toggle
+- shared/text-tools.mjs (16 transformations) + editor Text tools menu
+  (native-undo preserved, never persisted without user save)
+- shared/detect.mjs + type badges + explicit Open-URL action via validated
+  tv:open-external IPC (http/https only)
+- confirmDialog messageValues (safe textContent placeholders)
+
+Tests:
+- npm test → 88 checks pass (syntax 15 + unit 58 + ipc 30), exit 0
+- npm run test:e2e → 99/99 (8 new Phase 4 checks), exit 0
+- SMOKE launch → SMOKE OK, exit 0
+
+Security:
+New tv:open-external channel strictly validates http(s) URLs; detection
+remains pure analysis; no automatic execution paths introduced.
+
+Exit Gate:
+PASSED (evidence in §14)
+
+Next:
+Phase 5 — Search & Organization.
+
 ---
 
 # 43. Current Progress Snapshot
@@ -2343,46 +2396,47 @@ Project:
 TextVault Pro (repository currently holds TextVault v1.0.0 + Phase 1 architecture)
 
 Active Phase:
-Phase 4 — Core Library (next)
+Phase 5 — Search & Organization (next)
 
 Phase Entry Gate:
-NOT_EVALUATED (Phase 3 verified 2026-09-03)
+NOT_EVALUATED (Phase 4 verified 2026-09-03)
 
 Phase Status:
-Phase 3 VERIFIED; Phase 4 not started
+Phase 4 VERIFIED; Phase 5 not started
 
 Phase Exit Gate:
-Phase 3 PASSED (2026-09-03 — evidence in §13)
+Phase 4 PASSED (2026-09-03 — evidence in §14)
 
 Overall Release Status:
 NOT_READY
 
 Last Verified Test:
-npm test (75 checks) + npm run test:e2e (91/91) + SMOKE launch — all exit 0 (2026-09-03)
+npm test (88 checks) + npm run test:e2e (99/99) + SMOKE launch — all exit 0 (2026-09-03)
 
 Security Status:
-IN_PROGRESS — clipboard privacy model implemented and tested (SECURITY.md §62);
-open: confirmDialog innerHTML sink (LOW), dependency advisories (Phase 7)
+IN_PROGRESS — open: confirmDialog innerHTML sink (LOW, mitigated by
+messageValues pattern), dependency advisories (Phase 7)
 
 Performance Status:
-NOT_MEASURED (capture-persistence latency scheduled for Phase 9)
+NOT_MEASURED (search-perf measurements scheduled for Phase 5/9)
 
 Data Integrity Status:
-IMPROVED — validated clipboard store with pending-ack queue (no capture loss
-on renderer reload); import replace transactional (Phase 2)
+IMPROVED — schema v3 migration preserves existing values (tested);
+collection membership cleanup is transactional
 
 Coverage Status:
 NOT_AVAILABLE (no coverage tooling exists)
 
 Documentation Status:
-COMPLETE through Phase 3 (ARCHITECTURE.md §77.6; SECURITY.md §62)
+COMPLETE through Phase 4 (ARCHITECTURE.md §77.6–77.7; SECURITY.md §62)
 
 Current Task:
-None — Phase 3 complete
+None — Phase 4 complete
 
 Next Task:
-Phase 4 — Core Library: evaluate entry gate; implement snippets, collections,
-pin semantics for entries, and local text utilities with tests
+Phase 5 — Search & Organization: evaluate entry gate; unify search across
+clipboard/snippets/texts, add filters (type:/is:pinned), measure ~10k-entry
+search performance
 ```
 
 The agent must update this snapshot whenever the project state changes.

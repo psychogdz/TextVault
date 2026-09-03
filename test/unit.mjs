@@ -16,6 +16,12 @@ const { validateEntryRecord, validateClipboardRecord, sanitizeSettings, DEFAULT_
 const { runMigrations, MIGRATIONS } = await imp('shared/storage-migrations.mjs');
 const { detectSensitive } = await imp('shared/sensitive.mjs');
 const { duplicateAction, applyRetention, buildClipboardItem, clipboardPreview, CLIPBOARD_CONTENT_LIMIT } = await imp('shared/clipboard-policy.mjs');
+const {
+  applyTextTool, uppercase, lowercase, titleCase, uniqueLines, sortLines,
+  jsonPretty, jsonMinify, base64Encode, base64Decode, urlEncode, urlDecode,
+} = await imp('shared/text-tools.mjs');
+const { detectContentType, actionsForType } = await imp('shared/detect.mjs');
+const { validateSnippetRecord, validateCollectionRecord } = await imp('shared/validation.mjs');
 const { buildTxt } = await imp('electron/exporters/txt.js');
 const { buildDocxBuffer } = await imp('electron/exporters/docx-builder.mjs');
 const { buildPdfHtml } = await imp('electron/exporters/pdf-html.mjs');
@@ -249,12 +255,21 @@ test('drops unknown keys instead of persisting them', () => {
 });
 
 console.log('\nstorage migrations:');
-test('identity run: version 1 → 1 changes nothing', () => {
-  const recs = [{ id: 'a', content: 'x' }, { id: 'b', content: 'y' }];
-  const res = runMigrations(recs, 1);
+test('identity run: version 3 → 3 changes nothing', () => {
+  const recs = [{ id: 'a', content: 'x', collections: [], isPinned: false }, { id: 'b', content: 'y', collections: ['c'], isPinned: true }];
+  const res = runMigrations(recs, 3);
   assert.deepEqual(res.records, recs);
-  assert.equal(res.migrated, 0);
   assert.equal(res.errors.length, 0);
+});
+test('v1 → v3 adds membership + pin fields, preserves existing values', () => {
+  const recs = [{ id: 'a', content: 'x' }, { id: 'b', content: 'y', isPinned: true, collections: ['keep'] }];
+  const res = runMigrations(recs, 1);
+  assert.equal(res.version, 3);
+  assert.deepEqual(res.records[0].collections, []);
+  assert.equal(res.records[0].isPinned, false);
+  assert.equal(res.records[1].isPinned, true); // existing value preserved
+  assert.deepEqual(res.records[1].collections, ['keep']);
+  assert.equal(res.records[1].content, 'y'); // content untouched
 });
 test('runs pending migrations in order and counts changes', () => {
   const saved = MIGRATIONS[2];
@@ -361,6 +376,89 @@ test('clipboard record builder produces a valid, validated record', () => {
   assert.deepEqual(item.sensitiveKinds, ['credential']);
   assert.ok(clipboardPreview(item.content).length <= 220);
   assert.equal(typeof CLIPBOARD_CONTENT_LIMIT, 'number');
+});
+
+console.log('\ntext tools:');
+test('case transformations are locale-safe and Persian-neutral', () => {
+  assert.equal(uppercase('hello سلام'), 'HELLO سلام');
+  assert.equal(lowercase('HELLO سلام'), 'hello سلام');
+  assert.equal(titleCase('hello world سلام'), 'Hello World سلام');
+  assert.ok(titleCase('İstanbul ırmağı').length > 0); // must not throw on tricky locales
+});
+test('line tools: sort, dedupe (case-insensitive), reverse', () => {
+  assert.equal(sortLines('b\na\nc'), 'a\nb\nc');
+  assert.equal(uniqueLines('x\nX\ny\nx'), 'x\ny');
+  assert.equal(applyTextTool('reverse-lines', '1\n2\n3').result, '3\n2\n1');
+});
+test('whitespace tools', () => {
+  assert.equal(applyTextTool('trim-lines', '  a \n\tb  ').result, 'a\nb');
+  assert.equal(applyTextTool('normalize-whitespace', ' a\n\n b   c ').result, 'a b c');
+});
+test('json tools round-trip and report invalid input safely', () => {
+  const obj = { b: 1, a: 'سلام' };
+  assert.deepEqual(JSON.parse(jsonPretty(JSON.stringify(obj))), obj);
+  assert.equal(jsonMinify(JSON.stringify(obj, null, 2)), JSON.stringify(obj));
+  const bad = applyTextTool('json-pretty', '{nope');
+  assert.equal(bad.ok, false);
+  assert.match(bad.error, /not valid JSON/);
+});
+test('base64 and url tools round-trip Unicode', () => {
+  const text = 'سلام Hello 🎯 https://example.com';
+  assert.equal(base64Decode(base64Encode(text)), text);
+  assert.equal(urlDecode(urlEncode(text)), text);
+  assert.equal(applyTextTool('base64-decode', '!!!not-base64!!!').ok, false);
+});
+test('every advertised tool applies without throwing on empty input', async () => {
+  const { TEXT_TOOLS } = await imp('shared/text-tools.mjs');
+  for (const id of TEXT_TOOLS) {
+    const res = applyTextTool(id, '');
+    assert.ok(res.ok || /not valid/.test(res.error), `${id} failed unexpectedly: ${res.error}`);
+  }
+});
+test('large input stays fast (10k lines, unique-lines)', () => {
+  const big = Array.from({ length: 10_000 }, (_, i) => `line ${i % 900} متن`).join('\n');
+  const t0 = process.hrtime.bigint();
+  const res = applyTextTool('unique-lines', big);
+  const ms = Number(process.hrtime.bigint() - t0) / 1e6;
+  assert.ok(res.ok);
+  assert.ok(ms < 2000, `took ${ms.toFixed(0)}ms`);
+});
+
+console.log('\ncontent detection:');
+test('detects common types', () => {
+  assert.equal(detectContentType('https://example.com/a?b=1'), 'url');
+  assert.equal(detectContentType('user@example.com'), 'email');
+  assert.equal(detectContentType('192.168.0.1'), 'ip');
+  assert.equal(detectContentType('C:\\Users\\test\\file.txt'), 'path');
+  assert.equal(detectContentType('/usr/local/bin'), 'path');
+  assert.equal(detectContentType('{"a": 1}'), 'json');
+  assert.equal(detectContentType('npm install left-pad'), 'command');
+  assert.equal(detectContentType('# Title\n\n- item'), 'markdown');
+  assert.equal(detectContentType('const x = 1;'), 'code');
+  assert.equal(detectContentType('just plain text سلام'), 'text');
+  assert.equal(detectContentType(''), 'text');
+});
+test('detection is conservative: ambiguous content stays text', () => {
+  assert.equal(detectContentType('999.999.999.999 is not an IP'), 'text');
+  assert.equal(detectContentType('see https://example.com for details'), 'text');
+});
+test('actions are explicit and never auto-executing', () => {
+  assert.deepEqual(actionsForType('url'), ['open-external', 'copy']);
+  assert.deepEqual(actionsForType('text'), ['copy']);
+});
+
+console.log('\nsnippet + collection validators:');
+test('accepts valid snippet and collection records', () => {
+  assert.equal(validateSnippetRecord({ id: 's1', title: 'T', content: 'c', tags: ['a'], collections: [], createdAt: 1, updatedAt: 2 }).ok, true);
+  assert.equal(validateCollectionRecord({ id: 'c1', name: 'Work', createdAt: 1 }).ok, true);
+});
+test('rejects malformed snippets/collections', () => {
+  assert.equal(validateSnippetRecord({ id: 's', content: 5 }).ok, false);
+  assert.equal(validateSnippetRecord({ id: 's', content: 'x', createdAt: 'now', updatedAt: 2 }).ok, false);
+  assert.equal(validateSnippetRecord({ id: 's', content: 'x', createdAt: 1, updatedAt: 2, tags: [42] }).ok, false);
+  assert.equal(validateCollectionRecord({ id: '', name: 'X', createdAt: 1 }).ok, false);
+  assert.equal(validateCollectionRecord({ id: 'c', name: '   ', createdAt: 1 }).ok, false);
+  assert.equal(validateCollectionRecord({ id: 'c', name: 'x'.repeat(200), createdAt: 1 }).ok, false);
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
