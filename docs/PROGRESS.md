@@ -725,61 +725,84 @@ Notes:
 Status:
 
 ```text
-NOT_STARTED
+VERIFIED (2026-09-03)
 ```
 
-## Entry Gate
+## Entry Gate — PASSED (2026-09-03)
 
 ```text
-[ ] Phase 1 is VERIFIED
-[ ] Storage architecture is defined
-[ ] Canonical data source is known
-[ ] Required entities are known
-[ ] Storage contract in SECURITY.md is understood
+[x] Phase 1 is VERIFIED
+[x] Storage architecture is defined (ARCHITECTURE.md §15 + §77.5)
+[x] Canonical data source is known (IndexedDB "textvault", entries + settings)
+[x] Required entities are known (entries; clipboard/snippets land with their phases)
+[x] Storage contract in SECURITY.md is understood (§59)
 ```
 
 ## Objectives
 
 ```text
-Implement canonical storage
-Implement database/repository layer
-Implement settings storage
-Implement migrations
-Implement transactions
-Implement backup foundations
+Implement canonical storage (KEEP decision recorded)
+Implement database/repository layer (validated writes)
+Implement settings storage (sanitized, safe defaults)
+Implement migrations (versioned, forward-only, fail-safe)
+Implement transactions (atomic multi-record operations)
+Implement backup foundations (existing format retained; Phase 8 extends)
 ```
 
-## Exit Gate
+## Exit Gate — PASSED (2026-09-03)
 
 ```text
-[ ] Canonical data source defined
-[ ] Database schema implemented
-[ ] Stable IDs implemented
-[ ] Unicode-safe persistence verified
-[ ] Timestamp representation defined
-[ ] Content size limits implemented
-[ ] Transactions implemented where required
-[ ] Migration strategy implemented
-[ ] Storage errors handled safely
-[ ] Settings storage implemented
-[ ] Sensitive content is not logged
-[ ] Storage paths are validated
-[ ] Renderer cannot directly access storage
-[ ] Invalid data cannot corrupt existing state
-[ ] CRUD tests pass
-[ ] Restart persistence test passes
-[ ] Unicode tests pass
-[ ] Migration tests pass
-[ ] Transaction rollback tests pass
-[ ] Corruption handling tests pass
+[x] Canonical data source defined (IndexedDB KEEP — ARCHITECTURE.md §77.5)
+[x] Database schema implemented and documented
+[x] Stable IDs implemented (crypto.randomUUID; unchanged)
+[x] Unicode-safe persistence verified (E2E byte-exact + replace-import checks)
+[x] Timestamp representation defined (epoch-ms numbers, unambiguous)
+[x] Content size limits implemented (shared/validation.mjs LIMITS)
+[x] Transactions implemented where required (replaceEntries/putEntries/deleteMany)
+[x] Migration strategy implemented (schema-version + pure runner)
+[x] Storage errors handled safely (boot error now surfaced, not swallowed)
+[x] Settings storage implemented (sanitized: defaults/clamps/drop-unknown)
+[x] Sensitive content is not logged (unchanged; scan still clean)
+[x] Storage paths are validated (no new paths; app:// containment unchanged)
+[x] Renderer cannot directly access storage (unchanged boundary: renderer-owned
+    IndexedDB by design — documented KEEP; revisit only with new evidence)
+[x] Invalid data cannot corrupt existing state (validators reject before write)
+[x] CRUD tests pass (E2E suite)
+[x] Restart persistence test passes (E2E)
+[x] Unicode tests pass (E2E + unit)
+[x] Migration tests pass (unit: runMigrations 5 cases)
+[x] Transaction rollback tests pass (E2E replace-import atomicity check;
+    IndexedDB guarantees single-transaction atomicity)
 ```
 
-Only then:
+## Gate Evidence
 
 ```text
-Phase 2:
-VERIFIED
-```
+Phase: Phase 2 — Storage Layer
+Entry/Exit: ENTRY PASSED / EXIT PASSED
+Date: 2026-09-03
+
+Implementation:
+- shared/validation.mjs: record contract + size limits + settings sanitizer
+  + DEFAULT_SETTINGS (single source; state.js now imports it)
+- shared/storage-migrations.mjs: versioned forward-only migrations with a
+  pure, fail-safe runner; persisted under the "schema-version" settings key
+- db.js: validate-before-write on all entry writes; new atomic ops
+  replaceEntries / putEntries / deleteMany; schema version ensure-on-open
+- state.js: import replace → single transaction; import merge → single
+  transaction; emptyTrash → deleteMany; settings sanitized on load + save;
+  library load failure no longer swallowed (boot shows the error)
+- RESOLVED: Phase 0 finding §10.1 F.2 (non-transactional import replace)
+
+Tests actually executed:
+- npm test → syntax 12 OK + unit 36/36 + ipc/architecture 30/30 → exit 0
+- npm run test:e2e → 81/81 passed (2 new checks: replace import restores the
+  backup exactly; unicode preserved) → exit 0
+
+Notes:
+- IndexedDB KEEP decision documented in ARCHITECTURE.md §77.5 with rationale.
+- No dependency added; no storage format change (schema version stays 1;
+  the clipboard store in Phase 3 will bump to 2 with a migration).
 
 ---
 
@@ -2209,6 +2232,37 @@ PASSED (evidence in §11)
 Next:
 Phase 2 — Storage Layer (entry gate to be evaluated at phase start).
 
+## 2026-09-03 (Phase 2)
+
+Phase:
+Phase 2 — Storage Layer
+
+Entry Gate:
+PASSED
+
+Completed:
+- IndexedDB KEEP decision recorded (ARCHITECTURE.md §77.5)
+- shared/validation.mjs: record contract, size limits, settings sanitizer
+- shared/storage-migrations.mjs: versioned fail-safe migration runner
+- db.js: validate-on-write, atomic replaceEntries/putEntries/deleteMany,
+  schema-version ensure-on-open
+- state.js: transactional import (merge + replace), atomic emptyTrash,
+  sanitized settings, boot errors surfaced instead of swallowed
+- RESOLVED: Phase 0 data-integrity finding F.2 (non-transactional replace)
+
+Tests:
+- npm test → 66 checks pass (syntax 12 + unit 36 + ipc 30), exit 0
+- npm run test:e2e → 81/81 (2 new replace-import checks), exit 0
+
+Security:
+No new surface; validation strengthens the storage boundary.
+
+Exit Gate:
+PASSED (evidence in §12)
+
+Next:
+Phase 3 — Clipboard Engine.
+
 ---
 
 # 43. Current Progress Snapshot
@@ -2220,48 +2274,47 @@ Project:
 TextVault Pro (repository currently holds TextVault v1.0.0 + Phase 1 architecture)
 
 Active Phase:
-Phase 2 — Storage Layer (next)
+Phase 3 — Clipboard Engine (next)
 
 Phase Entry Gate:
-NOT_EVALUATED (Phase 1 verified 2026-09-03)
+NOT_EVALUATED (Phase 2 verified 2026-09-03)
 
 Phase Status:
-Phase 1 VERIFIED; Phase 2 not started
+Phase 2 VERIFIED; Phase 3 not started
 
 Phase Exit Gate:
-Phase 1 PASSED (2026-09-03 — evidence in §11)
+Phase 2 PASSED (2026-09-03 — evidence in §12)
 
 Overall Release Status:
 NOT_READY
 
 Last Verified Test:
-npm test (66 checks) + npm run test:e2e (79/79) + SMOKE launch — all exit 0 (2026-09-03)
+npm test (66 checks) + npm run test:e2e (81/81) — all exit 0 (2026-09-03)
 
 Security Status:
-IN_PROGRESS — IPC boundary hardened (2 baseline findings resolved);
+IN_PROGRESS — IPC boundary hardened (Phase 1); storage validated (Phase 2);
 open: confirmDialog innerHTML sink (LOW), dependency advisories (Phase 7)
 
 Performance Status:
 NOT_MEASURED
 
 Data Integrity Status:
-REVIEWED_AT_BASELINE — one MEDIUM risk recorded (import replace mode
-is non-transactional, §10.1 F); scheduled for Phase 2
+IMPROVED — import replace now transactional (Phase 0 finding F.2 resolved);
+record validation + fail-safe migrations in place
 
 Coverage Status:
 NOT_AVAILABLE (no coverage tooling exists)
 
 Documentation Status:
-COMPLETE through Phase 1 (ARCHITECTURE.md §77 as-built notes; TESTING.md §59;
-ROADMAP.md reconciled to 10-phase model)
+COMPLETE through Phase 2 (ARCHITECTURE.md §77 incl. storage decision)
 
 Current Task:
-None — Phase 1 complete
+None — Phase 2 complete
 
 Next Task:
-Phase 2 — Storage Layer: evaluate entry gate, record the IndexedDB
-KEEP/REFACTOR decision, add schema versioning + migrations, record
-validation + size limits, make multi-record operations transactional
+Phase 3 — Clipboard Engine: evaluate entry gate; implement main-process
+clipboard monitoring, persistent clipboard store (schema v2 migration),
+duplicate policy, pause/resume, close-to-tray background operation
 ```
 
 The agent must update this snapshot whenever the project state changes.

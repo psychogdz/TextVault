@@ -1,6 +1,7 @@
 // Central application state: entry cache, settings, persistence, pub/sub.
 import { db } from './core/db.js';
 import { createEntry, applyEdits, displayTitle, reviveEntry, deriveTitle } from './core/entry.js';
+import { sanitizeSettings, DEFAULT_SETTINGS } from '../../shared/validation.mjs';
 import { detectBaseDir } from '../../shared/bidi.mjs';
 
 const listeners = new Map();
@@ -10,16 +11,7 @@ export const App = {
   ready: false,
   appInfo: null,
 
-  settings: {
-    theme: 'dark',             // 'light' | 'dark' | 'system'
-    accent: 'violet',
-    sort: 'modified-desc',
-    editorFontSize: 14.5,
-    editorFont: 'sans',        // 'sans' | 'mono'
-    editorWrap: true,
-    autoSave: true,
-    autoSaveDelay: 800,
-  },
+  settings: { ...DEFAULT_SETTINGS },
 
   // navigation
   view: 'dashboard',           // dashboard | editor | trash | settings
@@ -41,16 +33,19 @@ export const App = {
 
   /* ------------------------- lifecycle ------------------------- */
   async init() {
+    // Entry loading must not be swallowed: if the database is unavailable the
+    // caller shows a visible error instead of presenting an empty vault that
+    // could later be overwritten (no silent data loss).
     const [entries, storedSettings, appInfo] = await Promise.all([
-      db.listEntries().catch((err) => {
-        console.error('Failed to load library:', err);
-        return [];
-      }),
-      db.getSetting('settings', {}),
+      db.listEntries(),
+      db.getSetting('settings', {}).then(
+        (s) => s,
+        (err) => { console.error('Failed to load settings:', err); return {}; },
+      ),
       window.tv.appInfo().catch(() => null),
     ]);
     for (const e of entries) this.entries.set(e.id, e);
-    Object.assign(this.settings, storedSettings || {});
+    this.settings = sanitizeSettings(storedSettings);
     this.appInfo = appInfo;
     this.ready = true;
     this.emit('loaded');
@@ -58,7 +53,7 @@ export const App = {
 
   async persistSettings() {
     try {
-      await db.setSetting('settings', this.settings);
+      await db.setSetting('settings', sanitizeSettings(this.settings));
     } catch (err) {
       console.error('Failed to persist settings:', err);
     }
@@ -141,10 +136,9 @@ export const App = {
 
   async emptyTrash() {
     const ids = this.trashedEntries().map((e) => e.id);
-    for (const id of ids) {
-      await db.deleteEntry(id);
-      this.entries.delete(id);
-    }
+    // one transaction: all deletions or none
+    await db.deleteMany(ids);
+    for (const id of ids) this.entries.delete(id);
     this.emit('entries-changed');
     return ids.length;
   },
@@ -178,6 +172,8 @@ export const App = {
 
   async importLibrary(rawEntries, { mode }) {
     // mode: 'merge' (keep both, new ids on conflict) | 'replace' (wipe current)
+    // Both modes write in a single storage transaction; the in-memory cache
+    // is only updated after the transaction commits.
     let revived = [];
     for (const raw of rawEntries) {
       const e = await reviveEntry(raw);
@@ -186,13 +182,13 @@ export const App = {
     if (!revived.length) return { imported: 0 };
 
     if (mode === 'replace') {
-      for (const id of [...this.entries.keys()]) await db.deleteEntry(id);
+      await db.replaceEntries(revived);
       this.entries.clear();
       for (const e of revived) this.entries.set(e.id, e);
-      await db.putEntries(revived);
     } else {
       const byHash = new Map([...this.entries.values()].map((e) => [e.contentHash + '|' + (e.deletedAt ? 'd' : 'l'), e]));
       const existingIds = new Set(this.entries.keys());
+      const pending = [];
       for (let e of revived) {
         if (existingIds.has(e.id)) {
           e = await reviveEntry(e, { newId: true });
@@ -201,9 +197,10 @@ export const App = {
         const key = e.contentHash + '|' + (e.deletedAt ? 'd' : 'l');
         if (byHash.has(key)) continue;
         byHash.set(key, e);
-        this.entries.set(e.id, e);
-        await db.putEntry(e);
+        pending.push(e);
       }
+      if (pending.length) await db.putEntries(pending);
+      for (const e of pending) this.entries.set(e.id, e);
     }
     this.emit('entries-changed');
     return { imported: revived.length };

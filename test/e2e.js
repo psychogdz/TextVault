@@ -433,6 +433,7 @@ async function main() {
   check('separate TXT files written', r6.ok && sepFiles.length >= 3, sepFiles.join(', '));
 
   /* ---------- backup / import round-trip ---------- */
+  let backupEntries = null; // kept for the replace-import regression at the end
   const backup = await win.webContents.executeJavaScript(
     `window.tv.backupExport({ entries: [...window.__TV_TEST__.App.entries.values()] })`, true);
   check('backup export ok', backup.ok, backup.error || backup.path);
@@ -445,6 +446,7 @@ async function main() {
       `window.tv.backupImport({ pathOverride: ${JSON.stringify(backup.path)} })`, true);
     check('backup import read ok', importRes.ok && importRes.count === 256, `${importRes.count} entries in backup`);
     if (importRes.ok) {
+      backupEntries = importRes.entries;
       await js(`(async () => window.__TV_TEST__.App.importLibrary(${JSON.stringify(importRes.entries)}, { mode: 'merge' }))()`);
       const afterMerge = await js(`window.__TV_TEST__.App.liveEntries().length`);
       check('merge import skips exact duplicates', afterMerge === 256, `${afterMerge} after merge`);
@@ -624,6 +626,26 @@ async function main() {
 
   win.setBounds({ x: 80, y: 40, width: 1440, height: 920 });
   await sleep(500);
+
+  /* ---------- replace import (atomic replace path) ---------- */
+  // Re-import the full backup in replace mode as the final state mutation:
+  // the library must end up with EXACTLY the backup's entries — exercising
+  // the single-transaction replace (no half-replaced state, no leftovers).
+  if (backupEntries) {
+    const replaceRes = await js(`(async () => {
+      const { App } = window.__TV_TEST__;
+      const out = await App.importLibrary(${JSON.stringify(backupEntries)}, { mode: 'replace' });
+      return { imported: out.imported, live: App.liveEntries().length, total: App.entries.size };
+    })()`);
+    const backupLive = backupEntries.filter((e) => !e.deletedAt).length;
+    check('replace import restores the backup exactly',
+      replaceRes.total === backupEntries.length && replaceRes.live === backupLive,
+      `live=${replaceRes.live}/${backupLive} total=${replaceRes.total}/${backupEntries.length}`);
+    check('replace import preserves unicode content',
+      await js(`!!window.__TV_TEST__.App.liveEntries().find((e) => e.content.includes('این یک prompt'))`));
+  } else {
+    check('replace import restores the backup exactly', false, 'backup import was unavailable');
+  }
 
   finish();
 }

@@ -2283,6 +2283,34 @@ registry/preload sync is enforced by tests, not by convention.
 
 ## 77.5 Storage note
 
-User data remains in the renderer-side IndexedDB database (`textvault` v1).
-The KEEP/REFACTOR decision and any migration work belong to the storage phase
-and will be recorded in `ARCHITECTURE.md` and `PROGRESS.md` at that time.
+User data remains in the renderer-side IndexedDB database (`textvault`).
+**Decision (Phase 2, 2026-09-03): KEEP** the renderer-side IndexedDB storage —
+audit outcome per §15 of this document:
+
+* Reliability/transactions: IndexedDB is transactional and LevelDB-backed;
+  the E2E suite proves restart persistence.
+* Performance: virtualized rendering keeps the DOM bounded; full-content
+  search is chunked. No measured bottleneck justifies a rewrite.
+* Testability: existing suites already cover persistence end-to-end.
+* No demonstrated technical reason to REPLACE; the gaps were structural and
+  are now addressed in place (see below).
+
+Storage hardening added in Phase 2:
+
+1. **Record validation** — every write to the `entries` store passes
+   `shared/validation.mjs → validateEntryRecord` (shape, id, size limits:
+   5 MB content, 300-char titles, 24 tags × 64 chars). Invalid records are
+   rejected loudly, never persisted partially.
+2. **Schema versioning** — the version is persisted under the
+   `schema-version` settings key; `shared/storage-migrations.mjs` holds
+   forward-only, deterministic migrations and a pure, unit-tested runner
+   that fails safe (a failing migration preserves records and reports).
+3. **Transactional multi-record operations** — `replaceEntries` (import
+   replace: clear + put in ONE transaction), `putEntries` (import merge),
+   and `deleteMany` (empty trash) are atomic. The previously non-transactional
+   replace-import data-integrity risk (PROGRESS.md §10.1 F) is resolved.
+4. **Settings hardening** — stored settings are sanitized through
+   `sanitizeSettings` (defaults repaired, ranges clamped, unknown keys
+   dropped); a corrupted settings record can never break boot.
+5. **Failure surfacing** — a failure to load the library on boot is now a
+   visible error (toast) instead of a silently emptied vault.

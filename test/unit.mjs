@@ -12,6 +12,8 @@ const { detectBaseDir, containsRtl, rtlDominance } = await imp('shared/bidi.mjs'
 const { textStats, charCount, lineCount, wordCount } = await imp('shared/stats.mjs');
 const { sanitizeFilename, uniqueFilename } = await imp('shared/filename.mjs');
 const { buildPreview, matchIndices, snippetAround, escapeHtml } = await imp('shared/snippets.mjs');
+const { validateEntryRecord, sanitizeSettings, DEFAULT_SETTINGS, LIMITS } = await imp('shared/validation.mjs');
+const { runMigrations, MIGRATIONS } = await imp('shared/storage-migrations.mjs');
 const { buildTxt } = await imp('electron/exporters/txt.js');
 const { buildDocxBuffer } = await imp('electron/exporters/docx-builder.mjs');
 const { buildPdfHtml } = await imp('electron/exporters/pdf-html.mjs');
@@ -194,6 +196,106 @@ test('keeps every line of an 850-line document', () => {
   const lines = long.content.split('\n').length;
   const pCount = (html.match(/<p>/g) || []).length;
   assert.equal(pCount, lines, `expected ${lines} <p>, got ${pCount}`);
+});
+
+console.log('\nstorage validation:');
+test('accepts a well-formed entry record', () => {
+  const rec = { id: 'abc-123', title: 't', content: 'hello', tags: ['a'], createdAt: 1, updatedAt: 2, openedAt: null, deletedAt: null };
+  assert.equal(validateEntryRecord(rec).ok, true);
+});
+test('rejects records without a usable id or content', () => {
+  assert.equal(validateEntryRecord({ content: 'x' }).ok, false);
+  assert.equal(validateEntryRecord({ id: '', content: 'x' }).ok, false);
+  assert.equal(validateEntryRecord({ id: 'a' }).ok, false);
+  assert.equal(validateEntryRecord({ id: 'a', content: 7 }).ok, false);
+  assert.equal(validateEntryRecord(null).ok, false);
+  assert.equal(validateEntryRecord('x').ok, false);
+});
+test('enforces content/title/tag/description limits', () => {
+  assert.equal(validateEntryRecord({ id: 'a', content: 'x'.repeat(LIMITS.ENTRY_CONTENT + 1) }).ok, false);
+  assert.equal(validateEntryRecord({ id: 'a', content: 'x', title: 't'.repeat(LIMITS.ENTRY_TITLE + 1) }).ok, false);
+  assert.equal(validateEntryRecord({ id: 'a', content: 'x', tags: Array.from({ length: LIMITS.ENTRY_TAGS + 1 }, () => 't') }).ok, false);
+  assert.equal(validateEntryRecord({ id: 'a', content: 'x', tags: ['t'.repeat(LIMITS.TAG_LENGTH + 1)] }).ok, false);
+  assert.equal(validateEntryRecord({ id: 'a', content: 'x', description: 'd'.repeat(LIMITS.ENTRY_DESCRIPTION + 1) }).ok, false);
+});
+test('rejects non-numeric timestamps', () => {
+  assert.equal(validateEntryRecord({ id: 'a', content: 'x', updatedAt: 'yesterday' }).ok, false);
+  assert.equal(validateEntryRecord({ id: 'a', content: 'x', deletedAt: 'nope' }).ok, false);
+  assert.equal(validateEntryRecord({ id: 'a', content: 'x', openedAt: null }).ok, true);
+});
+
+console.log('\nstorage settings sanitize:');
+test('keeps defaults for empty/corrupted input', () => {
+  assert.deepEqual(sanitizeSettings(null), DEFAULT_SETTINGS);
+  assert.deepEqual(sanitizeSettings('junk'), DEFAULT_SETTINGS);
+  assert.deepEqual(sanitizeSettings({ theme: 42, sort: 'hack', editorFontSize: 'x' }), DEFAULT_SETTINGS);
+});
+test('keeps valid values and clamps numeric ranges', () => {
+  const s = sanitizeSettings({ theme: 'light', accent: 'teal', sort: 'title-asc', editorFont: 'mono', editorWrap: false, autoSave: false, editorFontSize: 99, autoSaveDelay: 1 });
+  assert.equal(s.theme, 'light');
+  assert.equal(s.accent, 'teal');
+  assert.equal(s.sort, 'title-asc');
+  assert.equal(s.editorFont, 'mono');
+  assert.equal(s.editorWrap, false);
+  assert.equal(s.autoSave, false);
+  assert.equal(s.editorFontSize, 22); // clamped to max
+  assert.equal(s.autoSaveDelay, 300); // clamped to min
+});
+test('drops unknown keys instead of persisting them', () => {
+  const s = sanitizeSettings({ ...DEFAULT_SETTINGS, evil: 'x', theme: 'dark' });
+  assert.equal('evil' in s, false);
+});
+
+console.log('\nstorage migrations:');
+test('identity run: version 1 → 1 changes nothing', () => {
+  const recs = [{ id: 'a', content: 'x' }, { id: 'b', content: 'y' }];
+  const res = runMigrations(recs, 1);
+  assert.deepEqual(res.records, recs);
+  assert.equal(res.migrated, 0);
+  assert.equal(res.errors.length, 0);
+});
+test('runs pending migrations in order and counts changes', () => {
+  const saved = MIGRATIONS[2];
+  MIGRATIONS[2] = (rec) => ({ ...rec, migratedFlag: true });
+  try {
+    const res = runMigrations([{ id: 'a', content: 'x' }], 1, 2);
+    assert.equal(res.records[0].migratedFlag, true);
+    assert.equal(res.migrated, 1);
+    assert.equal(res.version, 2);
+  } finally {
+    if (saved) MIGRATIONS[2] = saved; else delete MIGRATIONS[2];
+  }
+});
+test('a throwing migration fails safe: records preserved, error reported', () => {
+  const saved = MIGRATIONS[2];
+  MIGRATIONS[2] = () => { throw new Error('boom'); };
+  try {
+    const recs = [{ id: 'a', content: 'x' }];
+    const res = runMigrations(recs, 1, 2);
+    assert.deepEqual(res.records, recs);
+    assert.equal(res.errors.length, 1);
+    assert.match(res.errors[0], /boom/);
+  } finally {
+    if (saved) MIGRATIONS[2] = saved; else delete MIGRATIONS[2];
+  }
+});
+test('a migration returning the same record counts as skipped, never dropped', () => {
+  const saved = MIGRATIONS[2];
+  MIGRATIONS[2] = (rec) => rec;
+  try {
+    const recs = [{ id: 'keep-me', content: 'x' }];
+    const res = runMigrations(recs, 1, 2);
+    assert.equal(res.records.length, 1);
+    assert.equal(res.records[0].id, 'keep-me');
+    assert.equal(res.skipped, 1);
+  } finally {
+    if (saved) MIGRATIONS[2] = saved; else delete MIGRATIONS[2];
+  }
+});
+test('non-array input fails safe', () => {
+  const res = runMigrations(null, 1);
+  assert.deepEqual(res.records, []);
+  assert.equal(res.errors.length, 1);
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
