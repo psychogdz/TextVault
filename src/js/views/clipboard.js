@@ -13,6 +13,7 @@ import { toast, confirmDialog, timeAgo, formatNumber } from '../ui/components.js
 import { escapeHtml } from '../../../shared/snippets.mjs';
 import { detectContentType } from '../../../shared/detect.mjs';
 import { parseQuery, matchClipboardItem } from '../../../shared/query.mjs';
+import { t, itemsKey } from '../../../shared/i18n.mjs';
 import { collectionList } from '../core/snippets.js';
 
 const els = {};
@@ -33,11 +34,11 @@ export function initClipboardView() {
     const st = getMonitorState();
     const next = !(st.paused || !st.enabled);
     if (!st.enabled) {
-      toast('Clipboard monitoring is off — enable it in Settings.', { type: 'info' });
+      toast(t('set.clip.monitor') + ' — ' + t('nav.settings'), { type: 'info' });
       return;
     }
     await setPaused(!st.paused);
-    toast(st.paused ? 'Clipboard monitoring resumed' : 'Clipboard monitoring paused', { type: 'info' });
+    toast(st.paused ? t('clip.monitoring.active') : t('clip.monitoring.paused'), { type: 'info' });
     void next;
   });
 
@@ -45,14 +46,14 @@ export function initClipboardView() {
     const n = clipboardCount();
     if (!n) return;
     const ok = await confirmDialog({
-      title: 'Clear clipboard history?',
-      message: `This removes ${formatNumber(n)} ${n === 1 ? 'item' : 'items'}. Pinned items are kept.`,
-      confirmText: 'Clear History',
+      title: t('clip.clear.title'),
+      message: t('clip.clear.body', { n: formatNumber(n), items: itemsKey(n) }),
+      confirmText: t('clip.clear'),
       danger: true,
     });
     if (!ok) return;
     await clearClipboardHistory();
-    toast('Clipboard history cleared');
+    toast(t('clip.cleared'));
   });
 
   els.search.addEventListener('input', () => {
@@ -68,9 +69,9 @@ function refreshStatus() {
   const st = getMonitorState();
   els.status.dataset.state = !st.enabled ? 'off' : st.paused ? 'paused' : 'active';
   els.statusText.textContent = !st.enabled
-    ? 'Monitoring off'
-    : st.paused ? 'Monitoring paused' : 'Monitoring active';
-  els.pauseBtn.textContent = st.paused ? 'Resume' : 'Pause';
+    ? t('clip.monitoring.off')
+    : st.paused ? t('clip.monitoring.paused') : t('clip.monitoring.active');
+  els.pauseBtn.textContent = st.paused ? t('clip.resume') : t('clip.pause');
 }
 
 
@@ -99,10 +100,10 @@ export function refresh() {
     const q = query.trim();
     els.empty.innerHTML = `
       <div class="empty-art">${emptyArt(q ? 'search' : 'clipboard')}</div>
-      <h3>${q ? 'No matches' : 'No clipboard history yet'}</h3>
+      <h3>${q ? t('clip.noMatches') : t('clip.empty')}</h3>
       <p>${q
-        ? 'Try a different search or clear the filter.'
-        : 'Copy anything, anywhere on your PC — TextVault saves it here automatically.'}</p>`;
+        ? t('clip.tryDifferent')
+        : t('clip.empty.body')}</p>`;
     els.empty.classList.remove('hidden');
     return;
   }
@@ -123,7 +124,7 @@ function renderRow(item) {
 
   const masked = item.isSensitive && !row.dataset.revealed;
   const preview = masked
-    ? '<span class="clip-masked">Sensitive content hidden — click to reveal</span>'
+    ? `<span class="clip-masked">${escapeHtml(t('clip.masked'))}</span>`
     : escapeHtml(item.preview || '');
   const type = item.contentType && item.contentType !== 'text'
     ? item.contentType : detectContentType(item.content || '');
@@ -142,12 +143,12 @@ function renderRow(item) {
       ${type !== 'text' ? `<span class="meta-dot"></span><span class="clip-type">${type}</span>` : ''}
     </div>
     <div class="clip-actions">
-      ${type === 'url' ? `<button class="icon-btn icon-btn-sm" data-act="open" title="Open URL">${icon('external', 14)}</button>` : ''}
+      ${type === 'url' ? `<button class="icon-btn icon-btn-sm" data-act="open" title="${t('open.url')}">${icon('external', 14)}</button>` : ''}
       <button class="icon-btn icon-btn-sm" data-act="copy" title="Copy">${icon('copy', 14)}</button>
-      <button class="icon-btn icon-btn-sm ${item.isPinned ? 'active' : ''}" data-act="pin" title="${item.isPinned ? 'Unpin' : 'Pin'}">${icon('pin', 14)}</button>
-      <button class="icon-btn icon-btn-sm ${item.isFavorite ? 'fav-on' : ''}" data-act="fav" title="${item.isFavorite ? 'Remove from favorites' : 'Favorite'}">${icon(item.isFavorite ? 'star-filled' : 'star', 14)}</button>
+      <button class="icon-btn icon-btn-sm ${item.isPinned ? 'active' : ''}" data-act="pin" title="${item.isPinned ? t('unpin') : t('pin')}">${icon('pin', 14)}</button>
+      <button class="icon-btn icon-btn-sm ${item.isFavorite ? 'fav-on' : ''}" data-act="fav" title="${item.isFavorite ? t('unfavorite') : t('favorite')}">${icon(item.isFavorite ? 'star-filled' : 'star', 14)}</button>
       <button class="icon-btn icon-btn-sm" data-act="coll" title="Collections">${icon('layers', 14)}</button>
-      <button class="icon-btn icon-btn-sm" data-act="del" title="Delete">${icon('trash', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="del" title="${t('delete')}">${icon('trash', 14)}</button>
     </div>`;
 
   const openBtn = row.querySelector('[data-act="open"]');
@@ -175,7 +176,7 @@ function renderRow(item) {
   row.querySelector('[data-act="copy"]').addEventListener('click', async (e) => {
     e.stopPropagation();
     await copyClipboardItem(item.id);
-    toast('Copied to clipboard');
+    toast(t('clip.copied'));
   });
   row.querySelector('[data-act="pin"]').addEventListener('click', async (e) => {
     e.stopPropagation();
@@ -193,10 +194,10 @@ function renderRow(item) {
   row.querySelector('[data-act="del"]').addEventListener('click', async (e) => {
     e.stopPropagation();
     await deleteClipboardItem(item.id);
-    toast('Removed from history', {
+    toast(t('clip.removed'), {
       type: 'info',
       duration: 4000,
-      action: { label: 'Undo', onClick: () => restoreClipboardItem(item).then(() => toast('Restored')) },
+      action: { label: t('clip.undo'), onClick: () => restoreClipboardItem(item).then(() => toast(t('clip.restored'))) },
     });
   });
 

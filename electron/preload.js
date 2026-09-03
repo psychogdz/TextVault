@@ -50,4 +50,9 @@ contextBridge.exposeInMainWorld('tv', {
 
   // Explicit user-initiated external URL opening (Phase 4)
   openExternal: (url) => ipcRenderer.invoke('tv:open-external', url),
+
+  // Quick Clipboard + i18n (Phase 6)
+  quickHide: () => ipcRenderer.invoke('tv:quick-hide'),
+  setShortcut: (accel) => ipcRenderer.invoke('tv:set-shortcut', accel),
+  setLanguage: (lang) => ipcRenderer.invoke('tv:set-language', lang),
 });

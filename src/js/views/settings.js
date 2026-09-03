@@ -1,9 +1,11 @@
-// Settings: appearance, editor defaults, clipboard engine, library, shortcuts, about.
+// Settings: appearance, language, editor defaults, clipboard engine, library, shortcuts, about.
 import { App } from '../state.js';
 import { icon } from '../ui/icons.js';
 import { toast, toastError, confirmDialog, formatNumber } from '../ui/components.js';
 import { applyEditorPrefs } from './editor.js';
 import { setMonitorEnabled } from '../core/clipboard.js';
+import { t } from '../../../shared/i18n.mjs';
+import { LANGUAGES } from '../../../shared/validation.mjs';
 
 const ACCENTS = [
   { id: 'violet', color: '#8b7cf8' },
@@ -52,7 +54,19 @@ export function initSettings() {
       </div>
 
       <div class="settings-card">
-        <h3>Editor</h3>
+        <h3 data-i18n="set.language">Language</h3>
+        <div class="settings-sub" data-i18n="set.language.sub">Interface language and direction.</div>
+        <div class="setting-row">
+          <div><div class="sr-label" data-i18n="set.language">Language</div></div>
+          <div class="theme-picker" id="set-language">
+            <button class="theme-btn" data-lang-opt="en">English</button>
+            <button class="theme-btn" data-lang-opt="fa">فارسی</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <h3 data-i18n="set.editor">Editor</h3>
         <div class="settings-sub">Defaults used when writing and viewing texts.</div>
         <div class="setting-row">
           <div><div class="sr-label">Font size</div><div class="sr-desc">Editor text size</div></div>
@@ -113,7 +127,14 @@ export function initSettings() {
           </div>
         </div>
         <div class="setting-row">
-          <div><div class="sr-label">Closing the window</div><div class="sr-desc">What happens when you close the main window</div></div>
+          <div><div class="sr-label" data-i18n="set.clip.shortcut">Quick Clipboard shortcut</div><div class="sr-desc" data-i18n="set.clip.shortcut.d">Global shortcut to open quick clipboard</div></div>
+          <div class="shortcut-set">
+            <input class="prompt-input" id="set-clip-shortcut" style="width:180px" autocomplete="off" spellcheck="false">
+            <button class="btn btn-ghost btn-sm" id="set-clip-shortcut-save">Save</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div><div class="sr-label" data-i18n="set.close">Closing the window</div><div class="sr-desc" data-i18n="set.close.d">What happens when you close the main window</div></div>
           <div class="select-wrap">
             <select id="set-close-behavior" aria-label="Close behavior">
               <option value="ask">Ask every time</option>
@@ -179,7 +200,10 @@ export function initSettings() {
     clipMonitor: document.getElementById('set-clip-monitor'),
     clipDup: document.getElementById('set-clip-dup'),
     clipMax: document.getElementById('set-clip-max'),
+    clipShortcut: document.getElementById('set-clip-shortcut'),
+    clipShortcutSave: document.getElementById('set-clip-shortcut-save'),
     closeBehavior: document.getElementById('set-close-behavior'),
+    langBtns: view.querySelectorAll('[data-lang-opt]'),
     stats: document.getElementById('set-stats'),
     dataPath: document.getElementById('set-datapath'),
     version: document.getElementById('set-version'),
@@ -255,6 +279,27 @@ export function initSettings() {
   els.closeBehavior.addEventListener('change', () => {
     App.settings.closeBehavior = els.closeBehavior.value;
     App.persistSettings();
+  });
+
+  els.langBtns.forEach((btn) => btn.addEventListener('click', () => {
+    if (App.settings.language === btn.dataset.langOpt) return;
+    App.settings.language = btn.dataset.langOpt;
+    App.persistSettings();
+    App.applyLanguage();
+    render();
+  }));
+
+  els.clipShortcutSave.addEventListener('click', async () => {
+    const accel = els.clipShortcut.value.trim();
+    const res = await window.tv.setShortcut(accel);
+    if (!res.ok) { toastError(res.error || 'Invalid shortcut.'); return; }
+    if (!res.registered) {
+      toastError('Shortcut could not be registered — it may be in use by another app.');
+      return;
+    }
+    App.settings.clipboard.quickShortcut = accel;
+    App.persistSettings();
+    toast('Shortcut updated');
   });
 
   document.getElementById('set-openpath').addEventListener('click', () => {
@@ -355,7 +400,9 @@ export function render() {
   els.clipMonitor.classList.toggle('on', App.settings.clipboard?.monitorEnabled !== false);
   els.clipDup.value = App.settings.clipboard?.duplicatePolicy || 'top';
   els.clipMax.value = String(App.settings.clipboard?.maxItems || 1000);
+  els.clipShortcut.value = App.settings.clipboard?.quickShortcut || 'Control+Shift+V';
   els.closeBehavior.value = App.settings.closeBehavior || 'ask';
+  els.langBtns.forEach((b) => b.classList.toggle('active', App.settings.language === b.dataset.langOpt));
 
   const live = App.liveEntries();
   const trashed = App.trashedEntries();

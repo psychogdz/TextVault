@@ -18,7 +18,37 @@ const { createWindow, focusMainWindow } = require('./services/window');
 const { buildMenu } = require('./services/menu');
 const { registerIpcHandlers, lifecycle } = require('./ipc/register');
 const clipboardService = require('./services/clipboard-service');
-const { createTray } = require('./services/tray');
+const { createTray, refreshTray } = require('./services/tray');
+const quickWindow = require('./services/quick-window');
+
+// Current UI language for main-process surfaces (tray). The renderer syncs
+// this via tv:set-language; defaults to English until it boots.
+let mainLang = 'en';
+
+async function trayLabels() {
+  // main.js lives one level below the repo root → ../shared
+  const { setLanguage, t } = await import('../shared/i18n.mjs');
+  setLanguage(mainLang);
+  return {
+    open: t('tray.open'),
+    settings: t('tray.settings'),
+    pause: t('tray.pause'),
+    resume: t('tray.resume'),
+    off: t('tray.off'),
+    quit: t('tray.quit'),
+    active: t('clip.monitoring.active'),
+    paused: t('clip.monitoring.paused'),
+  };
+}
+
+function setMainLanguage(lang) {
+  mainLang = lang === 'fa' ? 'fa' : 'en';
+  refreshTray(clipboardService.getState());
+}
+
+function currentLanguage() {
+  return mainLang;
+}
 
 // Test/verification hook: redirect userData (must run before app is ready).
 if (process.env.TEXTVAULT_USER_DATA) {
@@ -43,7 +73,7 @@ app.whenReady().then(() => {
   registerAppProtocol();
   buildMenu();
   createWindow();
-  registerIpcHandlers();
+  registerIpcHandlers({ setMainLanguage });
   lifecycle();
 
   // Clipboard engine: start monitoring immediately (the renderer corrects
@@ -59,7 +89,11 @@ app.whenReady().then(() => {
     },
     togglePause: () => clipboardService.setPaused(!clipboardService.getState().paused),
     quit: () => app.quit(),
-  });
+  }, trayLabels);
+
+  // Quick Clipboard: register the default global shortcut immediately so it
+  // works even before the renderer syncs the user's configured accelerator.
+  quickWindow.registerQuickShortcut('Control+Shift+V');
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -72,4 +106,5 @@ app.on('window-all-closed', () => {
 
 app.on('quit', () => {
   clipboardService.stopMonitor();
+  quickWindow.releaseOnQuit();
 });

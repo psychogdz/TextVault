@@ -303,3 +303,50 @@ mark {
   border-radius: 3px;
   padding: 0 1px;
 }
+
+/* ======================= Command palette (Phase 6) ======================= */
+
+.palette-backdrop { align-items: flex-start; padding-top: 12vh; }
+.palette {
+  width: min(560px, 92vw);
+  background: var(--surface-1, var(--surface-2, #151823));
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg, 14px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.palette-inputwrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.palette-inputwrap .search-icon { display: inline-flex; color: var(--text-3); }
+.palette-inputwrap input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 14px;
+}
+.palette-list { max-height: 320px; overflow-y: auto; padding: 6px; }
+.palette-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  color: var(--text);
+  font-size: 13.5px;
+  cursor: pointer;
+  text-align: start;
+}
+.palette-row.active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.palette-icon { display: inline-flex; color: var(--text-3); }
+.palette-label { flex: 1; }
+.palette-empty { padding: 18px; text-align: center; color: var(--text-3); font-size: 13px; }

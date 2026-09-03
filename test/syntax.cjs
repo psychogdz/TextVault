@@ -8,9 +8,12 @@ const os = require('node:os');
 const files = [
   'src/js/app.js',
   'src/js/state.js',
+  'src/js/commands.js',
+  'src/js/quick.js',
   'src/js/core/db.js',
   'src/js/core/entry.js',
   'src/js/core/clipboard.js',
+  'src/js/core/snippets.js',
   'src/js/search/search.js',
   'src/js/ui/icons.js',
   'src/js/ui/components.js',

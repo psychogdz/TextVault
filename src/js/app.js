@@ -20,6 +20,8 @@ import {
   clipboardItems, getMonitorState, clearClipboardHistory,
   seedPerfItems, searchPerf,
 } from './core/clipboard.js';
+import { initCommands, openCommandPalette } from './commands.js';
+import { setLanguage as setI18nLanguage, languageDirection, t as translate } from '../../shared/i18n.mjs';
 
 /* ---------------- view switching ---------------- */
 
@@ -178,6 +180,28 @@ function toggleTheme() {
   applyTheme();
 }
 
+/* ---------------- language / direction ---------------- */
+
+/** Apply the UI language: direction, translated chrome, main-process sync. */
+App.applyLanguage = () => {
+  const lang = App.settings.language === 'fa' ? 'fa' : 'en';
+  setI18nLanguage(lang);
+  document.documentElement.dir = languageDirection();
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    el.textContent = translate(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach((el) => {
+    el.placeholder = translate(el.dataset.i18nPh);
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+    el.title = translate(el.dataset.i18nTitle);
+  });
+  window.tv.setLanguage(lang).catch(() => {});
+  // re-render the active view so dynamic strings follow the language
+  if (App.ready) App.setView(App.view);
+};
+
 /* ---------------- keyboard shortcuts ---------------- */
 
 function wireShortcuts() {
@@ -249,6 +273,13 @@ function wireShortcuts() {
         && App.view === 'dashboard' && App.selectionMode && !isTypingTarget(e.target)) {
       e.preventDefault();
       dashboardSelectAll();
+      return;
+    }
+
+    // Ctrl+K — command palette
+    if (mod && !e.shiftKey && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      openCommandPalette();
       return;
     }
 
@@ -419,6 +450,11 @@ async function boot() {
     .catch(() => {});
   App.on('clipboard-changed', refreshSidebar);
   App.on('library-changed', refreshSidebar);
+
+  // i18n + global shortcut (Phase 6)
+  initCommands({ toggleTheme });
+  App.applyLanguage();
+  window.tv.setShortcut(App.settings.clipboard?.quickShortcut).catch(() => {});
 
   // programmatic test hook (only when launched with ?e2e=1 by the test runner)
   if (new URLSearchParams(location.search).get('e2e') === '1') {

@@ -23,6 +23,7 @@ const {
 const { detectContentType, actionsForType } = await imp('shared/detect.mjs');
 const { validateSnippetRecord, validateCollectionRecord } = await imp('shared/validation.mjs');
 const { parseQuery, matchClipboardItem, matchSnippet } = await imp('shared/query.mjs');
+const { STRINGS, t, setLanguage, languageDirection, itemsKey } = await imp('shared/i18n.mjs');
 const { buildTxt } = await imp('electron/exporters/txt.js');
 const { buildDocxBuffer } = await imp('electron/exporters/docx-builder.mjs');
 const { buildPdfHtml } = await imp('electron/exporters/pdf-html.mjs');
@@ -509,6 +510,38 @@ test('snippet matching covers title, content, tags, collections', () => {
   assert.equal(matchSnippet(s, parseQuery('collection:work'), new Map([['c1', 'Work']])), true);
   assert.equal(matchSnippet(s, parseQuery('type:url')), false);
   assert.equal(matchSnippet(s, parseQuery('is:pinned')), false);
+});
+
+console.log('\ni18n:');
+test('EN and FA tables define exactly the same keys', () => {
+  const en = Object.keys(STRINGS.en).sort();
+  const fa = Object.keys(STRINGS.fa).sort();
+  assert.deepEqual(fa, en);
+  assert.ok(en.length >= 100, `expected >=100 keys, got ${en.length}`);
+});
+test('t() translates, falls back to English, then to the key', () => {
+  setLanguage('fa');
+  assert.equal(t('nav.clipboard'), 'کلیپ‌بورد');
+  setLanguage('en');
+  assert.equal(t('nav.clipboard'), 'Clipboard');
+  assert.equal(t('key.that.does.not.exist'), 'key.that.does.not.exist');
+});
+test('t() substitutes {vars} and handles direction/plural helpers', () => {
+  setLanguage('en');
+  assert.equal(t('del.many.title', { n: 3, items: 'texts' }), 'Delete 3 texts?');
+  assert.equal(itemsKey(1), 'item');
+  assert.equal(itemsKey(5), 'items');
+  assert.equal(languageDirection('fa'), 'rtl');
+  assert.equal(languageDirection('en'), 'ltr');
+  setLanguage('fa');
+  assert.equal(itemsKey(1), 'items'); // FA: no plural suffix
+  setLanguage('en');
+});
+test('unknown language falls back to English', () => {
+  setLanguage('xx');
+  assert.equal(languageDirection(), 'ltr');
+  assert.equal(t('nav.trash'), 'Trash');
+  setLanguage('en');
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

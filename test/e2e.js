@@ -823,6 +823,92 @@ async function main() {
   const afterCleanup = await js(`window.__TV_TEST__.clipboard.count()`);
   check('perf dataset cleaned up', afterCleanup === 0, `${afterCleanup}`);
 
+  /* ---------- Phase 6: command palette ---------- */
+  await js(`(() => {
+    const e = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true, cancelable: true });
+    document.dispatchEvent(e);
+  })()`);
+  await sleep(300);
+  check('command palette opens with Ctrl+K', await js(`!!document.querySelector('.palette-backdrop')`));
+  const paletteRows = await js(`document.querySelectorAll('.palette-row').length`);
+  check('command palette lists registered commands', paletteRows >= 8, `${paletteRows} commands`);
+  await js(`(() => {
+    const e = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    document.dispatchEvent(e);
+  })()`);
+  await sleep(200);
+  check('command palette closes with Escape', !(await js(`!!document.querySelector('.palette-backdrop')`)));
+
+  /* ---------- Phase 6: language switch + RTL ---------- */
+  await js(`(() => {
+    const { App } = window.__TV_TEST__;
+    App.settings.language = 'fa';
+    App.persistSettings();
+    App.applyLanguage();
+  })()`);
+  await sleep(400);
+  const langState = await js(`({
+    dir: document.documentElement.dir,
+    lang: document.documentElement.lang,
+    navLabel: document.querySelector('[data-nav="clipboard"] .nav-label').textContent,
+  })`);
+  check('Persian language switches direction to RTL',
+    langState.dir === 'rtl' && langState.lang === 'fa', JSON.stringify(langState));
+  check('Persian chrome is translated', langState.navLabel === 'کلیپ‌بورد', langState.navLabel);
+  // restore English LTR for the remainder of the run
+  await js(`(() => {
+    const { App } = window.__TV_TEST__;
+    App.settings.language = 'en';
+    App.persistSettings();
+    App.applyLanguage();
+  })()`);
+  await sleep(300);
+  check('language restores to English LTR',
+    (await js(`document.documentElement.dir`)) === 'ltr'
+    && (await js(`document.querySelector('[data-nav="clipboard"] .nav-label').textContent`)) === 'Clipboard');
+
+  /* ---------- Phase 6: quick clipboard launcher ---------- */
+  // History was cleared after the perf run — give the quick window something
+  // to find (also proves monitoring is still active after everything above).
+  sysClipboard.writeText('QUICK_CLIP_TARGET متن 42');
+  await waitForClipboard(() => js(`window.__TV_TEST__.clipboard.has('QUICK_CLIP_TARGET')`));
+  const quickSvc = require(path.join(ROOT, 'electron/services/quick-window.js'));
+  quickSvc.toggleQuickWindow();
+  await sleep(900);
+  check('quick clipboard window opens', quickSvc.isQuickVisible());
+  const quickWin = quickSvc.getQuickWindow();
+  const quickSeesHistory = await (async () => {
+    for (let i = 0; i < 30; i++) {
+      try {
+        const ok = await quickWin.webContents.executeJavaScript(
+          `document.querySelectorAll('.quick-row').length > 0 || !!document.querySelector('.quick-empty')`, true);
+        if (ok) return true;
+      } catch { /* page still loading */ }
+      await sleep(200);
+    }
+    return false;
+  })();
+  check('quick clipboard shows clipboard history', quickSeesHistory);
+  const quickSearch = await quickWin.webContents.executeJavaScript(
+    `(() => {
+      const i = document.getElementById('quick-input');
+      i.value = 'QUICK_CLIP_TARGET';
+      i.dispatchEvent(new Event('input', { bubbles: true }));
+      return document.querySelectorAll('.quick-row').length;
+    })()`, true);
+  check('quick clipboard search filters results', quickSearch >= 1, `${quickSearch} rows`);
+  const quickCopy = await quickWin.webContents.executeJavaScript(
+    `(() => {
+      const row = document.querySelector('.quick-row');
+      if (!row) return false;
+      row.click();
+      return true;
+    })()`, true);
+  await sleep(400);
+  check('quick clipboard copies on selection', quickCopy === true && !quickSvc.isQuickVisible());
+  quickSvc.unregisterQuickShortcut();
+  check('quick shortcut unregisters cleanly', quickSvc.getRegisteredShortcut() === null);
+
   finish();
 }
 

@@ -2418,3 +2418,36 @@ Decisions and properties:
    pinned items topmost.
 4. **Collection filtering** resolves ids to names at query time; renaming a
    collection therefore never invalidates search behavior.
+
+## 77.9 UI/UX Polish and Desktop Experience (Phase 6, as-built)
+
+1. **Quick Clipboard (P0)**: a frameless, always-on-top launcher window
+   (`quick.html` + `src/js/quick.js`) toggled by a global shortcut
+   (default `Control+Shift+V`, configurable and validated against the
+   Electron accelerator shape). It shares the app:// origin and therefore
+   the SAME IndexedDB — no duplicated store. Search uses the shared query
+   parser; Enter/click copies; Escape hides; registration fails safely
+   (no crash) on conflicts and is released on quit.
+2. **Command palette (P1)**: central registry (`src/js/commands.js`) with
+   id/label/icon/shortcut/category/run/available; Ctrl+K opens a searchable,
+   keyboard-driven palette. Views and shortcuts reuse the same commands.
+3. **i18n + RTL (P1)**: `shared/i18n.mjs` holds EN/FA tables (key parity is
+   unit-tested); `App.applyLanguage()` applies document direction, the
+   translated chrome (`data-i18n` attributes), main-process tray labels, and
+   re-renders the active view. RTL layout uses flex/grid auto-flipping plus
+   targeted `[dir="rtl"]` physical-property overrides; keyboard hints are
+   bidi-isolated. Settings gains a Language section.
+4. **i18n coverage status (honest scope note)**: the static chrome
+   (navigation, toolbar, quick capture, all view headers/empty states) and
+   the clipboard/trash views' dynamic strings are fully translated; editor
+   internals, export dialogs, and some dashboard tooltips remain English at
+   this point. Completing the sweep is tracked as remaining polish, not
+   claimed as done.
+
+## 77.10 IPC additions in Phase 6
+
+| Channel | Direction | Validation summary |
+|---|---|---|
+| `tv:quick-hide` | R→M | no payload |
+| `tv:set-shortcut` | R→M | accelerator shape validated (shared contract), registration may fail safely |
+| `tv:set-language` | R→M | one of 'en' \| 'fa' |

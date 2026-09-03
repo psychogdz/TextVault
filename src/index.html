@@ -27,50 +27,50 @@
 
     <button class="btn btn-accent btn-block btn-new" id="btn-new-text">
       <span class="btn-icon" data-icon="plus"></span>
-      New Text
+      <span data-i18n="new.text">New Text</span>
       <kbd class="kbd-accent">Ctrl N</kbd>
     </button>
 
     <nav class="sidebar-nav" id="sidebar-nav">
       <button class="nav-item" data-nav="clipboard">
         <span class="nav-icon" data-icon="clipboard"></span>
-        <span class="nav-label">Clipboard</span>
+        <span class="nav-label" data-i18n="nav.clipboard">Clipboard</span>
         <span class="nav-count" data-count="clipboard"></span>
       </button>
       <button class="nav-item" data-nav="all">
         <span class="nav-icon" data-icon="layers"></span>
-        <span class="nav-label">All Texts</span>
+        <span class="nav-label" data-i18n="nav.all">All Texts</span>
         <span class="nav-count" data-count="all"></span>
       </button>
       <button class="nav-item" data-nav="favorites">
         <span class="nav-icon" data-icon="star"></span>
-        <span class="nav-label">Favorites</span>
+        <span class="nav-label" data-i18n="nav.favorites">Favorites</span>
         <span class="nav-count" data-count="favorites"></span>
       </button>
       <button class="nav-item" data-nav="recent">
         <span class="nav-icon" data-icon="clock"></span>
-        <span class="nav-label">Recently Used</span>
+        <span class="nav-label" data-i18n="nav.recent">Recently Used</span>
       </button>
       <button class="nav-item" data-nav="collections">
         <span class="nav-icon" data-icon="layers"></span>
-        <span class="nav-label">Collections</span>
+        <span class="nav-label" data-i18n="nav.collections">Collections</span>
         <span class="nav-count" data-count="collections"></span>
       </button>
       <button class="nav-item" data-nav="snippets">
         <span class="nav-icon" data-icon="file-text"></span>
-        <span class="nav-label">Snippets</span>
+        <span class="nav-label" data-i18n="nav.snippets">Snippets</span>
         <span class="nav-count" data-count="snippets"></span>
       </button>
       <button class="nav-item" data-nav="trash">
         <span class="nav-icon" data-icon="trash"></span>
-        <span class="nav-label">Trash</span>
+        <span class="nav-label" data-i18n="nav.trash">Trash</span>
         <span class="nav-count" data-count="trash"></span>
       </button>
     </nav>
 
     <div class="sidebar-tags">
       <div class="sidebar-heading">
-        <span class="nav-icon-sm" data-icon="tag"></span> Tags
+        <span class="nav-icon-sm" data-icon="tag"></span> <span data-i18n="nav.tags">Tags</span>
       </div>
       <div class="tag-list" id="tag-list"></div>
     </div>
@@ -78,7 +78,7 @@
     <div class="sidebar-footer">
       <button class="nav-item" data-nav="settings">
         <span class="nav-icon" data-icon="settings"></span>
-        <span class="nav-label">Settings</span>
+        <span class="nav-label" data-i18n="nav.settings">Settings</span>
       </button>
     </div>
   </aside>
@@ -90,7 +90,7 @@
     <header class="topbar" id="topbar">
       <div class="searchbox">
         <span class="search-icon" data-icon="search"></span>
-        <input id="search-input" type="text" placeholder="Search titles, content, tags…" autocomplete="off" spellcheck="false">
+        <input id="search-input" type="text" placeholder="Search titles, content, tags…" data-i18n-ph="search.placeholder" autocomplete="off" spellcheck="false">
         <kbd class="kbd">Ctrl F</kbd>
         <button class="icon-btn icon-btn-sm search-clear hidden" id="search-clear" title="Clear" data-icon-x></button>
       </div>
@@ -99,12 +99,12 @@
         <div class="select-wrap" id="sort-wrap" title="Sort">
           <span class="select-icon" data-icon="sort"></span>
           <select id="sort-select" aria-label="Sort by">
-            <option value="modified-desc">Recently Modified</option>
-            <option value="created-desc">Newest Created</option>
-            <option value="created-asc">Oldest Created</option>
-            <option value="used-desc">Recently Used</option>
-            <option value="title-asc">Title A → Z</option>
-            <option value="title-desc">Title Z → A</option>
+            <option value="modified-desc" data-i18n="sort.modified">Recently Modified</option>
+            <option value="created-desc" data-i18n="sort.createdDesc">Newest Created</option>
+            <option value="created-asc" data-i18n="sort.createdAsc">Oldest Created</option>
+            <option value="used-desc" data-i18n="sort.used">Recently Used</option>
+            <option value="title-asc" data-i18n="sort.titleAsc">Title A → Z</option>
+            <option value="title-desc" data-i18n="sort.titleDesc">Title Z → A</option>
           </select>
         </div>
         <span class="topbar-count" id="entries-count"></span>
@@ -115,10 +115,10 @@
     <section class="view view-dashboard" id="view-dashboard">
       <div class="quickcapture card-raised" id="quickcapture">
         <span class="qc-icon" data-icon="clipboard"></span>
-        <textarea id="qc-input" class="qc-input" rows="1" placeholder="Quick capture — paste text here, then press Ctrl+Enter to save…" spellcheck="false"></textarea>
+        <textarea id="qc-input" class="qc-input" rows="1" placeholder="Quick capture — paste text here, then press Ctrl+Enter to save…" data-i18n-ph="qc.placeholder" spellcheck="false"></textarea>
         <div class="qc-actions">
-          <button class="btn btn-ghost btn-sm" id="qc-paste" title="Paste from clipboard"><span class="btn-icon" data-icon="download"></span>Paste</button>
-          <button class="btn btn-accent btn-sm" id="qc-save"><span class="btn-icon" data-icon="save"></span>Save&nbsp;<kbd class="kbd-accent">Ctrl ↵</kbd></button>
+          <button class="btn btn-ghost btn-sm" id="qc-paste" title="Paste from clipboard"><span class="btn-icon" data-icon="download"></span><span data-i18n="qc.paste">Paste</span></button>
+          <button class="btn btn-accent btn-sm" id="qc-save"><span class="btn-icon" data-icon="save"></span><span data-i18n="qc.save">Save</span>&nbsp;<kbd class="kbd-accent">Ctrl ↵</kbd></button>
         </div>
       </div>
 
@@ -146,18 +146,18 @@
     <!-- View: Clipboard history -->
     <section class="view view-clipboard hidden" id="view-clipboard">
       <div class="clip-head">
-        <h2 class="view-title">Clipboard</h2>
+        <h2 class="view-title" data-i18n="clip.title">Clipboard</h2>
         <span class="clip-status" id="clip-status">
           <span class="clip-dot"></span>
           <span class="clip-status-text">Monitoring active</span>
         </span>
         <span class="spacer"></span>
-        <button class="btn btn-ghost btn-sm" id="clip-pause">Pause</button>
-        <button class="btn btn-ghost-danger btn-sm" id="clip-clear">Clear History</button>
+        <button class="btn btn-ghost btn-sm" id="clip-pause" data-i18n="clip.pause">Pause</button>
+        <button class="btn btn-ghost-danger btn-sm" id="clip-clear" data-i18n="clip.clear">Clear History</button>
       </div>
       <div class="clip-search">
         <span class="search-icon" data-icon="search"></span>
-        <input id="clip-search-input" type="text" placeholder="Search clipboard history…" autocomplete="off" spellcheck="false">
+        <input id="clip-search-input" type="text" placeholder="Search clipboard history…" data-i18n-ph="clip.search" autocomplete="off" spellcheck="false">
       </div>
       <div class="clip-list" id="clip-list"></div>
       <div class="empty-state hidden" id="clipboard-empty"></div>
@@ -166,14 +166,14 @@
     <!-- View: Snippets -->
     <section class="view view-snippets hidden" id="view-snippets">
       <div class="clip-head">
-        <h2 class="view-title">Snippets</h2>
+        <h2 class="view-title" data-i18n="sn.title">Snippets</h2>
         <span class="topbar-count" id="snippet-count"></span>
         <span class="spacer"></span>
-        <button class="btn btn-accent btn-sm" id="btn-new-snippet"><span class="btn-icon" data-icon="plus"></span>New Snippet</button>
+        <button class="btn btn-accent btn-sm" id="btn-new-snippet"><span class="btn-icon" data-icon="plus"></span><span data-i18n="sn.new">New Snippet</span></button>
       </div>
       <div class="clip-search">
         <span class="search-icon" data-icon="search"></span>
-        <input id="snippet-search-input" type="text" placeholder="Search snippets…" autocomplete="off" spellcheck="false">
+        <input id="snippet-search-input" type="text" placeholder="Search snippets…" data-i18n-ph="sn.search" autocomplete="off" spellcheck="false">
       </div>
       <div class="clip-list" id="snippet-list"></div>
       <div class="empty-state hidden" id="snippets-empty"></div>
@@ -182,9 +182,9 @@
     <!-- View: Collections -->
     <section class="view view-collections hidden" id="view-collections">
       <div class="clip-head">
-        <h2 class="view-title">Collections</h2>
+        <h2 class="view-title" data-i18n="col.title">Collections</h2>
         <span class="spacer"></span>
-        <button class="btn btn-accent btn-sm" id="btn-new-collection"><span class="btn-icon" data-icon="plus"></span>New Collection</button>
+        <button class="btn btn-accent btn-sm" id="btn-new-collection"><span class="btn-icon" data-icon="plus"></span><span data-i18n="col.new">New Collection</span></button>
       </div>
       <div class="clip-list" id="collection-list"></div>
       <div class="empty-state hidden" id="collections-empty"></div>
@@ -267,8 +267,8 @@
     <!-- View: Trash -->
     <section class="view view-trash hidden" id="view-trash">
       <div class="trash-head">
-        <h2 class="view-title">Trash</h2>
-        <button class="btn btn-ghost-danger btn-sm hidden" id="btn-empty-trash"><span class="btn-icon" data-icon="trash"></span> Empty Trash</button>
+        <h2 class="view-title" data-i18n="trash.title">Trash</h2>
+        <button class="btn btn-ghost-danger btn-sm hidden" id="btn-empty-trash"><span class="btn-icon" data-icon="trash"></span> <span data-i18n="trash.emptyBtn">Empty Trash</span></button>
       </div>
       <div class="trash-list" id="trash-list"></div>
       <div class="empty-state hidden" id="trash-empty"></div>

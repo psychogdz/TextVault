@@ -12,6 +12,10 @@ const { HANDLED, EMITTED } = require('./channels');
 const v = require('./validate');
 const { getMainWindow, markFlushed, markDirty, setQuitting, resolveCloseDisposition } = require('../services/window');
 const clipboardService = require('../services/clipboard-service');
+const quickWindow = require('../services/quick-window');
+
+// Hooks provided by the composition root (avoids a main.js require cycle).
+const hooks = { setMainLanguage: null };
 const {
   TEST_DIR,
   EXT_FILTERS,
@@ -152,7 +156,8 @@ async function handleBackupImport(_ev, opts) {
 
 /* --------------------------------------------------------------- misc ipc */
 
-function registerIpcHandlers() {
+function registerIpcHandlers(bridgeHooks = {}) {
+  Object.assign(hooks, bridgeHooks);
   ipcMain.handle(HANDLED.EXPORT, handleExport);
   ipcMain.handle(HANDLED.BACKUP_EXPORT, handleBackupExport);
   ipcMain.handle(HANDLED.BACKUP_IMPORT, handleBackupImport);
@@ -221,6 +226,29 @@ function registerIpcHandlers() {
     if (!check.ok) return check;
     shell.openExternal(check.value);
     return { ok: true };
+  });
+
+  /* ------------- quick clipboard + language (Phase 6) ------------- */
+
+  ipcMain.handle(HANDLED.QUICK_HIDE, () => {
+    quickWindow.hideQuickWindow();
+    return { ok: true };
+  });
+
+  ipcMain.handle(HANDLED.SET_SHORTCUT, async (_ev, accelerator) => {
+    // Validate the accelerator shape against the shared contract first.
+    const { isValidShortcutString } = await import('../../shared/validation.mjs');
+    if (!isValidShortcutString(accelerator)) {
+      return { ok: false, error: 'Invalid shortcut format.' };
+    }
+    const registered = quickWindow.registerQuickShortcut(accelerator);
+    return { ok: true, registered, accelerator: registered ? accelerator : null };
+  });
+
+  ipcMain.handle(HANDLED.SET_LANGUAGE, (_ev, lang) => {
+    if (!['en', 'fa'].includes(lang)) return { ok: false, error: 'Invalid language.' };
+    if (typeof hooks.setMainLanguage === 'function') hooks.setMainLanguage(lang);
+    return { ok: true, language: lang };
   });
 }
 

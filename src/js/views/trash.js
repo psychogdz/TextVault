@@ -2,6 +2,7 @@
 import { App } from '../state.js';
 import { icon, emptyArt } from '../ui/icons.js';
 import { toast, confirmDialog, timeAgo, formatNumber } from '../ui/components.js';
+import { t, itemsKey } from '../../../shared/i18n.mjs';
 
 const els = {};
 
@@ -15,14 +16,14 @@ export function initTrash() {
     const n = App.trashedEntries().length;
     if (!n) return;
     const ok = await confirmDialog({
-      title: 'Empty the Trash?',
-      message: `This permanently deletes ${n} ${n === 1 ? 'text' : 'texts'}. This cannot be undone.`,
-      confirmText: 'Delete Forever',
+      title: t('trash.empty.title'),
+      message: t('trash.empty.body', { n, items: t('texts') }),
+      confirmText: t('trash.deleteForever'),
       danger: true,
     });
     if (!ok) return;
     const count = await App.emptyTrash();
-    toast(`Permanently deleted ${count} ${count === 1 ? 'text' : 'texts'}`);
+    toast(t('trash.deleted', { n: count, items: t('texts') }));
   });
 
   App.on('entries-changed', refresh);
@@ -36,8 +37,8 @@ export function refresh() {
     els.list.innerHTML = '';
     els.empty.innerHTML = `
       <div class="empty-art">${emptyArt('trash')}</div>
-      <h3>Trash is empty</h3>
-      <p>Deleted texts are kept here so you can recover them if you change your mind.</p>`;
+      <h3>${t('trash.empty')}</h3>
+      <p>${t('trash.empty.body')}</p>`;
     els.empty.classList.remove('hidden');
     return;
   }
@@ -54,15 +55,15 @@ export function refresh() {
       </div>
       <span class="trash-deleted">deleted ${timeAgo(entry.deletedAt)}</span>
       <div class="trash-actions">
-        <button class="btn btn-ghost btn-sm" data-act="restore">${icon('restore', 14)} Restore</button>
-        <button class="btn btn-ghost-danger btn-sm" data-act="purge">${icon('trash', 14)} Delete Forever</button>
+        <button class="btn btn-ghost btn-sm" data-act="restore">${icon('restore', 14)} ${t('trash.restore')}</button>
+        <button class="btn btn-ghost-danger btn-sm" data-act="purge">${icon('trash', 14)} ${t('trash.deleteForever')}</button>
       </div>`;
     row.querySelector('.trash-title').textContent = App.titleOf(entry);
     row.querySelector('.trash-sub').textContent =
       `${formatNumber(entry.stats?.chars ?? 0)} chars • ${formatNumber(entry.stats?.lines ?? 0)} lines • modified ${timeAgo(entry.updatedAt)}`;
     row.querySelector('[data-act="restore"]').addEventListener('click', async () => {
       await App.restoreEntry(entry.id);
-      toast('Restored to your library', {
+      toast(t('trash.restoreOne'), {
         action: { label: 'Open', onClick: () => App.openEditor(entry.id) },
       });
     });

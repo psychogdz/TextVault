@@ -25,6 +25,7 @@ export const ACCENTS = ['violet', 'blue', 'teal', 'rose', 'amber'];
 export const SORTS = ['modified-desc', 'created-desc', 'created-asc', 'used-desc', 'title-asc', 'title-desc'];
 export const DUPLICATE_POLICIES = ['top', 'new'];
 export const CLOSE_BEHAVIORS = ['quit', 'tray', 'ask'];
+export const LANGUAGES = ['en', 'fa'];
 
 /** Authoritative settings defaults (single source for state.js + sanitize). */
 export const DEFAULT_SETTINGS = Object.freeze({
@@ -42,8 +43,10 @@ export const DEFAULT_SETTINGS = Object.freeze({
     duplicatePolicy: 'top', // 'top' = move existing to top, 'new' = keep duplicates
     maxItems: 1000,         // retention cap; pinned/favorite items are protected
     autoClearSensitive: false, // Phase 7 will wire behavior; default is mark-only
+    quickShortcut: 'Control+Shift+V', // global shortcut for the quick window
   }),
   closeBehavior: 'ask',     // 'quit' | 'tray' | 'ask' (ask once, then remember)
+  language: 'en',           // 'en' | 'fa' — UI language and direction
 });
 
 function isObj(v) {
@@ -204,6 +207,7 @@ export function sanitizeSettings(raw) {
     out.autoSaveDelay = Math.min(3000, Math.max(300, Math.round(Number(src.autoSaveDelay))));
   }
   if (CLOSE_BEHAVIORS.includes(src.closeBehavior)) out.closeBehavior = src.closeBehavior;
+  if (LANGUAGES.includes(src.language)) out.language = src.language;
   const cb = isObj(src.clipboard) ? src.clipboard : {};
   if (typeof cb.monitorEnabled === 'boolean') out.clipboard.monitorEnabled = cb.monitorEnabled;
   if (DUPLICATE_POLICIES.includes(cb.duplicatePolicy)) out.clipboard.duplicatePolicy = cb.duplicatePolicy;
@@ -211,5 +215,17 @@ export function sanitizeSettings(raw) {
     out.clipboard.maxItems = Math.min(50000, Math.max(10, Math.round(Number(cb.maxItems))));
   }
   if (typeof cb.autoClearSensitive === 'boolean') out.clipboard.autoClearSensitive = cb.autoClearSensitive;
+  if (isValidShortcutString(cb.quickShortcut)) out.clipboard.quickShortcut = cb.quickShortcut;
   return out;
+}
+
+/** Electron accelerator shape: Modifier+Modifier+Key (validated loosely). */
+export function isValidShortcutString(s) {
+  if (typeof s !== 'string' || s.length === 0 || s.length > 64) return false;
+  const parts = s.split('+');
+  if (parts.length < 2 || parts.length > 4) return false;
+  const modifiers = ['Control', 'Ctrl', 'Command', 'Cmd', 'Shift', 'Alt', 'Option', 'AltGr', 'Super'];
+  const key = parts[parts.length - 1];
+  if (!/^[A-Z0-9]$|^[A-Z]{3,9}$/.test(key)) return false;
+  return parts.slice(0, -1).every((m) => modifiers.includes(m));
 }

@@ -301,3 +301,15 @@ kbd, .kbd {
 /* Editor view fills remaining space */
 .view-editor { padding: 0 22px 0; }
 .view-trash, .view-settings { padding: 0 22px; overflow-y: auto; }
+
+/* ============ RTL structural support (Phase 6): physical overrides ============ */
+/* Layout is flex/grid-first (auto-flipping); these cover the few physical
+   left/right rules that cannot use logical properties without a wider sweep. */
+
+[dir="rtl"] .sidebar { border-right: none; border-left: 1px solid var(--border-soft); }
+[dir="rtl"] .card::before,
+[dir="rtl"] .clip-row[data-sensitive] { border-left: none; border-right: 3px solid #fbbf24; }
+[dir="rtl"] .card::before { border-right-width: 3px; }
+[dir="rtl"] .kbd, [dir="rtl"] .kbd-accent { direction: ltr; unicode-bidi: isolate; }
+[dir="rtl"] .dropdown { left: 0; right: auto; }
+[dir="rtl"] .quick-footer { direction: rtl; }

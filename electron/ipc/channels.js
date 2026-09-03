@@ -25,6 +25,10 @@ const HANDLED = Object.freeze({
   CLOSE_RESOLVE: 'tv:close-resolve',
   // Explicit user-initiated external URL opening (Phase 4)
   OPEN_EXTERNAL: 'tv:open-external',
+  // Quick Clipboard launcher + i18n (Phase 6)
+  QUICK_HIDE: 'tv:quick-hide',
+  SET_SHORTCUT: 'tv:set-shortcut',
+  SET_LANGUAGE: 'tv:set-language',
 });
 
 const EMITTED = Object.freeze({
