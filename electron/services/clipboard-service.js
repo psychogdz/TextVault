@@ -21,9 +21,10 @@ const MAX_PENDING = 200;
 const state = {
   enabled: true,      // master switch (mirrors settings; renderer corrects on boot)
   paused: false,      // temporary pause
+  private: false,     // private mode: clipboard is read (state tracked) but captures are discarded
   lastText: null,     // last clipboard text seen by the monitor
   lastCaptureAt: 0,
-  skipped: 0,         // captures skipped (oversized/invalid)
+  skipped: 0,         // captures skipped (oversized/invalid/private)
   pending: new Map(), // id -> item awaiting renderer persistence ack
   timer: null,
   sensitive: null,    // shared/sensitive.mjs (loaded async — ESM)
@@ -43,6 +44,7 @@ function getState() {
   return {
     enabled: state.enabled,
     paused: state.paused,
+    private: state.private,
     lastCaptureAt: state.lastCaptureAt,
     skipped: state.skipped,
     pending: state.pending.size,
@@ -58,6 +60,11 @@ function notifyState() {
 
 function setPaused(paused) {
   state.paused = !!paused;
+  notifyState();
+}
+
+function setPrivate(privateMode) {
+  state.private = !!privateMode;
   notifyState();
 }
 
@@ -83,6 +90,14 @@ function tick() {
   if (text === state.lastText) return;
 
   state.lastText = text;
+
+  // Private mode (SECURITY.md §47): clipboard state is tracked but content
+  // is deliberately discarded — nothing is persisted while it is active.
+  if (state.private) {
+    state.skipped += 1;
+    notifyState();
+    return;
+  }
 
   if (text.length > state.policy.CLIPBOARD_CONTENT_LIMIT) {
     state.skipped += 1; // oversized capture: skipped safely, never truncated
@@ -146,6 +161,7 @@ module.exports = {
   stopMonitor,
   getState,
   setPaused,
+  setPrivate,
   setEnabled,
   ackCaptured,
   getPending,

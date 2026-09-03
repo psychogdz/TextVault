@@ -5,7 +5,7 @@
 
 import { db } from './db.js';
 import { App } from '../state.js';
-import { duplicateAction, applyRetention, buildClipboardItem } from '../../../shared/clipboard-policy.mjs';
+import { duplicateAction, applyRetention, applyTimeRetention, buildClipboardItem } from '../../../shared/clipboard-policy.mjs';
 import { parseQuery, matchClipboardItem } from '../../../shared/query.mjs';
 import { detectContentType } from '../../../shared/detect.mjs';
 import { collectionList } from './snippets.js';
@@ -45,11 +45,21 @@ function ack(id) {
 
 /**
  * Handle one incoming capture from the monitor.
- * Applies the configured duplicate policy, persists, then runs retention.
+ * Privacy pipeline (SECURITY.md §47/§59): sensitive-skip → duplicate
+ * policy → persist → size + time retention.
  */
 export async function applyCapture(item) {
   try {
-    const policy = App.settings.clipboard?.duplicatePolicy || 'top';
+    const cbSettings = App.settings.clipboard || {};
+
+    // Sensitive auto-skip: when enabled, flagged captures are deliberately
+    // NOT persisted (user-configured; acked so the monitor drops them).
+    if (cbSettings.autoClearSensitive && item.isSensitive) {
+      ack(item.id);
+      return;
+    }
+
+    const policy = cbSettings.duplicatePolicy || 'top';
     const action = duplicateAction([...items.values()], item.content, policy);
     const now = Date.now();
 
@@ -69,12 +79,17 @@ export async function applyCapture(item) {
     await db.putClipboardItem(item);
     ack(item.id);
 
-    // Retention: newest maxItems win; pinned/favorite are protected.
-    const maxItems = App.settings.clipboard?.maxItems ?? 1000;
-    const { remove } = applyRetention([...items.values()], maxItems);
-    if (remove.length) {
-      await db.deleteClipboardMany(remove);
-      for (const id of remove) items.delete(id);
+    // Retention: newest maxItems win and time-based sweep runs here;
+    // pinned/favorite are protected in both policies.
+    const maxItems = cbSettings.maxItems ?? 1000;
+    const remove = new Set(applyRetention([...items.values()], maxItems).remove);
+    for (const id of applyTimeRetention([...items.values()], cbSettings.retentionDays ?? 0, now)) {
+      remove.add(id);
+    }
+    if (remove.size) {
+      const ids = [...remove];
+      await db.deleteClipboardMany(ids);
+      for (const id of ids) items.delete(id);
     }
     emitChanged();
   } catch (err) {
@@ -151,6 +166,13 @@ export async function setPaused(paused) {
 
 export async function setMonitorEnabled(enabled) {
   const res = await window.tv.clipboardSetEnabled(enabled);
+  if (res && res.state) setMonitorState(res.state);
+  return res;
+}
+
+/** Private mode (session-only): captures are discarded while active. */
+export async function setPrivateMode(privateMode) {
+  const res = await window.tv.clipboardSetPrivate(privateMode);
   if (res && res.state) setMonitorState(res.state);
   return res;
 }

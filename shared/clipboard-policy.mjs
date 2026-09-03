@@ -53,6 +53,21 @@ export function applyRetention(items, maxItems) {
   return { keep: [...keep], remove };
 }
 
+/**
+ * Time-based retention: remove items older than `retentionDays`.
+ * Pinned/favorite items are always protected (PRODUCT_SPEC §18).
+ * days = 0 (or non-finite) means "keep forever" — no removals.
+ * @returns {string[]} ids to remove
+ */
+export function applyTimeRetention(items, retentionDays, now = Date.now()) {
+  const days = Number.isFinite(retentionDays) && retentionDays > 0 ? retentionDays : 0;
+  if (!days) return [];
+  const cutoff = now - days * 86_400_000;
+  return items
+    .filter((it) => !it.isPinned && !it.isFavorite && (it.updatedAt || 0) < cutoff)
+    .map((it) => it.id);
+}
+
 /** Build the canonical clipboard record (caller supplies id + timestamps). */
 export function buildClipboardItem({ id, content, createdAt, updatedAt, isSensitive, sensitiveKinds, sourceApplication = null }) {
   return {

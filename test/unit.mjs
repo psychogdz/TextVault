@@ -15,7 +15,7 @@ const { buildPreview, matchIndices, snippetAround, escapeHtml } = await imp('sha
 const { validateEntryRecord, validateClipboardRecord, sanitizeSettings, DEFAULT_SETTINGS, LIMITS } = await imp('shared/validation.mjs');
 const { runMigrations, MIGRATIONS } = await imp('shared/storage-migrations.mjs');
 const { detectSensitive } = await imp('shared/sensitive.mjs');
-const { duplicateAction, applyRetention, buildClipboardItem, clipboardPreview, CLIPBOARD_CONTENT_LIMIT } = await imp('shared/clipboard-policy.mjs');
+const { duplicateAction, applyRetention, applyTimeRetention, buildClipboardItem, clipboardPreview, CLIPBOARD_CONTENT_LIMIT } = await imp('shared/clipboard-policy.mjs');
 const {
   applyTextTool, uppercase, lowercase, titleCase, uniqueLines, sortLines,
   jsonPretty, jsonMinify, base64Encode, base64Decode, urlEncode, urlDecode,
@@ -461,6 +461,18 @@ test('rejects malformed snippets/collections', () => {
   assert.equal(validateCollectionRecord({ id: '', name: 'X', createdAt: 1 }).ok, false);
   assert.equal(validateCollectionRecord({ id: 'c', name: '   ', createdAt: 1 }).ok, false);
   assert.equal(validateCollectionRecord({ id: 'c', name: 'x'.repeat(200), createdAt: 1 }).ok, false);
+});
+
+test('time retention removes only stale unprotected items', () => {
+  const now = 10 * 86_400_000; // day 10
+  const items = [
+    { id: 'old', updatedAt: now - 40 * 86_400_000 },
+    { id: 'old-pinned', updatedAt: now - 40 * 86_400_000, isPinned: true },
+    { id: 'recent', updatedAt: now - 1 * 86_400_000 },
+  ];
+  assert.deepEqual(applyTimeRetention(items, 30, now), ['old']);
+  assert.deepEqual(applyTimeRetention(items, 0, now), []); // forever
+  assert.deepEqual(applyTimeRetention(items, undefined, now), []);
 });
 
 console.log('\nquery parsing + matching:');

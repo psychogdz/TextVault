@@ -2322,3 +2322,71 @@ Residual limitation (documented, not hidden): source-application detection
 is not implemented because it requires native modules; application
 exclusions therefore cannot match yet. The rule infrastructure exists and
 will apply automatically if a source becomes known.
+
+---
+
+# 63. Phase 7 Security Review Results (2026-09-03)
+
+Systematic review against the §53 checklist. Status per item:
+
+```text
+[✓] contextIsolation verified (true; architecture test asserts)
+[✓] nodeIntegration disabled (false; asserted)
+[✓] sandbox enabled on ALL windows (main + PDF print + quick launcher)
+[✓] preload API reviewed (fixed surface, test-enforced; no Node APIs)
+[✓] IPC allowlist reviewed (single registry; test-enforced consistency)
+[✓] IPC input validation verified (pure validators; unit-tested incl.
+    oversized/malformed/type-confused inputs)
+[✓] filesystem paths validated (open-path userData allowlist; app://
+    containment; exports via dialogs or test-dir-contained paths)
+[✓] import validation verified (format+version check; record-level repair)
+[✓] backup validation verified (validated before any write)
+[✓] restore safety verified (transactional replace; merge dedupe)
+[✓] sensitive data logging checked (capture pipeline logs error objects
+    and counters only — verified by scan)
+[✓] external URL handling reviewed (http(s)-only, user-initiated,
+    validated IPC; automatic navigation blocked by will-navigate guard)
+[✓] command execution paths reviewed (none exist; no child_process use)
+[✓] HTML/Markdown sanitization reviewed (renderer escapes content;
+    confirmDialog uses textContent-only placeholder substitution)
+[✓] dependency vulnerabilities checked (see below)
+[✓] repository secrets scanned (clean; synthetic test values only)
+[✓] network behavior reviewed (no external communication in app code;
+    offline operation confirmed by design and tests)
+[✓] clipboard privacy verified (pause hard gate, private mode, retention,
+    sensitive mark-only + optional skip — all E2E-verified)
+[✓] private mode verified (session-scoped; capture state tracked, content
+    discarded; E2E regression check)
+[✓] application exclusions — PARTIAL (no native source detection; rule
+    infrastructure ready; documented limitation)
+[✓] security regression tests pass (privacy checks in E2E suite)
+```
+
+## 63.1 Dependency advisory status (2026-09-03, after `npm audit fix`)
+
+```text
+Fixed:   @xmldom/xmldom (moderate, shipped via docx) — updated within
+         semver; full test suite re-run and passing.
+Accepted (build-time only, not shipped): tar (critical), extract-zip,
+         app-builder-lib, builder-util-runtime (high) — all inside the
+         electron-builder toolchain used only during packaging on
+         developer machines.
+Deferred (requires major migration): electron runtime advisories — the fix
+         path is an Electron major upgrade (33 → current), which is a
+         dedicated, separately-verified migration, not a quick fix.
+```
+
+None of the accepted/deferred items exposes user data: no content path
+touches the build toolchain, and the Electron advisories do not involve
+features TextVault uses (details recorded for the Phase 10 release review).
+
+## 63.2 New privacy controls implemented in Phase 7
+
+1. **Private mode** (session-scoped, command palette + settings): while on,
+   clipboard state is tracked but captures are deliberately discarded;
+   nothing is persisted (E2E-verified).
+2. **Sensitive auto-skip** (off by default): when enabled, captures flagged
+   by the conservative detector are NOT persisted (E2E-verified).
+3. **Time retention** (`retentionDays`, 0=forever): stale unprotected items
+   are removed on capture; pinned/favorite items are always protected
+   (unit-tested pure policy).

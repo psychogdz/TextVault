@@ -19,6 +19,7 @@ const HANDLED = Object.freeze({
   CLIPBOARD_STATE: 'tv:clipboard-state',
   CLIPBOARD_SET_PAUSED: 'tv:clipboard-set-paused',
   CLIPBOARD_SET_ENABLED: 'tv:clipboard-set-enabled',
+  CLIPBOARD_SET_PRIVATE: 'tv:clipboard-set-private',
   CLIPBOARD_ACK: 'tv:clipboard-ack',
   CLIPBOARD_GET_PENDING: 'tv:clipboard-get-pending',
   // Window close behavior (Phase 3): renderer decides quit vs hide-to-tray

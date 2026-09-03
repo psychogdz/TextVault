@@ -4,7 +4,7 @@
 // (ARCHITECTURE.md §30).
 
 import { App } from './state.js';
-import { setPaused, setMonitorEnabled, getMonitorState } from './core/clipboard.js';
+import { setPaused, setMonitorEnabled, setPrivateMode, getMonitorState } from './core/clipboard.js';
 import { t, setLanguage, languageDirection } from '../../shared/i18n.mjs';
 import { icon } from './ui/icons.js';
 import { toast } from './ui/components.js';
@@ -55,6 +55,15 @@ export function initCommands({ toggleTheme }) {
       const st = getMonitorState();
       await setMonitorEnabled(!st.enabled);
       toast(t(st.enabled ? 'clip.monitoring.off' : 'clip.monitoring.active'), { type: 'info' });
+    },
+  });
+  registerCommand({
+    id: 'clip.private', label: () => (getMonitorState().private ? 'Private mode: off' : 'Private mode: on'),
+    icon: 'info', category: 'privacy',
+    run: async () => {
+      const st = getMonitorState();
+      await setPrivateMode(!st.private);
+      toast(!st.private ? 'Private mode on — copies are not saved' : 'Private mode off', { type: 'info' });
     },
   });
   registerCommand({

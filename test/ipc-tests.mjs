@@ -153,7 +153,7 @@ const TV_METHODS = [
   'clipboardState', 'clipboardSetPaused', 'clipboardSetEnabled',
   'clipboardGetPending', 'clipboardAck', 'onClipboardCaptured',
   'onClipboardStateChanged', 'onCloseRequest', 'closeResolve', 'openExternal',
-  'quickHide', 'setShortcut', 'setLanguage',
+  'quickHide', 'setShortcut', 'setLanguage', 'clipboardSetPrivate',
 ];
 test('preload exposes exactly the documented window.tv methods', () => {
   for (const m of TV_METHODS) {

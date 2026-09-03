@@ -3,7 +3,7 @@ import { App } from '../state.js';
 import { icon } from '../ui/icons.js';
 import { toast, toastError, confirmDialog, formatNumber } from '../ui/components.js';
 import { applyEditorPrefs } from './editor.js';
-import { setMonitorEnabled } from '../core/clipboard.js';
+import { setMonitorEnabled, setPrivateMode, getMonitorState } from '../core/clipboard.js';
 import { t } from '../../../shared/i18n.mjs';
 import { LANGUAGES } from '../../../shared/validation.mjs';
 
@@ -116,7 +116,7 @@ export function initSettings() {
           </div>
         </div>
         <div class="setting-row">
-          <div><div class="sr-label">History size</div><div class="sr-desc">Pinned and favorite items are never removed</div></div>
+          <div><div class="sr-label" data-i18n="set.clip.max">History size</div><div class="sr-desc" data-i18n="set.clip.max.d">Pinned and favorite items are never removed</div></div>
           <div class="select-wrap">
             <select id="set-clip-max" aria-label="History size">
               <option value="100">100 items</option>
@@ -125,6 +125,25 @@ export function initSettings() {
               <option value="5000">5,000 items</option>
             </select>
           </div>
+        </div>
+        <div class="setting-row">
+          <div><div class="sr-label">Time retention</div><div class="sr-desc">Delete clipboard items older than this</div></div>
+          <div class="select-wrap">
+            <select id="set-clip-retention" aria-label="Time retention">
+              <option value="0">Keep forever</option>
+              <option value="7">7 days</option>
+              <option value="30">30 days</option>
+              <option value="90">90 days</option>
+            </select>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div><div class="sr-label">Skip sensitive captures</div><div class="sr-desc">Never save clipboard content that looks like a password, key or token</div></div>
+          <div class="switch" id="set-clip-skip-sens" role="switch"></div>
+        </div>
+        <div class="setting-row">
+          <div><div class="sr-label">Private mode (this session)</div><div class="sr-desc">Temporarily discard everything you copy — nothing is saved while on</div></div>
+          <div class="switch" id="set-clip-private" role="switch"></div>
         </div>
         <div class="setting-row">
           <div><div class="sr-label" data-i18n="set.clip.shortcut">Quick Clipboard shortcut</div><div class="sr-desc" data-i18n="set.clip.shortcut.d">Global shortcut to open quick clipboard</div></div>
@@ -200,6 +219,9 @@ export function initSettings() {
     clipMonitor: document.getElementById('set-clip-monitor'),
     clipDup: document.getElementById('set-clip-dup'),
     clipMax: document.getElementById('set-clip-max'),
+    clipRetention: document.getElementById('set-clip-retention'),
+    clipSkipSens: document.getElementById('set-clip-skip-sens'),
+    clipPrivate: document.getElementById('set-clip-private'),
     clipShortcut: document.getElementById('set-clip-shortcut'),
     clipShortcutSave: document.getElementById('set-clip-shortcut-save'),
     closeBehavior: document.getElementById('set-close-behavior'),
@@ -275,6 +297,20 @@ export function initSettings() {
   els.clipMax.addEventListener('change', () => {
     App.settings.clipboard.maxItems = Number(els.clipMax.value);
     App.persistSettings();
+  });
+  els.clipRetention.addEventListener('change', () => {
+    App.settings.clipboard.retentionDays = Number(els.clipRetention.value);
+    App.persistSettings();
+  });
+  els.clipSkipSens.addEventListener('click', () => {
+    App.settings.clipboard.autoClearSensitive = !App.settings.clipboard.autoClearSensitive;
+    App.persistSettings();
+    render();
+  });
+  els.clipPrivate.addEventListener('click', async () => {
+    const next = !getMonitorState().private;
+    await setPrivateMode(next);
+    render();
   });
   els.closeBehavior.addEventListener('change', () => {
     App.settings.closeBehavior = els.closeBehavior.value;
@@ -400,6 +436,9 @@ export function render() {
   els.clipMonitor.classList.toggle('on', App.settings.clipboard?.monitorEnabled !== false);
   els.clipDup.value = App.settings.clipboard?.duplicatePolicy || 'top';
   els.clipMax.value = String(App.settings.clipboard?.maxItems || 1000);
+  els.clipRetention.value = String(App.settings.clipboard?.retentionDays ?? 0);
+  els.clipSkipSens.classList.toggle('on', !!App.settings.clipboard?.autoClearSensitive);
+  els.clipPrivate.classList.toggle('on', !!getMonitorState().private);
   els.clipShortcut.value = App.settings.clipboard?.quickShortcut || 'Control+Shift+V';
   els.closeBehavior.value = App.settings.closeBehavior || 'ask';
   els.langBtns.forEach((b) => b.classList.toggle('active', App.settings.language === b.dataset.langOpt));

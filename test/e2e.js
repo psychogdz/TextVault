@@ -909,6 +909,36 @@ async function main() {
   quickSvc.unregisterQuickShortcut();
   check('quick shortcut unregisters cleanly', quickSvc.getRegisteredShortcut() === null);
 
+  /* ---------- Phase 7: private mode + sensitive auto-skip ---------- */
+  // Private mode (session-only): copies are discarded until turned off.
+  await js(`window.tv.clipboardSetPrivate(true)`);
+  await sleep(200);
+  sysClipboard.writeText('PRIVATE_MODE_MARKER_MUST_NOT_PERSIST');
+  await sleep(1800);
+  check('private mode discards captures',
+    !(await js(`window.__TV_TEST__.clipboard.has('PRIVATE_MODE_MARKER_MUST_NOT_PERSIST')`)));
+  check('private mode visible in monitor state',
+    (await js(`window.__TV_TEST__.clipboard.monitorState().private`)) === true);
+  await js(`window.tv.clipboardSetPrivate(false)`);
+  await sleep(300);
+
+  // sensitive auto-skip: flagged content is NOT persisted while enabled
+  await js(`(() => {
+    const { App } = window.__TV_TEST__;
+    App.settings.clipboard.autoClearSensitive = true;
+    App.persistSettings();
+  })()`);
+  sysClipboard.writeText('password = "SKIP_ME_SENSITIVE_123"');
+  await sleep(1800);
+  check('sensitive auto-skip prevents persistence',
+    !(await js(`window.__TV_TEST__.clipboard.has('SKIP_ME_SENSITIVE_123')`)));
+  await js(`(() => {
+    const { App } = window.__TV_TEST__;
+    App.settings.clipboard.autoClearSensitive = false;
+    App.persistSettings();
+  })()`);
+  await sleep(200);
+
   finish();
 }
 

@@ -200,6 +200,11 @@ function registerIpcHandlers(bridgeHooks = {}) {
     clipboardService.setEnabled(enabled);
     return { ok: true, state: clipboardService.getState() };
   });
+  ipcMain.handle(HANDLED.CLIPBOARD_SET_PRIVATE, (_ev, privateMode) => {
+    if (typeof privateMode !== 'boolean') return { ok: false, error: 'Invalid clipboard request.' };
+    clipboardService.setPrivate(privateMode);
+    return { ok: true, state: clipboardService.getState() };
+  });
   ipcMain.handle(HANDLED.CLIPBOARD_GET_PENDING, () => clipboardService.getPending());
   ipcMain.handle(HANDLED.CLIPBOARD_ACK, (_ev, ids) => {
     if (!Array.isArray(ids) || ids.length > 500 || ids.some((x) => typeof x !== 'string')) {

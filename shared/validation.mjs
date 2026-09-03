@@ -37,12 +37,13 @@ export const DEFAULT_SETTINGS = Object.freeze({
   editorWrap: true,
   autoSave: true,
   autoSaveDelay: 800,
-  // Clipboard engine (Phase 3)
+  // Clipboard engine (Phase 3; privacy extensions Phase 7)
   clipboard: Object.freeze({
     monitorEnabled: true,   // master switch for clipboard monitoring
     duplicatePolicy: 'top', // 'top' = move existing to top, 'new' = keep duplicates
     maxItems: 1000,         // retention cap; pinned/favorite items are protected
-    autoClearSensitive: false, // Phase 7 will wire behavior; default is mark-only
+    retentionDays: 0,       // time-based retention; 0 = keep forever
+    autoClearSensitive: false, // true = sensitive captures are NOT persisted
     quickShortcut: 'Control+Shift+V', // global shortcut for the quick window
   }),
   closeBehavior: 'ask',     // 'quit' | 'tray' | 'ask' (ask once, then remember)
@@ -215,6 +216,9 @@ export function sanitizeSettings(raw) {
     out.clipboard.maxItems = Math.min(50000, Math.max(10, Math.round(Number(cb.maxItems))));
   }
   if (typeof cb.autoClearSensitive === 'boolean') out.clipboard.autoClearSensitive = cb.autoClearSensitive;
+  if (Number.isFinite(cb.retentionDays)) {
+    out.clipboard.retentionDays = Math.min(365, Math.max(0, Math.round(Number(cb.retentionDays))));
+  }
   if (isValidShortcutString(cb.quickShortcut)) out.clipboard.quickShortcut = cb.quickShortcut;
   return out;
 }

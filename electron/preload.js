@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld('tv', {
   clipboardState: () => ipcRenderer.invoke('tv:clipboard-state'),
   clipboardSetPaused: (paused) => ipcRenderer.invoke('tv:clipboard-set-paused', paused),
   clipboardSetEnabled: (enabled) => ipcRenderer.invoke('tv:clipboard-set-enabled', enabled),
+  clipboardSetPrivate: (p) => ipcRenderer.invoke('tv:clipboard-set-private', p),
   clipboardGetPending: () => ipcRenderer.invoke('tv:clipboard-get-pending'),
   clipboardAck: (ids) => ipcRenderer.invoke('tv:clipboard-ack', ids),
   onClipboardCaptured: (callback) => ipcRenderer.on('clipboard:captured', (_ev, item) => callback(item)),
