@@ -79,17 +79,59 @@ test('rejects non-object payloads and bad defaultName', () => {
   assert.equal(v.validateExportPayload({ kind: 'txt', mode: 'single', entries: [{ content: 'a' }], defaultName: 'x'.repeat(300) }).ok, false);
 });
 
-console.log('\nipc validators: backup export');
-test('accepts a valid backup payload', () => {
-  assert.equal(v.validateBackupExportPayload({ entries: [{ content: 'hello' }] }).ok, true);
+console.log('\nbackup format contract (shared/backup-format.mjs):');
+const bf = requireCjs('./shared/backup-format.mjs');
+test('buildBackupPayload emits a versioned v2 envelope', () => {
+  const p = bf.buildBackupPayload({
+    entries: [{ content: 'a' }],
+    clipboard: [{ id: 'c1', content: 'b' }],
+    snippets: [],
+    collections: [{ id: 'k', name: 'Work' }],
+  });
+  assert.equal(p.format, 'textvault-backup');
+  assert.equal(p.version, 2);
+  assert.equal(typeof p.exportedAt, 'string');
+  assert.equal(p.collections[0].name, 'Work');
 });
-test('rejects malformed backup payloads', () => {
-  assert.equal(v.validateBackupExportPayload(null).ok, false);
-  assert.equal(v.validateBackupExportPayload({}).ok, false);
-  assert.equal(v.validateBackupExportPayload({ entries: 'x' }).ok, false);
-  assert.equal(v.validateBackupExportPayload({ entries: [{ content: null }] }).ok, false);
-  assert.equal(v.validateBackupExportPayload({
-    entries: [{ content: 'x'.repeat(v.MAX_BACKUP_CONTENT + 1) }],
+test('validateBackupFile accepts v1 and v2 backups (absent arrays normalize to [])', () => {
+  const v1 = bf.validateBackupFile({ format: 'textvault-backup', version: 1, entries: [{ content: 'a' }] });
+  assert.equal(v1.ok, true);
+  assert.deepEqual(v1.data.clipboard, []);
+  const v2 = bf.validateBackupFile({
+    format: 'textvault-backup', version: 2, entries: [{ content: 'a' }],
+    clipboard: [{ id: 'c', content: 'b', createdAt: 1, updatedAt: 2 }],
+    snippets: [], collections: [{ id: 'k', name: 'Work', createdAt: 1 }],
+  });
+  assert.equal(v2.ok, true);
+  assert.equal(v2.data.clipboard.length, 1);
+});
+test('validateBackupFile rejects malformed/unsupported files', () => {
+  assert.equal(bf.validateBackupFile(null).ok, false);
+  assert.equal(bf.validateBackupFile('x').ok, false);
+  assert.equal(bf.validateBackupFile({ format: 'other', version: 1, entries: [] }).ok, false);
+  assert.equal(bf.validateBackupFile({ format: 'textvault-backup', version: 9, entries: [] }).ok, false);
+  assert.equal(bf.validateBackupFile({ format: 'textvault-backup', version: 2 }).ok, false);
+  assert.equal(bf.validateBackupFile({
+    format: 'textvault-backup', version: 2, entries: [{ content: 5 }],
+  }).ok, false);
+  assert.equal(bf.validateBackupFile({
+    format: 'textvault-backup', version: 2, entries: [],
+    clipboard: [{ content: 'x'.repeat(10 * 1024 * 1024 + 1) }],
+  }).ok, false);
+  assert.equal(bf.validateBackupFile({
+    format: 'textvault-backup', version: 2, entries: [], collections: [{ id: 'k' }],
+  }).ok, false);
+});
+test('validateBackupExportPayload enforces bounds on all four arrays', () => {
+  assert.equal(bf.validateBackupExportPayload({ entries: [{ content: 'a' }] }).ok, true);
+  assert.equal(bf.validateBackupExportPayload(null).ok, false);
+  assert.equal(bf.validateBackupExportPayload({ entries: 'x' }).ok, false);
+  assert.equal(bf.validateBackupExportPayload({ entries: [{ content: null }] }).ok, false);
+  assert.equal(bf.validateBackupExportPayload({
+    entries: [{ content: 'x'.repeat(10 * 1024 * 1024 + 1) }],
+  }).ok, false);
+  assert.equal(bf.validateBackupExportPayload({
+    entries: [], snippets: 'nope',
   }).ok, false);
 });
 

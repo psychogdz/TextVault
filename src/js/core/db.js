@@ -177,14 +177,22 @@ export const db = {
    * operation can never leave the library half-destroyed.
    */
   async replaceEntries(entries) {
-    for (const e of entries) asserters.entries(e);
+    return db.replaceStore('entries', entries);
+  },
+
+  /**
+   * Generic atomic store replacement (clear + put in ONE transaction) for
+   * any validated store — used by backup restore (SECURITY.md §59.12/59.13).
+   */
+  async replaceStore(store, records) {
+    for (const r of records) asserters[store](r);
     const d = await openDb();
     return new Promise((resolve, reject) => {
-      const t = d.transaction('entries', 'readwrite');
-      const store = t.objectStore('entries');
-      store.clear();
-      for (const e of entries) store.put(e);
-      t.oncomplete = () => resolve(entries.length);
+      const t = d.transaction(store, 'readwrite');
+      const os = t.objectStore(store);
+      os.clear();
+      for (const r of records) os.put(r);
+      t.oncomplete = () => resolve(records.length);
       t.onerror = () => reject(t.error);
     });
   },

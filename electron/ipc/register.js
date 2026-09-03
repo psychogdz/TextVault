@@ -96,31 +96,34 @@ async function handleExport(_ev, payload) {
 
 /* ------------------------------------------------------------ backup/rest */
 
-function backupPayloadValid(data) {
-  return data && typeof data === 'object' && data.format === 'textvault-backup'
-    && typeof data.version === 'number' && Array.isArray(data.entries);
+let backupFormat = null;
+async function loadBackupFormat() {
+  if (!backupFormat) {
+    backupFormat = await import('../../shared/backup-format.mjs');
+  }
+  return backupFormat;
 }
 
 async function handleBackupExport(_ev, payload) {
   try {
-    const check = v.validateBackupExportPayload(payload);
+    const fmt = await loadBackupFormat();
+    const check = fmt.validateBackupExportPayload(payload);
     if (!check.ok) return check;
-    const { entries } = payload;
-    const stamp = new Date().toISOString().slice(0, 10);
-    const outPayload = {
-      format: 'textvault-backup',
-      version: 1,
-      app: 'TextVault',
-      exportedAt: new Date().toISOString(),
-      entries,
-    };
+    const outPayload = fmt.buildBackupPayload({
+      entries: payload.entries || [],
+      clipboard: payload.clipboard || [],
+      snippets: payload.snippets || [],
+      collections: payload.collections || [],
+    });
     const json = JSON.stringify(outPayload, null, 2);
+    const stamp = new Date().toISOString().slice(0, 10);
     const target = await pickSavePath(
       getMainWindow(), `TextVault_Backup_${stamp}.json`, 'JSON', EXT_FILTERS.json);
     if (!target) return { ok: false, canceled: true };
     const finalPath = withExt(target, 'json');
     writeFileAtomic(finalPath, json, 'utf8');
-    return { ok: true, path: finalPath, count: entries.length };
+    const count = outPayload.entries.length + outPayload.clipboard.length + outPayload.snippets.length;
+    return { ok: true, path: finalPath, count, version: outPayload.version };
   } catch (err) {
     return invalid(describeError(err));
   }
@@ -128,6 +131,7 @@ async function handleBackupExport(_ev, payload) {
 
 async function handleBackupImport(_ev, opts) {
   try {
+    const fmt = await loadBackupFormat();
     const check = v.validateBackupImportOpts(opts, { testDir: TEST_DIR });
     if (!check.ok) return check;
     let filePath = check.filePath;
@@ -145,10 +149,15 @@ async function handleBackupImport(_ev, opts) {
     } catch {
       return { ok: false, error: 'The selected file is not valid JSON — it may be corrupted.' };
     }
-    if (!backupPayloadValid(data)) {
-      return { ok: false, error: 'This file is not a TextVault backup (unexpected format).' };
+    const validated = fmt.validateBackupFile(data);
+    if (!validated.ok) {
+      return { ok: false, error: validated.error };
     }
-    return { ok: true, entries: data.entries, count: data.entries.length, exportedAt: data.exportedAt };
+    const { data: out, version } = validated;
+    const count = out.entries.length + out.clipboard.length + out.snippets.length;
+    return {
+      ok: true, version, ...out, count, exportedAt: data.exportedAt,
+    };
   } catch (err) {
     return invalid(describeError(err));
   }
@@ -261,4 +270,4 @@ function lifecycle() {
   app.on('before-quit', () => { setQuitting(true); });
 }
 
-module.exports = { registerIpcHandlers, lifecycle, invalid, backupPayloadValid };
+module.exports = { registerIpcHandlers, lifecycle, invalid };

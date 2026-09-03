@@ -6,6 +6,7 @@
 import { db } from './db.js';
 import { App } from '../state.js';
 import { duplicateAction, applyRetention, applyTimeRetention, buildClipboardItem } from '../../../shared/clipboard-policy.mjs';
+import { validateClipboardRecord } from '../../../shared/validation.mjs';
 import { parseQuery, matchClipboardItem } from '../../../shared/query.mjs';
 import { detectContentType } from '../../../shared/detect.mjs';
 import { collectionList } from './snippets.js';
@@ -114,6 +115,38 @@ export async function initClipboard() {
   } catch { /* monitor may not be ready; pending persists */ }
 
   emitChanged();
+}
+
+/** Repair an imported clipboard record; returns null if hopeless. */
+export function reviveClipboardItem(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  if (typeof raw.content !== 'string') return null;
+  const now = Date.now();
+  const item = buildClipboardItem({
+    id: (typeof raw.id === 'string' && raw.id) || undefined,
+    content: raw.content,
+    createdAt: Number.isFinite(raw.createdAt) ? raw.createdAt : now,
+    updatedAt: Number.isFinite(raw.updatedAt) ? raw.updatedAt : now,
+    isSensitive: !!raw.isSensitive,
+    sensitiveKinds: Array.isArray(raw.sensitiveKinds) ? raw.sensitiveKinds : [],
+    sourceApplication: typeof raw.sourceApplication === 'string' ? raw.sourceApplication : null,
+  });
+  item.contentType = typeof raw.contentType === 'string' ? raw.contentType : 'text';
+  item.isFavorite = !!raw.isFavorite;
+  item.isPinned = !!raw.isPinned;
+  item.collections = Array.isArray(raw.collections)
+    ? raw.collections.filter((c) => typeof c === 'string') : [];
+  item.preview = typeof raw.preview === 'string' ? raw.preview : item.preview;
+  return validateClipboardRecord(item).ok ? item : null;
+}
+
+/** Re-read the whole store into the cache (used after a backup restore). */
+export async function reloadClipboardCache() {
+  const stored = await db.listClipboard().catch(() => []);
+  items.clear();
+  for (const it of stored) items.set(it.id, it);
+  emitChanged();
+  return items.size;
 }
 
 export async function copyClipboardItem(id) {

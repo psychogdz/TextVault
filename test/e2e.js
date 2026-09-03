@@ -939,6 +939,60 @@ async function main() {
   })()`);
   await sleep(200);
 
+  /* ---------- Phase 8: backup v2 round-trip (all stores) ---------- */
+  // Seed distinct data in every store, export v2, mutate, replace-restore.
+  const b8 = await js(`(async () => {
+    const S = window.__TV_TEST__.snippets;
+    const C = window.__TV_TEST__.collections;
+    const s = await S.create({ title: 'BK Snippet', content: 'bk snippet content', tags: [] });
+    const c = await C.create('BK Collection');
+    await S.update(s.id, { collections: [c.id] });
+    return { snippetId: s.id, collId: c.id };
+  })()`);
+  sysClipboard.writeText('BK_CLIP_MARKER distinct content ' + Date.now());
+  await waitForClipboard(() => js(`window.__TV_TEST__.clipboard.has('BK_CLIP_MARKER')`));
+
+  const exp8 = await js(`window.__TV_TEST__.backup.exportAll()`);
+  check('backup v2 export ok', exp8.ok && exp8.version === 2, JSON.stringify({ ok: exp8.ok, v: exp8.version, err: exp8.error }));
+  const bk = JSON.parse(fs.readFileSync(exp8.path, 'utf8'));
+  check('backup v2 contains all four stores',
+    bk.version === 2 && Array.isArray(bk.entries) && Array.isArray(bk.clipboard)
+    && Array.isArray(bk.snippets) && Array.isArray(bk.collections)
+    && bk.snippets.length >= 1 && bk.collections.length >= 1
+    && bk.clipboard.some((x) => x.content.includes('BK_CLIP_MARKER')),
+    `entries=${bk.entries.length} clip=${bk.clipboard.length} snips=${bk.snippets.length} colls=${bk.collections.length}`);
+
+  // mutate: an extra snippet that must disappear on replace-restore
+  await js(`window.__TV_TEST__.snippets.create({ title: 'BK Extra', content: 'extra' })`);
+  const imp8 = await js(`window.tv.backupImport({ pathOverride: ${JSON.stringify(exp8.path)} })`);
+  check('backup v2 import read ok', imp8.ok && imp8.version === 2, imp8.error || '');
+  const res8 = await js(`(async () => {
+    const out = await window.__TV_TEST__.backup.importAll(${JSON.stringify(imp8)}, 'replace');
+    return {
+      imported: out.imported,
+      hasBk: !!window.__TV_TEST__.snippets.byTitle('BK Snippet'),
+      extraGone: !window.__TV_TEST__.snippets.byTitle('BK Extra'),
+      clipHas: window.__TV_TEST__.clipboard.has('BK_CLIP_MARKER'),
+    };
+  })()`);
+  check('replace restore rebuilds every store exactly',
+    res8.hasBk && res8.extraGone && res8.clipHas, JSON.stringify(res8));
+
+  // v1 backward compatibility: entries-only backup merges cleanly
+  const v1Path = path.join(OUT, 'bk-v1-compat.json');
+  fs.writeFileSync(v1Path, JSON.stringify({
+    format: 'textvault-backup', version: 1, app: 'TextVault',
+    exportedAt: new Date().toISOString(),
+    entries: [{ id: 'v1-compat-1', title: 'V1 Compat', content: 'v1 content متن', createdAt: Date.now(), updatedAt: Date.now() }],
+  }));
+  const impV1 = await js(`window.tv.backupImport({ pathOverride: ${JSON.stringify(v1Path)} })`);
+  check('v1 backup accepted (backward compatible)', impV1.ok && impV1.version === 1, impV1.error || '');
+  const v1res = await js(`(async () => {
+    await window.__TV_TEST__.backup.importAll(${JSON.stringify(impV1)}, 'merge');
+    return window.__TV_TEST__.App.liveEntries().some((e) => e.id === 'v1-compat-1');
+  })()`);
+  check('v1 backup entries merge into the library', v1res === true);
+
   finish();
 }
 

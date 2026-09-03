@@ -4,6 +4,7 @@ import { icon } from '../ui/icons.js';
 import { toast, toastError, confirmDialog, formatNumber } from '../ui/components.js';
 import { applyEditorPrefs } from './editor.js';
 import { setMonitorEnabled, setPrivateMode, getMonitorState } from '../core/clipboard.js';
+import { exportLibrary as exportBackup, importBackup } from '../core/backup.js';
 import { t } from '../../../shared/i18n.mjs';
 import { LANGUAGES } from '../../../shared/validation.mjs';
 
@@ -176,11 +177,11 @@ export function initSettings() {
           <button class="btn btn-ghost btn-sm" id="set-openpath">${icon('folder', 14)} Open Folder</button>
         </div>
         <div class="setting-row">
-          <div><div class="sr-label">Backup</div><div class="sr-desc">Export your entire library (including Trash) as JSON</div></div>
+          <div><div class="sr-label">Backup</div><div class="sr-desc">Export texts, clipboard history, snippets and collections as JSON</div></div>
           <button class="btn btn-accent btn-sm" id="set-backup">${icon('upload', 14)} Export Library</button>
         </div>
         <div class="setting-row">
-          <div><div class="sr-label">Restore</div><div class="sr-desc">Import a TextVault backup (merge or replace)</div></div>
+          <div><div class="sr-label">Restore</div><div class="sr-desc">Import a TextVault backup (merge or replace) — v1 and v2</div></div>
           <button class="btn btn-ghost btn-sm" id="set-import">${icon('download', 14)} Import Library</button>
         </div>
       </div>
@@ -363,12 +364,12 @@ export function applyTheme() {
 
 async function exportLibrary() {
   try {
-    const res = await App.exportLibrary();
+    const res = await exportBackup();
     if (!res.ok) {
       if (!res.canceled) toastError('Backup failed: ' + (res.error || 'unknown error'));
       return;
     }
-    toast(`Backed up ${formatNumber(res.count)} texts`);
+    toast(`Backed up ${formatNumber(res.count)} items (v${res.version})`);
   } catch (err) {
     toastError('Backup failed: ' + (err.message || 'unknown error'));
   }
@@ -384,8 +385,10 @@ async function importLibrary() {
     const count = res.count;
     const mode = await chooseImportMode(count);
     if (!mode) return;
-    const out = await App.importLibrary(res.entries, { mode });
-    toast(`Imported ${formatNumber(out.imported)} texts${mode === 'replace' ? ' (library replaced)' : ''}`);
+    // Staged import: the whole validated backup is applied through the
+    // transactional storage layer (texts, clipboard, snippets, collections).
+    const out = await importBackup(res, { mode });
+    toast(`Imported ${formatNumber(out.imported)} items${mode === 'replace' ? ' (library replaced)' : ''}`);
   } catch (err) {
     toastError('Import failed: ' + (err.message || 'unknown error'));
   }

@@ -15,6 +15,7 @@ import {
   createSnippet, updateSnippet, deleteSnippet, createCollection, renameCollection,
   deleteCollection, setItemCollections, collectionMembers,
 } from './core/snippets.js';
+import { exportLibrary as exportBackup, importBackup } from './core/backup.js';
 import {
   initClipboard, applyCapture, setMonitorState, setMonitorEnabled, clipboardCount,
   clipboardItems, getMonitorState, clearClipboardHistory,
@@ -484,6 +485,10 @@ async function boot() {
         remove: (id) => deleteSnippet(id),
         byTitle: (t) => snippetList().find((s) => s.title === t) || null,
         viewVisible: () => !document.getElementById('view-snippets').classList.contains('hidden'),
+      },
+      backup: {
+        exportAll: () => exportBackup(),
+        importAll: (res, mode) => importBackup(res, { mode }),
       },
       collections: {
         count: () => collectionList().length,

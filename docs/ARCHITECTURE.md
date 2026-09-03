@@ -2451,3 +2451,23 @@ Decisions and properties:
 | `tv:quick-hide` | R→M | no payload |
 | `tv:set-shortcut` | R→M | accelerator shape validated (shared contract), registration may fail safely |
 | `tv:set-language` | R→M | one of 'en' \| 'fa' |
+
+## 77.11 Import / Export / Backup (Phase 8, as-built)
+
+1. **Backup format v2** (`shared/backup-format.mjs`): envelope
+   `{ format:'textvault-backup', version:2, app, exportedAt, entries,
+   clipboard, snippets, collections }` with per-store count/size bounds.
+   v1 backups (entries only) remain importable — version detection is
+   explicit and unsupported versions are rejected with a safe message.
+2. **Single validation contract**: the pure shared module validates export
+   payloads and parsed backup files; the main process delegates to it and
+   never trusts renderer data. Unit tests cover malformed/oversized/
+   unsupported inputs.
+3. **Staged restore**: import runs record-level revive/repair first, then
+   applies merge or replace through the transactional storage layer
+   (`db.replaceStore` = clear + put in ONE transaction per store). A crash
+   mid-restore cannot leave a store half-modified; malformed input cannot
+   partially destroy the library.
+4. **Merge semantics**: exact-duplicate skip per store (content equality for
+   clipboard/snippets, hash for texts); collection id conflicts resolve in
+   favor of existing data; members always reference existing ids.

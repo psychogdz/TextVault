@@ -67,24 +67,6 @@ function validateExportPayload(payload) {
   return { ok: true };
 }
 
-/** Validate a tv:backup-export payload. Returns { ok, error? }. */
-function validateBackupExportPayload(payload) {
-  if (!isPlainObject(payload)) return { ok: false, error: 'Invalid backup request.' };
-  const { entries } = payload;
-  if (!Array.isArray(entries) || entries.length > MAX_BACKUP_ENTRIES) {
-    return { ok: false, error: 'Invalid backup request.' };
-  }
-  let total = 0;
-  for (const e of entries) {
-    if (!isPlainObject(e)) return { ok: false, error: 'Invalid backup request.' };
-    if (typeof e.content !== 'string') return { ok: false, error: 'Invalid backup request.' };
-    total += e.content.length;
-    if (e.content.length > MAX_BACKUP_CONTENT) return { ok: false, error: 'A text is too large to back up.' };
-  }
-  if (total > MAX_BACKUP_TOTAL) return { ok: false, error: 'Library is too large to back up.' };
-  return { ok: true };
-}
-
 /**
  * Validate tv:backup-import options. `pathOverride` (a renderer-supplied file
  * path) is only accepted in test mode (TEXTVAULT_TEST_DIR) and only when the
@@ -168,7 +150,6 @@ module.exports = {
   MAX_DEFAULT_NAME,
   isPlainObject,
   validateExportPayload,
-  validateBackupExportPayload,
   validateBackupImportOpts,
   isPathAllowed,
   validateClipboardWrite,

@@ -13,6 +13,7 @@ const files = [
   'src/js/core/db.js',
   'src/js/core/entry.js',
   'src/js/core/clipboard.js',
+  'src/js/core/backup.js',
   'src/js/core/snippets.js',
   'src/js/search/search.js',
   'src/js/ui/icons.js',

@@ -92,6 +92,43 @@ export async function initSnippets() {
   emit();
 }
 
+/** Repair an imported snippet record; returns null if hopeless. */
+export function reviveSnippet(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  if (typeof raw.content !== 'string') return null;
+  const now = Date.now();
+  const snippet = {
+    id: (typeof raw.id === 'string' && raw.id) || uid(),
+    title: typeof raw.title === 'string' ? raw.title : '',
+    content: raw.content,
+    description: typeof raw.description === 'string' ? raw.description : '',
+    tags: Array.isArray(raw.tags) ? normalizeTags(raw.tags) : [],
+    collections: Array.isArray(raw.collections)
+      ? raw.collections.filter((c) => typeof c === 'string') : [],
+    isFavorite: !!raw.isFavorite,
+    createdAt: Number.isFinite(raw.createdAt) ? raw.createdAt : now,
+    updatedAt: Number.isFinite(raw.updatedAt) ? raw.updatedAt : now,
+  };
+  return snippet;
+}
+
+/** Re-read stores into caches (used after a backup restore). */
+export async function reloadSnippetsCache() {
+  const stored = await db.listSnippets().catch(() => []);
+  snippets.clear();
+  for (const s of stored) snippets.set(s.id, s);
+  emit();
+  return snippets.size;
+}
+
+export async function reloadCollectionsCache() {
+  const stored = await db.listCollections().catch(() => []);
+  collections.clear();
+  for (const c of stored) collections.set(c.id, c);
+  emit();
+  return collections.size;
+}
+
 /* ----------------------------- collections ---------------------------- */
 
 export function collectionList() {

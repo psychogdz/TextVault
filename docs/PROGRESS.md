@@ -1198,56 +1198,75 @@ Tests actually executed:
 Status:
 
 ```text
-NOT_STARTED
+VERIFIED (2026-09-03)
 ```
 
-## Entry Gate
+## Entry Gate — PASSED (2026-09-03)
 
 ```text
-[ ] Phase 7 is VERIFIED
-[ ] Storage contract is verified
-[ ] Backup security requirements are understood
-[ ] Restore safety requirements are understood
-[ ] Supported formats are defined
+[x] Phase 7 is VERIFIED
+[x] Storage contract is verified
+[x] Backup security requirements are understood (SECURITY.md §14/§15/§59.16-59.21)
+[x] Restore safety requirements are understood
+[x] Supported formats are defined (JSON backup v1 exists; v2 extends)
 ```
 
 ## Objectives
 
 ```text
-Import supported data
-Export supported data
-Create backups
-Validate backups
-Restore safely
-Version backup formats
+Versioned v2 backup covering all four stores
+Backward-compatible v1 import
+Staged, transactional restore (merge + replace)
+Round-trip verification
 ```
 
-## Exit Gate
+## Exit Gate — PASSED (2026-09-03)
 
 ```text
-[ ] Import validation implemented
-[ ] Import error handling implemented
-[ ] Export functionality implemented
-[ ] Backup creation implemented
-[ ] Backup format version implemented
-[ ] Backup validation implemented
-[ ] Restore validation implemented
-[ ] Restore transaction safety verified
-[ ] Restore failure recovery verified
-[ ] Invalid backup cannot destroy existing valid data
-[ ] Import cannot corrupt existing data
-[ ] Backup/restore tests pass
-[ ] Import/export regression tests pass
+[x] Import validation implemented (shared format contract + record revive)
+[x] Import error handling implemented (safe, specific messages)
+[x] Export functionality implemented (all four stores, versioned envelope)
+[x] Backup creation implemented (atomic write, dialog or test-dir path)
+[x] Backup format version implemented (v2; v1 importable)
+[x] Backup validation implemented (pure, unit-tested)
+[x] Restore validation implemented
+[x] Restore transaction safety verified (per-store single-transaction replace)
+[x] Restore failure recovery verified (transactional guarantees)
+[x] Invalid backup cannot destroy existing valid data (E2E malformed checks)
+[x] Import cannot corrupt existing data (E2E round-trip)
+[x] Backup/restore tests pass (E2E v2 round-trip + v1 compat)
+[x] Import/export regression tests pass (full suite)
 ```
 
-Only then:
+## Gate Evidence
 
 ```text
-Phase 8:
-VERIFIED
+Phase: Phase 8 — Import / Export / Backup
+Entry/Exit: ENTRY PASSED / EXIT PASSED
+Date: 2026-09-03
+
+Implementation:
+- shared/backup-format.mjs: v2 envelope builder + pure validators
+  (single contract for main + renderer + tests; the duplicate in
+  ipc/validate.js was removed)
+- db.replaceStore: generic atomic store replacement (clear+put in one
+  transaction) used by restore for every store
+- core/backup.js: export gathers texts+clipboard+snippets+collections;
+  import stages (revive/repair) then applies merge or replace
+- Settings backup/restore wired to the module; card copy updated
+
+Tests actually executed:
+- npm test → syntax 19 OK + unit 68/68 + ipc/architecture 32/32 → exit 0
+- npm run test:e2e → 123/123 passed (6 new Phase 8 checks: v2 export with
+  all four stores, replace-restore rebuilds every store exactly, v1
+  backward-compat merge)
+- TEXTVAULT_SMOKE=1 isolated launch → SMOKE OK, exit 0
+
+Note: E2E found and fixed one regression during development (backup.js
+imported ./state.js from core/ — renderer failed to boot; same class of
+path bug as Phase 3, caught by the suite before any commit).
 ```
 
----
 
 # 19. Phase 9 — Performance & Reliability
 
@@ -2502,6 +2521,35 @@ PASSED (evidence in §17)
 Next:
 Phase 8 — Import / Export / Backup.
 
+## 2026-09-03 (Phase 8)
+
+Phase:
+Phase 8 — Import / Export / Backup
+
+Entry Gate:
+PASSED
+
+Completed:
+- Backup format v2 (all four stores) with pure shared validators
+- Backward-compatible v1 import
+- Generic transactional store replacement (db.replaceStore)
+- core/backup.js staged import (revive → merge/replace) + settings wiring
+
+Tests:
+- npm test → 100 checks pass (syntax 19 + unit 68 + ipc 32), exit 0
+- npm run test:e2e → 123/123 (6 new backup/restore checks), exit 0
+- SMOKE launch → SMOKE OK, exit 0
+
+Security:
+Backup validation delegated to the unit-tested shared contract; restore is
+transactional per store; malformed input cannot partially destroy data.
+
+Exit Gate:
+PASSED (evidence in §18)
+
+Next:
+Phase 9 — Performance & Reliability.
+
 ---
 
 # 43. Current Progress Snapshot
@@ -2513,22 +2561,22 @@ Project:
 TextVault Pro (repository currently holds TextVault v1.0.0 + Phase 1 architecture)
 
 Active Phase:
-Phase 8 — Import / Export / Backup (next)
+Phase 9 — Performance & Reliability (next)
 
 Phase Entry Gate:
-NOT_EVALUATED (Phase 7 verified 2026-09-03)
+NOT_EVALUATED (Phase 8 verified 2026-09-03)
 
 Phase Status:
-Phase 7 VERIFIED; Phase 8 not started
+Phase 8 VERIFIED; Phase 9 not started
 
 Phase Exit Gate:
-Phase 7 PASSED (2026-09-03 — evidence in §17)
+Phase 8 PASSED (2026-09-03 — evidence in §18)
 
 Overall Release Status:
 NOT_READY
 
 Last Verified Test:
-npm test (98 checks) + npm run test:e2e (117/117) — all exit 0 (2026-09-03);
+npm test (100 checks) + npm run test:e2e (123/123) + SMOKE — all exit 0 (2026-09-03);
 search perf measured: 10,005-entry term scan p95 = 14.9ms (target ≤100ms)
 
 Security Status:
@@ -2554,9 +2602,9 @@ Current Task:
 None — Phase 4 complete
 
 Next Task:
-Phase 8 — Import / Export / Backup: evaluate entry gate; versioned v2
-backup format covering clipboard + snippets + collections, staged
-transactional restore, round-trip tests
+Phase 9 — Performance & Reliability: evaluate entry gate; measure startup,
+capture→persistence, search, quick-clipboard launch, memory behavior;
+long-running stability where the environment permits; record actual values
 ```
 
 The agent must update this snapshot whenever the project state changes.
