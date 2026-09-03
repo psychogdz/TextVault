@@ -1,8 +1,9 @@
-// Settings: appearance, editor defaults, data location, backup/import, shortcuts, about.
+// Settings: appearance, editor defaults, clipboard engine, library, shortcuts, about.
 import { App } from '../state.js';
 import { icon } from '../ui/icons.js';
 import { toast, toastError, confirmDialog, formatNumber } from '../ui/components.js';
 import { applyEditorPrefs } from './editor.js';
+import { setMonitorEnabled } from '../core/clipboard.js';
 
 const ACCENTS = [
   { id: 'violet', color: '#8b7cf8' },
@@ -85,6 +86,45 @@ export function initSettings() {
       </div>
 
       <div class="settings-card">
+        <h3>Clipboard</h3>
+        <div class="settings-sub">History capture and privacy basics.</div>
+        <div class="setting-row">
+          <div><div class="sr-label">Clipboard monitoring</div><div class="sr-desc">Save a copy of everything you copy</div></div>
+          <div class="switch" id="set-clip-monitor" role="switch"></div>
+        </div>
+        <div class="setting-row">
+          <div><div class="sr-label">Duplicate copies</div><div class="sr-desc">Re-copying an item moves it to the top</div></div>
+          <div class="select-wrap">
+            <select id="set-clip-dup" aria-label="Duplicate policy">
+              <option value="top">Move to top (recommended)</option>
+              <option value="new">Keep duplicates</option>
+            </select>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div><div class="sr-label">History size</div><div class="sr-desc">Pinned and favorite items are never removed</div></div>
+          <div class="select-wrap">
+            <select id="set-clip-max" aria-label="History size">
+              <option value="100">100 items</option>
+              <option value="500">500 items</option>
+              <option value="1000">1,000 items</option>
+              <option value="5000">5,000 items</option>
+            </select>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div><div class="sr-label">Closing the window</div><div class="sr-desc">What happens when you close the main window</div></div>
+          <div class="select-wrap">
+            <select id="set-close-behavior" aria-label="Close behavior">
+              <option value="ask">Ask every time</option>
+              <option value="tray">Close to tray (keeps monitoring)</option>
+              <option value="quit">Quit TextVault</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-card">
         <h3>Your Library</h3>
         <div class="settings-sub">Local data, backup and restore.</div>
         <div class="settings-stats" id="set-stats"></div>
@@ -136,6 +176,10 @@ export function initSettings() {
     autoSave: document.getElementById('set-autosave'),
     asDelay: document.getElementById('set-asdelay'),
     asDelayVal: document.getElementById('set-asdelay-val'),
+    clipMonitor: document.getElementById('set-clip-monitor'),
+    clipDup: document.getElementById('set-clip-dup'),
+    clipMax: document.getElementById('set-clip-max'),
+    closeBehavior: document.getElementById('set-close-behavior'),
     stats: document.getElementById('set-stats'),
     dataPath: document.getElementById('set-datapath'),
     version: document.getElementById('set-version'),
@@ -192,6 +236,25 @@ export function initSettings() {
     App.settings.autoSaveDelay = Number(els.asDelay.value);
     App.persistSettings();
     els.asDelayVal.textContent = App.settings.autoSaveDelay + 'ms';
+  });
+
+  els.clipMonitor.addEventListener('click', async () => {
+    App.settings.clipboard.monitorEnabled = !App.settings.clipboard.monitorEnabled;
+    App.persistSettings();
+    await setMonitorEnabled(App.settings.clipboard.monitorEnabled);
+    render();
+  });
+  els.clipDup.addEventListener('change', () => {
+    App.settings.clipboard.duplicatePolicy = els.clipDup.value;
+    App.persistSettings();
+  });
+  els.clipMax.addEventListener('change', () => {
+    App.settings.clipboard.maxItems = Number(els.clipMax.value);
+    App.persistSettings();
+  });
+  els.closeBehavior.addEventListener('change', () => {
+    App.settings.closeBehavior = els.closeBehavior.value;
+    App.persistSettings();
   });
 
   document.getElementById('set-openpath').addEventListener('click', () => {
@@ -289,6 +352,10 @@ export function render() {
   els.autoSave.classList.toggle('on', App.settings.autoSave);
   els.asDelay.value = App.settings.autoSaveDelay;
   els.asDelayVal.textContent = App.settings.autoSaveDelay + 'ms';
+  els.clipMonitor.classList.toggle('on', App.settings.clipboard?.monitorEnabled !== false);
+  els.clipDup.value = App.settings.clipboard?.duplicatePolicy || 'top';
+  els.clipMax.value = String(App.settings.clipboard?.maxItems || 1000);
+  els.closeBehavior.value = App.settings.closeBehavior || 'ask';
 
   const live = App.liveEntries();
   const trashed = App.trashedEntries();
@@ -311,7 +378,8 @@ export function openSettingsHelp(kind) {
   App.setView('settings');
   setTimeout(() => {
     const cards = document.querySelectorAll('#view-settings .settings-card');
-    const target = kind === 'shortcuts' ? cards[3] : cards[4];
+    // 0 Appearance · 1 Editor · 2 Clipboard · 3 Library · 4 Shortcuts · 5 About
+    const target = kind === 'shortcuts' ? cards[4] : cards[5];
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, 60);
 }

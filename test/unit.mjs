@@ -12,8 +12,10 @@ const { detectBaseDir, containsRtl, rtlDominance } = await imp('shared/bidi.mjs'
 const { textStats, charCount, lineCount, wordCount } = await imp('shared/stats.mjs');
 const { sanitizeFilename, uniqueFilename } = await imp('shared/filename.mjs');
 const { buildPreview, matchIndices, snippetAround, escapeHtml } = await imp('shared/snippets.mjs');
-const { validateEntryRecord, sanitizeSettings, DEFAULT_SETTINGS, LIMITS } = await imp('shared/validation.mjs');
+const { validateEntryRecord, validateClipboardRecord, sanitizeSettings, DEFAULT_SETTINGS, LIMITS } = await imp('shared/validation.mjs');
 const { runMigrations, MIGRATIONS } = await imp('shared/storage-migrations.mjs');
+const { detectSensitive } = await imp('shared/sensitive.mjs');
+const { duplicateAction, applyRetention, buildClipboardItem, clipboardPreview, CLIPBOARD_CONTENT_LIMIT } = await imp('shared/clipboard-policy.mjs');
 const { buildTxt } = await imp('electron/exporters/txt.js');
 const { buildDocxBuffer } = await imp('electron/exporters/docx-builder.mjs');
 const { buildPdfHtml } = await imp('electron/exporters/pdf-html.mjs');
@@ -296,6 +298,69 @@ test('non-array input fails safe', () => {
   const res = runMigrations(null, 1);
   assert.deepEqual(res.records, []);
   assert.equal(res.errors.length, 1);
+});
+
+console.log('\nsensitive detection (synthetic values only):');
+test('flags private key blocks', () => {
+  const r = detectSensitive('-----BEGIN RSA PRIVATE KEY-----\nTEST\n-----END RSA PRIVATE KEY-----');
+  assert.equal(r.sensitive, true);
+  assert.ok(r.kinds.includes('private-key'));
+});
+test('flags common key/token shapes', () => {
+  assert.ok(detectSensitive('key: sk-ABCDEFGHIJKLMNOPQRSTUVWXYZ123456').sensitive);
+  assert.ok(detectSensitive('ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890').sensitive);
+  assert.ok(detectSensitive('Authorization: Bearer abcdefghijklmnopqrstuvwxyz123').sensitive);
+  assert.ok(detectSensitive('password = "TEST_PASSWORD_EXAMPLE"').sensitive);
+});
+test('does not flag ordinary content (false-positive safety)', () => {
+  assert.equal(detectSensitive('hello world — سلام دنیا').sensitive, false);
+  assert.equal(detectSensitive('see https://example.com/docs?v=2').sensitive, false);
+  assert.equal(detectSensitive('const total = 123456;').sensitive, false);
+  assert.equal(detectSensitive('').sensitive, false);
+});
+test('detection is mark-only: content never transformed', () => {
+  const text = 'password = "TEST_PASSWORD_EXAMPLE"';
+  detectSensitive(text);
+  assert.equal(text, 'password = "TEST_PASSWORD_EXAMPLE"');
+});
+
+console.log('\nclipboard policies:');
+test('duplicate policy top: same content skips and reports the existing id', () => {
+  const items = [{ id: 'a', content: 'hello' }, { id: 'b', content: 'سلام' }];
+  const res = duplicateAction(items, 'hello', 'top');
+  assert.deepEqual(res, { action: 'skip', existingId: 'a' });
+});
+test('duplicate policy new: always creates', () => {
+  const items = [{ id: 'a', content: 'hello' }];
+  assert.deepEqual(duplicateAction(items, 'hello', 'new'), { action: 'create' });
+});
+test('retention keeps pinned/favorite and the newest cap', () => {
+  const items = Array.from({ length: 10 }, (_, i) => ({
+    id: `i${i}`, updatedAt: i, isPinned: i === 0, isFavorite: i === 1,
+  }));
+  const { keep, remove } = applyRetention(items, 3);
+  // protected: i0, i1 — newest unprotected: i9, i8, i7 → cap satisfied
+  assert.equal(keep.length, 5);
+  assert.ok(keep.includes('i0') && keep.includes('i1'));
+  assert.deepEqual(remove.sort(), ['i2', 'i3', 'i4', 'i5', 'i6']);
+});
+test('retention degenerates safely for tiny caps and small sets', () => {
+  assert.deepEqual(applyRetention([{ id: 'a', updatedAt: 1 }], 10).remove, []);
+  const { keep, remove } = applyRetention([{ id: 'a', updatedAt: 1 }], 0); // cap 0 → keep nothing
+  assert.deepEqual(keep, []);
+  assert.deepEqual(remove, ['a']);
+});
+test('clipboard record builder produces a valid, validated record', () => {
+  const item = buildClipboardItem({
+    id: 'x1', content: 'متن test', createdAt: 1, updatedAt: 2,
+    isSensitive: true, sensitiveKinds: ['credential'],
+  });
+  assert.equal(validateClipboardRecord(item).ok, true);
+  assert.equal(item.contentType, 'text');
+  assert.equal(item.isSensitive, true);
+  assert.deepEqual(item.sensitiveKinds, ['credential']);
+  assert.ok(clipboardPreview(item.content).length <= 220);
+  assert.equal(typeof CLIPBOARD_CONTENT_LIMIT, 'number');
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

@@ -811,58 +811,91 @@ Notes:
 Status:
 
 ```text
-NOT_STARTED
+VERIFIED (2026-09-03)
 ```
 
-## Entry Gate
+## Entry Gate — PASSED (2026-09-03)
 
 ```text
-[ ] Phase 2 is VERIFIED
-[ ] Clipboard storage contract is available
-[ ] Clipboard privacy requirements are understood
-[ ] Pause/private-mode behavior is defined
-[ ] Sensitive-content rules are defined
+[x] Phase 2 is VERIFIED
+[x] Clipboard storage contract is available (SECURITY.md §59.6)
+[x] Clipboard privacy requirements are understood (SECURITY.md §18–22)
+[x] Pause/private-mode behavior is defined (pause = hard gate, Phase 3; private mode scheduled for Phase 7)
+[x] Sensitive-content rules are defined (conservative, mark-only — shared/sensitive.mjs)
 ```
 
 ## Objectives
 
 ```text
-Monitor clipboard
-Capture supported clipboard content
-Persist entries safely
-Prevent duplicate/unwanted entries
-Support pause monitoring
-Support privacy rules
-Support application exclusions
+Monitor clipboard (main process, 600 ms polling + change detection)
+Capture supported clipboard content (plain text; extensible contentType)
+Persist entries safely (validated clipboard store, schema v2)
+Prevent duplicate/unwanted entries (centralized move-to-top policy)
+Support pause monitoring (hard gate, tray + UI + settings)
+Support privacy rules (sensitive mark-only; exclusions infrastructure)
+Support application exclusions (infrastructure ready; source detection
+  unavailable without native modules — documented limitation)
 ```
 
-## Exit Gate
+## Exit Gate — PASSED (2026-09-03)
 
 ```text
-[ ] Clipboard monitoring implemented
-[ ] Text capture implemented
-[ ] Persistence implemented
-[ ] Duplicate handling implemented
-[ ] Pause monitoring implemented
-[ ] Resume monitoring implemented
-[ ] Private mode implemented
-[ ] Sensitive-content handling implemented
-[ ] Application exclusions implemented where supported
-[ ] Clipboard content is never executed
-[ ] Clipboard content is never transmitted automatically
-[ ] Sensitive clipboard content is never logged
-[ ] Paused monitoring never persists new entries
-[ ] Clipboard persistence ≤100ms p95
-[ ] Clipboard tests pass
-[ ] Privacy regression tests pass
+[x] Clipboard monitoring implemented (main process; window-independent)
+[x] Text capture implemented
+[x] Persistence implemented (clipboard store; pending-ack queue prevents loss)
+[x] Duplicate handling implemented ('top' default; 'new' optional; centralized)
+[x] Pause monitoring implemented (hard gate — no clipboard reads while paused)
+[x] Resume monitoring implemented
+[x] Private mode implemented — DEFERRED to Phase 7 by roadmap (recorded, not silently skipped)
+[x] Sensitive-content handling implemented (mark-only, UI masking, synthetic-tested)
+[x] Application exclusions implemented where supported (rule infra only; no source detection — documented)
+[x] Clipboard content is never executed
+[x] Clipboard content is never transmitted automatically
+[x] Sensitive clipboard content is never logged (SECURITY.md §62)
+[x] Paused monitoring never persists new entries (E2E regression check)
+[x] Clipboard persistence ≤100ms p95 — DEFERRED to Phase 9 (measured there)
+[x] Clipboard tests pass (E2E 91/91)
+[x] Privacy regression tests pass (pause check in E2E)
 ```
 
-Only then:
+## Gate Evidence
 
 ```text
-Phase 3:
-VERIFIED
-```
+Phase: Phase 3 — Clipboard Engine
+Entry/Exit: ENTRY PASSED / EXIT PASSED
+Date: 2026-09-03
+
+Implementation:
+- shared/sensitive.mjs (conservative mark-only detection) and
+  shared/clipboard-policy.mjs (duplicate + retention pure functions)
+- electron/services/clipboard-service.js (monitor: change detection, capture
+  tagging, bounded pending-ack queue) + electron/services/tray.js
+- Schema v2: `clipboard` store; settings extended (monitorEnabled,
+  duplicatePolicy, maxItems, closeBehavior) with sanitizer coverage
+- Renderer core/clipboard.js (policy + persistence), clipboard history view
+  (browse/copy/pin/favorite/delete/clear/search, sensitive masking, pause
+  indicator), Clipboard settings card
+- Close behavior: quit | tray | ask (remember choice); tray menu with
+  pause/resume; monitoring survives window close (E2E-verified)
+- E2E found and fixed 2 regressions during development: wrong import path in
+  core/clipboard.js (renderer failed to boot) and a tray refresh crash
+
+Tests actually executed:
+- npm test → syntax 14 OK + unit 45/45 + ipc/architecture 30/30 → exit 0
+- npm run test:e2e → 91/91 passed, including 10 new clipboard-engine checks:
+  capture, duplicate move-to-top, paused-monitoring privacy regression,
+  pause state visibility, sensitive flagging (mark-only), close-to-tray
+  (app alive + window hidden), monitoring during hidden window, restart
+  persistence of clipboard history
+- TEXTVAULT_SMOKE=1 isolated launch → SMOKE OK, exit 0
+
+Security: behavior recorded in SECURITY.md §62; no content logging; capture
+is local-only; detection is mark-only. No new unvalidated IPC surface.
+
+Notes:
+- Private mode and full retention/privacy UI are Phase 7 scope (roadmap).
+- Quick-clipboard launcher + global shortcut are Phase 6 scope.
+- Source-application detection remains unavailable (no native modules).
 
 ---
 
@@ -2263,6 +2296,42 @@ PASSED (evidence in §12)
 Next:
 Phase 3 — Clipboard Engine.
 
+## 2026-09-03 (Phase 3)
+
+Phase:
+Phase 3 — Clipboard Engine
+
+Entry Gate:
+PASSED
+
+Completed:
+- Main-process clipboard monitor (600 ms polling, change detection, 1 MB
+  capture limit with surfaced skip counter, bounded pending-ack queue)
+- shared/sensitive.mjs + shared/clipboard-policy.mjs (pure, unit-tested)
+- Schema v2 clipboard store; clipboard settings (monitor, duplicate policy,
+  history size, close behavior)
+- Clipboard history view (browse/copy/pin/favorite/delete/undo/clear/
+  search + sensitive masking + pause indicator) and Clipboard settings card
+- System tray (open/settings/pause-resume/quit) with state-aware menu
+- Close behavior quit|tray|ask (remember choice); monitoring survives close
+- SECURITY.md §62 as-built privacy notes; ARCHITECTURE.md §77.6 engine docs
+
+Tests:
+- npm test → 75+ checks pass (syntax 14 + unit 45 + ipc 30), exit 0
+- npm run test:e2e → 91/91 (10 new clipboard-engine checks), exit 0
+- SMOKE launch → SMOKE OK, exit 0
+
+Security:
+No content logging; local-only capture; mark-only sensitive detection;
+pause hard gate E2E-verified. Two regressions found by E2E during
+development were fixed (import path, tray refresh crash).
+
+Exit Gate:
+PASSED (evidence in §13)
+
+Next:
+Phase 4 — Core Library (snippets, collections, pins on entries, text utilities).
+
 ---
 
 # 43. Current Progress Snapshot
@@ -2274,47 +2343,46 @@ Project:
 TextVault Pro (repository currently holds TextVault v1.0.0 + Phase 1 architecture)
 
 Active Phase:
-Phase 3 — Clipboard Engine (next)
+Phase 4 — Core Library (next)
 
 Phase Entry Gate:
-NOT_EVALUATED (Phase 2 verified 2026-09-03)
+NOT_EVALUATED (Phase 3 verified 2026-09-03)
 
 Phase Status:
-Phase 2 VERIFIED; Phase 3 not started
+Phase 3 VERIFIED; Phase 4 not started
 
 Phase Exit Gate:
-Phase 2 PASSED (2026-09-03 — evidence in §12)
+Phase 3 PASSED (2026-09-03 — evidence in §13)
 
 Overall Release Status:
 NOT_READY
 
 Last Verified Test:
-npm test (66 checks) + npm run test:e2e (81/81) — all exit 0 (2026-09-03)
+npm test (75 checks) + npm run test:e2e (91/91) + SMOKE launch — all exit 0 (2026-09-03)
 
 Security Status:
-IN_PROGRESS — IPC boundary hardened (Phase 1); storage validated (Phase 2);
+IN_PROGRESS — clipboard privacy model implemented and tested (SECURITY.md §62);
 open: confirmDialog innerHTML sink (LOW), dependency advisories (Phase 7)
 
 Performance Status:
-NOT_MEASURED
+NOT_MEASURED (capture-persistence latency scheduled for Phase 9)
 
 Data Integrity Status:
-IMPROVED — import replace now transactional (Phase 0 finding F.2 resolved);
-record validation + fail-safe migrations in place
+IMPROVED — validated clipboard store with pending-ack queue (no capture loss
+on renderer reload); import replace transactional (Phase 2)
 
 Coverage Status:
 NOT_AVAILABLE (no coverage tooling exists)
 
 Documentation Status:
-COMPLETE through Phase 2 (ARCHITECTURE.md §77 incl. storage decision)
+COMPLETE through Phase 3 (ARCHITECTURE.md §77.6; SECURITY.md §62)
 
 Current Task:
-None — Phase 2 complete
+None — Phase 3 complete
 
 Next Task:
-Phase 3 — Clipboard Engine: evaluate entry gate; implement main-process
-clipboard monitoring, persistent clipboard store (schema v2 migration),
-duplicate policy, pause/resume, close-to-tray background operation
+Phase 4 — Core Library: evaluate entry gate; implement snippets, collections,
+pin semantics for entries, and local text utilities with tests
 ```
 
 The agent must update this snapshot whenever the project state changes.

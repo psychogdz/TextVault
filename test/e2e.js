@@ -647,6 +647,85 @@ async function main() {
     check('replace import restores the backup exactly', false, 'backup import was unavailable');
   }
 
+  /* ---------- clipboard engine (Phase 3) ---------- */
+  const { clipboard: sysClipboard } = require('electron');
+  // deterministic start: clear whatever the monitor gathered during the suite
+  await js(`window.__TV_TEST__.clipboard.clearAll()`);
+
+  const waitForClipboard = async (fn, timeoutMs = 6000) => {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (await fn()) return true;
+      await sleep(300);
+    }
+    return fn();
+  };
+
+  const clipCount0 = await js(`window.__TV_TEST__.clipboard.count()`);
+  check('clipboard history cleared for engine tests', clipCount0 === 0, `${clipCount0}`);
+
+  sysClipboard.writeText('TEXTVAULT_E2E_CLIP متن آزمایشی ۱۲۳');
+  check('clipboard capture captures new content',
+    await waitForClipboard(() => js(`window.__TV_TEST__.clipboard.has('TEXTVAULT_E2E_CLIP')`)));
+
+  // duplicate policy 'top': A → B → A yields bounded history, A on top
+  const clipA = 'CLIP_A_' + Date.now();
+  const clipB = 'CLIP_B_' + Date.now();
+  sysClipboard.writeText(clipA);
+  await waitForClipboard(() => js(`window.__TV_TEST__.clipboard.has('${clipA}')`));
+  sysClipboard.writeText(clipB);
+  await waitForClipboard(() => js(`window.__TV_TEST__.clipboard.has('${clipB}')`));
+  sysClipboard.writeText(clipA); // recopy A → dedupe: move to top, no new record
+  await sleep(1600);
+  const dupRes = await js(`({
+    count: window.__TV_TEST__.clipboard.count(),
+    top: window.__TV_TEST__.clipboard.top(),
+  })`);
+  check('duplicate policy keeps history bounded (move-to-top)',
+    dupRes.count === 3 && String(dupRes.top).startsWith('CLIP_A_'),
+    `count=${dupRes.count} top=${String(dupRes.top).slice(0, 12)}`);
+
+  // pause: while paused, copies must NOT be captured
+  await js(`window.tv.clipboardSetPaused(true)`);
+  await sleep(200);
+  sysClipboard.writeText('PAUSED_MARKER_SHOULD_NOT_CAPTURE');
+  await sleep(1800);
+  check('paused monitoring never persists new entries',
+    !(await js(`window.__TV_TEST__.clipboard.has('PAUSED_MARKER_SHOULD_NOT_CAPTURE')`)));
+  check('pause state visible to the UI',
+    (await js(`window.__TV_TEST__.clipboard.monitorState().paused`)) === true);
+  await js(`window.tv.clipboardSetPaused(false)`);
+  await sleep(200);
+
+  // sensitive content: captured but flagged (mark-only)
+  sysClipboard.writeText('password = "TEST_PASSWORD_EXAMPLE"');
+  await waitForClipboard(() => js(`window.__TV_TEST__.clipboard.has('TEST_PASSWORD_EXAMPLE')`));
+  check('sensitive clipboard content is flagged (not blocked)',
+    (await js(`window.__TV_TEST__.clipboard.items().some((i) => i.sensitive && i.content.includes('TEST_PASSWORD_EXAMPLE'))`)) === true);
+
+  /* ---------- close-to-tray behavior ---------- */
+  await js(`(async () => {
+    const { App } = window.__TV_TEST__;
+    App.settings.closeBehavior = 'tray';
+    await App.persistSettings();
+    return App.settings.closeBehavior;
+  })()`);
+  win.close(); // renderer resolves 'tray' → the app stays alive
+  await sleep(2500);
+  check('close-to-tray keeps the app running', !win.isDestroyed());
+  check('close-to-tray hides the window', !win.isVisible());
+  sysClipboard.writeText('BACKGROUND_CAPTURE_AFTER_CLOSE_TRAY');
+  check('clipboard monitoring survives window close',
+    await waitForClipboard(() => js(`window.__TV_TEST__.clipboard.has('BACKGROUND_CAPTURE_AFTER_CLOSE_TRAY')`)));
+  win.show();
+  await sleep(400);
+
+  /* ---------- clipboard restart persistence ---------- */
+  await win.webContents.reload();
+  await waitHook();
+  check('clipboard history survives restart',
+    await js(`window.__TV_TEST__.clipboard.has('TEXTVAULT_E2E_CLIP')`));
+
   finish();
 }
 

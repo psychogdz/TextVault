@@ -2289,3 +2289,36 @@ Reliability is a storage requirement.
 The storage layer must therefore be treated as critical infrastructure, not merely as an implementation detail.
 
 
+
+---
+
+# 62. As-Built Privacy Notes — Clipboard Engine (Phase 3, 2026-09-03)
+
+The clipboard engine is implemented as described in `ARCHITECTURE.md` §77.6.
+Its privacy properties, as verified by the executed test suite:
+
+1. **Local-only capture.** The monitor polls the system clipboard locally
+   (600 ms interval, change detection). No capture content is ever sent
+   anywhere; the canonical store is the renderer's local IndexedDB.
+2. **No content logging.** Neither the monitor nor the persistence path logs
+   clipboard text. Logged values are limited to error objects and counters.
+3. **Sensitive content is mark-only.** Captures matching conservative
+   synthetic-tested patterns (private keys, known API-key/token shapes,
+   Bearer/Authorization headers, password assignments) are flagged
+   (`isSensitive`, `sensitiveKinds`) and masked in the UI until the user
+   reveals them. Detection never blocks, alters, or deletes content, and
+   never claims completeness (false positives/negatives are expected).
+4. **Oversized captures are skipped, never truncated.** Content above the
+   1 MB capture limit increments a surfaced `skipped` counter.
+5. **Pause is a hard gate.** While monitoring is paused, the clipboard is
+   not read at all; nothing created during the pause is persisted while
+   paused (E2E-verified regression check).
+6. **Retention protects explicit user intent.** Retention cleanup (history
+   size cap) never removes pinned or favorite items.
+7. **Capture pipeline preserves content exactly.** No normalization or
+   transformation is applied to clipboard text before persistence.
+
+Residual limitation (documented, not hidden): source-application detection
+is not implemented because it requires native modules; application
+exclusions therefore cannot match yet. The rule infrastructure exists and
+will apply automatically if a source becomes known.

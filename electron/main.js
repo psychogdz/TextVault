@@ -17,6 +17,8 @@ const { registerAppProtocol } = require('./services/app-protocol');
 const { createWindow, focusMainWindow } = require('./services/window');
 const { buildMenu } = require('./services/menu');
 const { registerIpcHandlers, lifecycle } = require('./ipc/register');
+const clipboardService = require('./services/clipboard-service');
+const { createTray } = require('./services/tray');
 
 // Test/verification hook: redirect userData (must run before app is ready).
 if (process.env.TEXTVAULT_USER_DATA) {
@@ -43,6 +45,22 @@ app.whenReady().then(() => {
   createWindow();
   registerIpcHandlers();
   lifecycle();
+
+  // Clipboard engine: start monitoring immediately (the renderer corrects
+  // enabled/paused from persisted settings once it boots), then tray.
+  clipboardService.startMonitor();
+  createTray(clipboardService.getState, {
+    showWindow: () => focusMainWindow(),
+    openSettings: () => {
+      focusMainWindow();
+      const { sendToMain } = require('./services/window');
+      const { EMITTED: E } = require('./ipc/channels');
+      sendToMain(E.MENU, 'settings');
+    },
+    togglePause: () => clipboardService.setPaused(!clipboardService.getState().paused),
+    quit: () => app.quit(),
+  });
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -50,4 +68,8 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('quit', () => {
+  clipboardService.stopMonitor();
 });

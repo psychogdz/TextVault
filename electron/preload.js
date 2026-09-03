@@ -34,4 +34,17 @@ contextBridge.exposeInMainWorld('tv', {
 
   // Menu commands
   onMenu: (callback) => ipcRenderer.on('menu', (_ev, cmd) => callback(cmd)),
+
+  // Clipboard engine (Phase 3)
+  clipboardState: () => ipcRenderer.invoke('tv:clipboard-state'),
+  clipboardSetPaused: (paused) => ipcRenderer.invoke('tv:clipboard-set-paused', paused),
+  clipboardSetEnabled: (enabled) => ipcRenderer.invoke('tv:clipboard-set-enabled', enabled),
+  clipboardGetPending: () => ipcRenderer.invoke('tv:clipboard-get-pending'),
+  clipboardAck: (ids) => ipcRenderer.invoke('tv:clipboard-ack', ids),
+  onClipboardCaptured: (callback) => ipcRenderer.on('clipboard:captured', (_ev, item) => callback(item)),
+  onClipboardStateChanged: (callback) => ipcRenderer.on('clipboard:state-changed', (_ev, st) => callback(st)),
+
+  // Close disposition (Phase 3): renderer answers a close request
+  onCloseRequest: (callback) => ipcRenderer.on('tv:close-request', () => callback()),
+  closeResolve: (action) => ipcRenderer.invoke('tv:close-resolve', action),
 });

@@ -8,11 +8,17 @@ import { initDashboard, refresh as refreshDashboard, showSkeletons, clearSkeleto
 import { initEditor, openEditor as openEditorView, closeEditor, saveNow, openFindbar, openReplacebar, handleEscape, isActive as editorActive } from './views/editor.js';
 import { initTrash, refresh as refreshTrash } from './views/trash.js';
 import { initSettings, render as renderSettings, applyTheme, openSettingsHelp } from './views/settings.js';
+import { initClipboardView, refresh as refreshClipboardView } from './views/clipboard.js';
+import {
+  initClipboard, applyCapture, setMonitorState, setMonitorEnabled, clipboardCount,
+  clipboardItems, getMonitorState, clearClipboardHistory,
+} from './core/clipboard.js';
 
 /* ---------------- view switching ---------------- */
 
 const views = {
   dashboard: document.getElementById('view-dashboard'),
+  clipboard: document.getElementById('view-clipboard'),
   editor: document.getElementById('view-editor'),
   trash: document.getElementById('view-trash'),
   settings: document.getElementById('view-settings'),
@@ -26,6 +32,7 @@ App.setView = (name) => {
   document.getElementById('app').dataset.view = name;
   refreshSidebar();
   if (name === 'dashboard') refreshDashboard();
+  if (name === 'clipboard') refreshClipboardView();
   if (name === 'trash') refreshTrash();
   if (name === 'settings') renderSettings();
 };
@@ -92,6 +99,7 @@ function refreshSidebar() {
   const counts = {
     all: live.length,
     favorites: live.filter((e) => e.favorite).length,
+    clipboard: clipboardCount(),
     trash: App.trashedEntries().length,
   };
   document.querySelectorAll('[data-count]').forEach((el) => {
@@ -101,7 +109,10 @@ function refreshSidebar() {
   });
 
   document.querySelectorAll('#sidebar-nav .nav-item').forEach((btn) => {
-    btn.classList.toggle('active', App.view === 'dashboard' && App.nav === btn.dataset.nav);
+    const active = btn.dataset.nav === 'clipboard'
+      ? App.view === 'clipboard'
+      : App.view === 'dashboard' && App.nav === btn.dataset.nav;
+    btn.classList.toggle('active', active);
   });
   document.querySelector('.sidebar-footer .nav-item').classList.toggle('active', App.view === 'settings');
 
@@ -131,6 +142,7 @@ function wireSidebar() {
     btn.addEventListener('click', () => {
       App.nav = btn.dataset.nav;
       if (App.nav === 'trash') App.setView('trash');
+      else if (App.nav === 'clipboard') App.setView('clipboard');
       else App.setView('dashboard');
     });
   });
@@ -274,6 +286,7 @@ function wireElectronBridge() {
       case 'theme': toggleTheme(); break;
       case 'shortcuts': openSettingsHelp('shortcuts'); break;
       case 'about': openSettingsHelp('about'); break;
+      case 'settings': App.setView('settings'); break;
       case 'backup-export': App.setView('settings'); setTimeout(() => document.getElementById('set-backup')?.click(), 80); break;
       case 'backup-import': App.setView('settings'); setTimeout(() => document.getElementById('set-import')?.click(), 80); break;
       default: break;
@@ -287,6 +300,56 @@ function wireElectronBridge() {
       window.tv.notifyFlushed();
     }
   });
+
+  // Clipboard engine: live captures + monitor state.
+  window.tv.onClipboardCaptured((item) => { applyCapture(item); });
+  window.tv.onClipboardStateChanged((st) => { setMonitorState(st); });
+
+  // Close disposition: the user decides what closing the window means.
+  window.tv.onCloseRequest(async () => {
+    const behavior = App.settings.closeBehavior || 'ask';
+    if (behavior === 'tray') { window.tv.closeResolve('tray'); return; }
+    if (behavior === 'quit') { window.tv.closeResolve('quit'); return; }
+    const choice = await askCloseBehavior();
+    if (!choice) { window.tv.closeResolve('cancel'); return; }
+    if (choice.remember) {
+      App.settings.closeBehavior = choice.action;
+      App.persistSettings();
+    }
+    window.tv.closeResolve(choice.action);
+  });
+}
+
+/** First-close dialog: minimize to tray or quit? (shown when closeBehavior === 'ask') */
+function askCloseBehavior() {
+  return new Promise((resolve) => {
+    const root = document.getElementById('modal-root');
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="modal" role="dialog" aria-modal="true">
+        <h3 class="modal-title">Close TextVault?</h3>
+        <div class="modal-body">Clipboard monitoring keeps running in the background
+          when the window is closed to the tray.<br><br>
+          <label class="remember-row"><input type="checkbox" id="close-remember"> Remember my choice</label></div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" data-act="cancel">Cancel</button>
+          <button class="btn btn-ghost-danger" data-act="quit">Quit TextVault</button>
+          <button class="btn btn-accent" data-act="tray">Close to Tray</button>
+        </div>
+      </div>`;
+    const close = (v) => {
+      backdrop.remove();
+      document.removeEventListener('keydown', onKey, true);
+      const remember = backdrop.querySelector('#close-remember')?.checked;
+      resolve(v ? { action: v, remember } : null);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') close(null); };
+    backdrop.querySelectorAll('[data-act]').forEach((b) =>
+      b.addEventListener('click', () => close(b.dataset.act)));
+    document.addEventListener('keydown', onKey, true);
+    root.appendChild(backdrop);
+  });
 }
 
 /* ---------------- boot ---------------- */
@@ -296,6 +359,7 @@ async function boot() {
   applyTheme();
 
   initDashboard();
+  initClipboardView();
   initEditor();
   initTrash();
   initSettings();
@@ -327,12 +391,32 @@ async function boot() {
   refreshDashboard();
   App.on('entries-changed', refreshSidebar);
 
+  // Clipboard engine: load persisted history, drain pending captures, and
+  // sync the monitor's master switch with the user's saved settings.
+  await initClipboard();
+  window.tv.clipboardSetEnabled(App.settings.clipboard?.monitorEnabled !== false)
+    .catch(() => {});
+  App.on('clipboard-changed', refreshSidebar);
+
   // programmatic test hook (only when launched with ?e2e=1 by the test runner)
   if (new URLSearchParams(location.search).get('e2e') === '1') {
     window.__TV_TEST__ = {
       App,
       ready: true,
       openEditor: (id) => App.openEditor(id),
+      clipboard: {
+        count: () => clipboardCount(),
+        clearAll: () => clearClipboardHistory(),
+        items: () => clipboardItems().map((i) => ({
+          id: i.id, content: i.content, pinned: i.isPinned, fav: i.isFavorite,
+          sensitive: i.isSensitive, updatedAt: i.updatedAt,
+        })),
+        top: () => clipboardItems()[0]?.content ?? null,
+        has: (needle) => clipboardItems().some((i) => i.content.includes(needle)),
+        monitorState: () => getMonitorState(),
+        pinnedCount: () => clipboardItems().filter((i) => i.isPinned).length,
+        viewVisible: () => !document.getElementById('view-clipboard').classList.contains('hidden'),
+      },
       dashboard: {
         search: (q) => { const i = document.getElementById('search-input'); i.value = q; i.dispatchEvent(new Event('input', { bubbles: true })); },
         cards: () => [...document.querySelectorAll('#grid-inner .card')].map((c) => c.dataset.id),

@@ -10,6 +10,7 @@ const files = [
   'src/js/state.js',
   'src/js/core/db.js',
   'src/js/core/entry.js',
+  'src/js/core/clipboard.js',
   'src/js/search/search.js',
   'src/js/ui/icons.js',
   'src/js/ui/components.js',
@@ -18,6 +19,7 @@ const files = [
   'src/js/views/editor.js',
   'src/js/views/trash.js',
   'src/js/views/settings.js',
+  'src/js/views/clipboard.js',
 ];
 
 let failed = 0;

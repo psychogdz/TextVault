@@ -32,6 +32,11 @@
     </button>
 
     <nav class="sidebar-nav" id="sidebar-nav">
+      <button class="nav-item" data-nav="clipboard">
+        <span class="nav-icon" data-icon="clipboard"></span>
+        <span class="nav-label">Clipboard</span>
+        <span class="nav-count" data-count="clipboard"></span>
+      </button>
       <button class="nav-item" data-nav="all">
         <span class="nav-icon" data-icon="layers"></span>
         <span class="nav-label">All Texts</span>
@@ -126,6 +131,26 @@
       </div>
 
       <div class="bulkbar hidden" id="bulkbar"></div>
+    </section>
+
+    <!-- View: Clipboard history -->
+    <section class="view view-clipboard hidden" id="view-clipboard">
+      <div class="clip-head">
+        <h2 class="view-title">Clipboard</h2>
+        <span class="clip-status" id="clip-status">
+          <span class="clip-dot"></span>
+          <span class="clip-status-text">Monitoring active</span>
+        </span>
+        <span class="spacer"></span>
+        <button class="btn btn-ghost btn-sm" id="clip-pause">Pause</button>
+        <button class="btn btn-ghost-danger btn-sm" id="clip-clear">Clear History</button>
+      </div>
+      <div class="clip-search">
+        <span class="search-icon" data-icon="search"></span>
+        <input id="clip-search-input" type="text" placeholder="Search clipboard history…" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="clip-list" id="clip-list"></div>
+      <div class="empty-state hidden" id="clipboard-empty"></div>
     </section>
 
     <!-- View: Editor -->

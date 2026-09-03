@@ -150,6 +150,9 @@ const preloadSrc = src('electron/preload.js');
 const TV_METHODS = [
   'export', 'backupExport', 'backupImport', 'clipboardRead', 'clipboardWrite',
   'appInfo', 'openPath', 'onFlush', 'notifyFlushed', 'markDirty', 'onMenu',
+  'clipboardState', 'clipboardSetPaused', 'clipboardSetEnabled',
+  'clipboardGetPending', 'clipboardAck', 'onClipboardCaptured',
+  'onClipboardStateChanged', 'onCloseRequest', 'closeResolve',
 ];
 test('preload exposes exactly the documented window.tv methods', () => {
   for (const m of TV_METHODS) {
@@ -209,7 +212,8 @@ test('ipcMain handlers exist only in ipc/register.js', () => {
     'electron/main.js',
     'electron/services/app-protocol.js', 'electron/services/window.js',
     'electron/services/menu.js', 'electron/services/export-service.js',
-    'electron/services/file-dialogs.js',
+    'electron/services/file-dialogs.js', 'electron/services/clipboard-service.js',
+    'electron/services/tray.js',
   ];
   for (const f of others) {
     assert.ok(!src(f).includes('ipcMain.'), `${f} must not register IPC handlers`);

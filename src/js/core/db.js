@@ -10,17 +10,22 @@
 //  - the schema version is persisted and migrations run on open
 //    (see shared/storage-migrations.mjs)
 
-import { validateEntryRecord, SCHEMA_VERSION } from '../../../shared/validation.mjs';
+import { validateEntryRecord, validateClipboardRecord, SCHEMA_VERSION } from '../../../shared/validation.mjs';
 import { runMigrations } from '../../../shared/storage-migrations.mjs';
 
 const DB_NAME = 'textvault';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const SCHEMA_KEY = 'schema-version';
 
 let dbPromise = null;
 
 function assertValidEntry(entry) {
   const check = validateEntryRecord(entry);
+  if (!check.ok) throw new Error(`Storage rejected an invalid record: ${check.error}`);
+}
+
+function assertValidClipboardItem(item) {
+  const check = validateClipboardRecord(item);
   if (!check.ok) throw new Error(`Storage rejected an invalid record: ${check.error}`);
 }
 
@@ -40,6 +45,12 @@ export function openDb() {
       }
       if (!db.objectStoreNames.contains('settings')) {
         db.createObjectStore('settings');
+      }
+      if (!db.objectStoreNames.contains('clipboard')) {
+        const cb = db.createObjectStore('clipboard', { keyPath: 'id' });
+        cb.createIndex('createdAt', 'createdAt');
+        cb.createIndex('updatedAt', 'updatedAt');
+        cb.createIndex('contentHash', 'contentHash');
       }
     };
     req.onsuccess = async () => {
@@ -195,6 +206,70 @@ export const db = {
     return new Promise((resolve, reject) => {
       const t = d.transaction('settings', 'readwrite');
       const req = t.objectStore('settings').put(value, key);
+      reqToPromise(req, t).then(resolve, reject);
+    });
+  },
+
+  /* --------------------- clipboard history store --------------------- */
+
+  async listClipboard() {
+    const d = await openDb();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction('clipboard', 'readonly');
+      const req = t.objectStore('clipboard').getAll();
+      reqToPromise(req, t).then(resolve, reject);
+    });
+  },
+
+  async putClipboardItem(item) {
+    assertValidClipboardItem(item);
+    const d = await openDb();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction('clipboard', 'readwrite');
+      const req = t.objectStore('clipboard').put(item);
+      reqToPromise(req, t).then(resolve, reject);
+    });
+  },
+
+  async putClipboardItems(items) {
+    for (const it of items) assertValidClipboardItem(it);
+    const d = await openDb();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction('clipboard', 'readwrite');
+      const store = t.objectStore('clipboard');
+      for (const it of items) store.put(it);
+      t.oncomplete = () => resolve(items.length);
+      t.onerror = () => reject(t.error);
+    });
+  },
+
+  async deleteClipboardItem(id) {
+    const d = await openDb();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction('clipboard', 'readwrite');
+      const req = t.objectStore('clipboard').delete(id);
+      reqToPromise(req, t).then(resolve, reject);
+    });
+  },
+
+  async deleteClipboardMany(ids) {
+    if (!ids.length) return 0;
+    const d = await openDb();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction('clipboard', 'readwrite');
+      const store = t.objectStore('clipboard');
+      for (const id of ids) store.delete(id);
+      t.oncomplete = () => resolve(ids.length);
+      t.onerror = () => reject(t.error);
+    });
+  },
+
+  /** Clear the entire clipboard history atomically. */
+  async clearClipboard() {
+    const d = await openDb();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction('clipboard', 'readwrite');
+      const req = t.objectStore('clipboard').clear();
       reqToPromise(req, t).then(resolve, reject);
     });
   },

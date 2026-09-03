@@ -10,11 +10,14 @@
 import { SCHEMA_VERSION } from './validation.mjs';
 
 /**
- * Map of target version → migration function.
- * Example: { 2: (records) => records.map(addMissingField) }
- * Version 1 is the original schema; no entry exists for it.
+ * Map of target version → migration function (applied to `entries` records).
+ * Version 2: the clipboard store is created separately in onupgradeneeded;
+ * entry records themselves are unchanged, so this step is an explicit no-op
+ * that only records the version bump. Future record-shape changes go here.
  */
-export const MIGRATIONS = {};
+export const MIGRATIONS = {
+  2: (record) => record,
+};
 
 /**
  * Pure migration runner.

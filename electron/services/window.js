@@ -1,7 +1,8 @@
 'use strict';
 
 // Main window lifecycle: creation, secure webPreferences, quit-time save
-// flush handshake, smoke-test hook, and main→renderer event helpers.
+// flush handshake, close disposition (quit vs hide-to-tray), smoke-test hook,
+// and main→renderer event helpers.
 
 const path = require('node:path');
 const { BrowserWindow, app } = require('electron');
@@ -13,6 +14,7 @@ const SRC_DIR = path.join(ROOT, 'src');
 let mainWindow = null;
 let quitting = false;
 let flushed = true;
+let closeResolver = null; // pending close-disposition callback
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -76,21 +78,63 @@ function createWindow() {
 
   mainWindow.on('closed', () => { mainWindow = null; });
 
-  // Give the renderer a chance to flush pending auto-saves before closing.
+  // Give the renderer a chance to flush pending auto-saves, then let it
+  // decide the close disposition (quit / hide to tray) per user settings —
+  // closing the window must never silently stop clipboard monitoring.
   mainWindow.on('close', (event) => {
-    if (quitting || flushed || mainWindow.isDestroyed()) return;
+    if (quitting || mainWindow.isDestroyed()) return;
+    if (!flushed) {
+      event.preventDefault();
+      mainWindow.webContents.send(EMITTED.FLUSH);
+      const started = Date.now();
+      const poll = setInterval(() => {
+        if (flushed || Date.now() - started > 4000) {
+          clearInterval(poll);
+          requestCloseDisposition();
+        }
+      }, 120);
+      return;
+    }
     event.preventDefault();
-    mainWindow.webContents.send(EMITTED.FLUSH);
-    const started = Date.now();
-    const poll = setInterval(() => {
-      if (flushed || Date.now() - started > 4000) {
-        clearInterval(poll);
-        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
-      }
-    }, 120);
+    requestCloseDisposition();
   });
 
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+}
+
+/**
+ * Ask the renderer how to dispose of a window close. The renderer resolves
+ * via tv:close-resolve ('quit' | 'tray' | 'cancel'). If the renderer cannot
+ * answer within 3s (crashed/reloading), fall back to quit — the v1.0.0
+ * behavior — rather than hanging.
+ */
+function requestCloseDisposition() {
+  if (quitting || !mainWindow || mainWindow.isDestroyed()) return;
+  if (closeResolver) return; // already pending
+  const timer = setTimeout(() => {
+    closeResolver = null;
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    quitting = true;
+    app.quit();
+  }, 3000);
+  closeResolver = (action) => {
+    clearTimeout(timer);
+    closeResolver = null;
+    if (action === 'quit') {
+      quitting = true;
+      app.quit();
+    } else if (action === 'tray') {
+      mainWindow.hide();
+    } // 'cancel' → keep the window open
+  };
+  sendToMain(EMITTED.CLOSE_REQUEST);
+}
+
+/** Resolve a pending close request (called from the IPC layer). */
+function resolveCloseDisposition(action) {
+  if (closeResolver && ['quit', 'tray', 'cancel'].includes(action)) {
+    closeResolver(action);
+  }
 }
 
 /** Send an event to the main window if it exists. */
@@ -141,4 +185,6 @@ module.exports = {
   markFlushed,
   markDirty,
   focusMainWindow,
+  requestCloseDisposition,
+  resolveCloseDisposition,
 };

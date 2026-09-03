@@ -8,9 +8,10 @@ const path = require('node:path');
 const { ipcMain, app, shell, clipboard } = require('electron');
 const fsp = require('node:fs/promises');
 
-const { HANDLED } = require('./channels');
+const { HANDLED, EMITTED } = require('./channels');
 const v = require('./validate');
-const { getMainWindow, markFlushed, markDirty, setQuitting } = require('../services/window');
+const { getMainWindow, markFlushed, markDirty, setQuitting, resolveCloseDisposition } = require('../services/window');
+const clipboardService = require('../services/clipboard-service');
 const {
   TEST_DIR,
   EXT_FILTERS,
@@ -180,6 +181,38 @@ function registerIpcHandlers() {
   ipcMain.handle(HANDLED.FLUSHED, () => { markFlushed(); });
   ipcMain.on(HANDLED.FLUSHED, () => { markFlushed(); });
   ipcMain.handle(HANDLED.MARK_DIRTY, () => { markDirty(); });
+
+  /* ------------------- clipboard engine (Phase 3) ------------------- */
+
+  ipcMain.handle(HANDLED.CLIPBOARD_STATE, () => clipboardService.getState());
+  ipcMain.handle(HANDLED.CLIPBOARD_SET_PAUSED, (_ev, paused) => {
+    if (typeof paused !== 'boolean') return { ok: false, error: 'Invalid clipboard request.' };
+    clipboardService.setPaused(paused);
+    return { ok: true, state: clipboardService.getState() };
+  });
+  ipcMain.handle(HANDLED.CLIPBOARD_SET_ENABLED, (_ev, enabled) => {
+    if (typeof enabled !== 'boolean') return { ok: false, error: 'Invalid clipboard request.' };
+    clipboardService.setEnabled(enabled);
+    return { ok: true, state: clipboardService.getState() };
+  });
+  ipcMain.handle(HANDLED.CLIPBOARD_GET_PENDING, () => clipboardService.getPending());
+  ipcMain.handle(HANDLED.CLIPBOARD_ACK, (_ev, ids) => {
+    if (!Array.isArray(ids) || ids.length > 500 || ids.some((x) => typeof x !== 'string')) {
+      return { ok: false, error: 'Invalid clipboard request.' };
+    }
+    clipboardService.ackCaptured(ids);
+    return { ok: true };
+  });
+
+  /* ------------------- close disposition (Phase 3) ------------------- */
+
+  ipcMain.handle(HANDLED.CLOSE_RESOLVE, (_ev, action) => {
+    if (!['quit', 'tray', 'cancel'].includes(action)) {
+      return { ok: false, error: 'Invalid close request.' };
+    }
+    resolveCloseDisposition(action);
+    return { ok: true };
+  });
 }
 
 function lifecycle() {

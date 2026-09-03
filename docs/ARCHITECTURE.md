@@ -2228,7 +2228,10 @@ electron/
 │                              will-navigate guard, window-open denial
 │   ├── menu.js                application menu (commands relayed to renderer)
 │   ├── export-service.js      TXT/DOCX/PDF rendering, hidden print window
-│   └── file-dialogs.js        native dialogs, atomic writes, TEST_DIR hook
+│   ├── file-dialogs.js        native dialogs, atomic writes, TEST_DIR hook
+│   ├── clipboard-service.js   clipboard monitor: change detection, capture
+│   │                          tagging, pending-capture queue (Phase 3)
+│   └── tray.js                system tray menu (Phase 3)
 └── exporters/                 pure format builders (txt, docx, pdf-html)
 ```
 
@@ -2250,8 +2253,17 @@ payload at the boundary (`ipc/validate.js`) and answers with a predictable
 | `tv:app-info` | R→M | no payload |
 | `tv:open-path` | R→M | path allowlist: only the app's own userData directory may be opened |
 | `tv:flushed`, `tv:mark-dirty` | R→M | no payload (flush handshake) |
+| `tv:clipboard-state` | R→M | no payload |
+| `tv:clipboard-set-paused` | R→M | boolean required |
+| `tv:clipboard-set-enabled` | R→M | boolean required |
+| `tv:clipboard-get-pending` | R→M | no payload |
+| `tv:clipboard-ack` | R→M | array of id strings, ≤500 |
+| `tv:close-resolve` | R→M | one of 'quit' \| 'tray' \| 'cancel' |
 | `menu` | M→R | static command strings from the menu module |
 | `tv:flush`, `tv:flushed-reply` | M→R | flush handshake |
+| `clipboard:captured` | M→R | validated clipboard item (see 77.6) |
+| `clipboard:state-changed` | M→R | monitor state snapshot (booleans/numbers) |
+| `tv:close-request` | M→R | no payload; renderer must answer via `tv:close-resolve` |
 
 ## 77.3 Preload surface
 
@@ -2285,9 +2297,7 @@ registry/preload sync is enforced by tests, not by convention.
 
 User data remains in the renderer-side IndexedDB database (`textvault`).
 **Decision (Phase 2, 2026-09-03): KEEP** the renderer-side IndexedDB storage —
-audit outcome per §15 of this document:
-
-* Reliability/transactions: IndexedDB is transactional and LevelDB-backed;
+audit outcome per §15 of this document:* Reliability/transactions: IndexedDB is transactional and LevelDB-backed;
   the E2E suite proves restart persistence.
 * Performance: virtualized rendering keeps the DOM bounded; full-content
   search is chunked. No measured bottleneck justifies a rewrite.
@@ -2314,3 +2324,51 @@ Storage hardening added in Phase 2:
    dropped); a corrupted settings record can never break boot.
 5. **Failure surfacing** — a failure to load the library on boot is now a
    visible error (toast) instead of a silently emptied vault.
+
+## 77.6 Clipboard Engine (Phase 3, as-built)
+
+```text
+System clipboard ( polled every 600 ms, change detection via last text )
+      ↓  main: clipboard-service.js
+Capture (skip: empty / unchanged / oversized > 1 MB → skipped counter)
+      ↓  tag: timestamps, sensitive-content flags (shared/sensitive.mjs)
+clipboard:captured event  →  Renderer
+      ↓  renderer: core/clipboard.js — THE ONLY policy layer
+Duplicate policy ('top' = move-to-top | 'new')  [shared/clipboard-policy.mjs]
+      ↓
+Persistence → validated `clipboard` store (schema v2)
+      ↓
+Retention (maxItems; pinned/favorite protected)  [pure, unit-tested]
+      ↓
+Ack → main drops the capture from its pending queue
+```
+
+Decisions and properties:
+
+1. **Storage ownership**: the renderer's IndexedDB is the single canonical
+   store for clipboard history. The main process keeps only *unacknowledged*
+   captures in a bounded queue (≤200) so nothing is lost while the renderer
+   is busy or reloading; unacked captures drain on next boot.
+2. **Policy centralization**: duplicate and retention policies are pure
+   functions in `shared/clipboard-policy.mjs` used only by
+   `core/clipboard.js` — never by UI components.
+3. **Sensitive content is mark-only**: captures are flagged
+   (`isSensitive`, `sensitiveKinds`) and masked in the UI until revealed;
+   content is never blocked, altered, or deleted by detection.
+4. **Oversized captures** (>1 MB) are skipped, counted, and surfaced in the
+   monitor state — never silently truncated (SECURITY.md §59.11).
+5. **Background operation**: closing the main window resolves a close
+   disposition ('quit' | 'tray' | 'cancel', user-configurable with
+   ask-once-and-remember default). 'tray' hides the window; the renderer —
+   and therefore monitoring — keeps running. If the renderer cannot answer
+   a close request within 3 s, the app quits (v1.0.0 fallback).
+6. **System tray**: Open, Settings, Pause/Resume, Quit; the menu reflects
+   monitor state. Source-application detection is NOT implemented (no native
+   modules) — the exclusion rule infrastructure exists and applies when a
+   source is known (currently never); documented limitation.
+7. **Pause semantics**: while paused, the monitor does not read the
+   clipboard at all; content copied during a pause is captured only after
+   resume (it was never persisted *during* the pause — verified by E2E).
+8. **Schema v2**: the `clipboard` object store (indexes: createdAt,
+   updatedAt, contentHash) was added in `onupgradeneeded`; entry records
+   themselves are unchanged (MIGRATIONS[2] is an explicit no-op).

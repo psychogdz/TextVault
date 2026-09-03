@@ -1,0 +1,180 @@
+// Clipboard history view: status, search, rows with copy/pin/favorite/delete.
+// Domain logic lives in core/clipboard.js; this module only renders and
+// forwards user actions (ARCHITECTURE.md §7 — renderer responsibilities).
+
+import { App } from '../state.js';
+import {
+  clipboardItems, clipboardCount, getMonitorState, setPaused,
+  copyClipboardItem, toggleClipboardPin, toggleClipboardFavorite,
+  deleteClipboardItem, restoreClipboardItem, clearClipboardHistory,
+} from '../core/clipboard.js';
+import { icon, emptyArt } from '../ui/icons.js';
+import { toast, confirmDialog, timeAgo, formatNumber } from '../ui/components.js';
+import { escapeHtml } from '../../../shared/snippets.mjs';
+
+const els = {};
+let query = '';
+let listToken = 0;
+
+export function initClipboardView() {
+  els.view = document.getElementById('view-clipboard');
+  els.status = document.getElementById('clip-status');
+  els.statusText = document.querySelector('#clip-status .clip-status-text');
+  els.pauseBtn = document.getElementById('clip-pause');
+  els.clearBtn = document.getElementById('clip-clear');
+  els.list = document.getElementById('clip-list');
+  els.empty = document.getElementById('clipboard-empty');
+  els.search = document.getElementById('clip-search-input');
+
+  els.pauseBtn.addEventListener('click', async () => {
+    const st = getMonitorState();
+    const next = !(st.paused || !st.enabled);
+    if (!st.enabled) {
+      toast('Clipboard monitoring is off — enable it in Settings.', { type: 'info' });
+      return;
+    }
+    await setPaused(!st.paused);
+    toast(st.paused ? 'Clipboard monitoring resumed' : 'Clipboard monitoring paused', { type: 'info' });
+    void next;
+  });
+
+  els.clearBtn.addEventListener('click', async () => {
+    const n = clipboardCount();
+    if (!n) return;
+    const ok = await confirmDialog({
+      title: 'Clear clipboard history?',
+      message: `This removes ${formatNumber(n)} ${n === 1 ? 'item' : 'items'}. Pinned items are kept.`,
+      confirmText: 'Clear History',
+      danger: true,
+    });
+    if (!ok) return;
+    await clearClipboardHistory();
+    toast('Clipboard history cleared');
+  });
+
+  els.search.addEventListener('input', () => {
+    query = els.search.value;
+    refresh();
+  });
+
+  App.on('clipboard-changed', () => { if (App.view === 'clipboard') refresh(); });
+  App.on('clipboard-state', () => { if (App.view === 'clipboard') refreshStatus(); });
+}
+
+function refreshStatus() {
+  const st = getMonitorState();
+  els.status.dataset.state = !st.enabled ? 'off' : st.paused ? 'paused' : 'active';
+  els.statusText.textContent = !st.enabled
+    ? 'Monitoring off'
+    : st.paused ? 'Monitoring paused' : 'Monitoring active';
+  els.pauseBtn.textContent = st.paused ? 'Resume' : 'Pause';
+}
+
+function matches(item) {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return (item.content || '').toLowerCase().includes(q);
+}
+
+export function refresh() {
+  if (!els.list) return;
+  refreshStatus();
+  const token = ++listToken;
+
+  const pinned = [];
+  const rest = [];
+  for (const it of clipboardItems()) {
+    if (!matches(it)) continue;
+    (it.isPinned ? pinned : rest).push(it);
+  }
+  const rows = [...pinned, ...rest];
+
+  els.list.innerHTML = '';
+  if (!rows.length) {
+    els.list.style.display = 'none';
+    const q = query.trim();
+    els.empty.innerHTML = `
+      <div class="empty-art">${emptyArt(q ? 'search' : 'clipboard')}</div>
+      <h3>${q ? 'No matches' : 'No clipboard history yet'}</h3>
+      <p>${q
+        ? 'Try a different search or clear the filter.'
+        : 'Copy anything, anywhere on your PC — TextVault saves it here automatically.'}</p>`;
+    els.empty.classList.remove('hidden');
+    return;
+  }
+  els.empty.classList.add('hidden');
+  els.list.style.display = '';
+
+  for (const it of rows) {
+    els.list.appendChild(renderRow(it));
+  }
+  void token;
+}
+
+function renderRow(item) {
+  const row = document.createElement('div');
+  row.className = 'clip-row';
+  row.dataset.id = item.id;
+  if (item.isSensitive) row.dataset.sensitive = '1';
+
+  const masked = item.isSensitive && !row.dataset.revealed;
+  const preview = masked
+    ? '<span class="clip-masked">Sensitive content hidden — click to reveal</span>'
+    : escapeHtml(item.preview || '');
+
+  row.innerHTML = `
+    <div class="clip-flags">
+      ${item.isPinned ? `<span class="clip-flag" title="Pinned">${icon('pin', 13)}</span>` : ''}
+      ${item.isFavorite ? `<span class="clip-flag fav" title="Favorite">${icon('star-filled', 13)}</span>` : ''}
+      ${item.isSensitive ? `<span class="clip-flag sens" title="Looks like a password, key or token">${icon('alert', 13)}</span>` : ''}
+    </div>
+    <div class="clip-preview"></div>
+    <div class="clip-meta">
+      <span>${timeAgo(item.updatedAt)}</span>
+      <span class="meta-dot"></span>
+      <span>${formatNumber(item.content.length)} chars</span>
+    </div>
+    <div class="clip-actions">
+      <button class="icon-btn icon-btn-sm" data-act="copy" title="Copy">${icon('copy', 14)}</button>
+      <button class="icon-btn icon-btn-sm ${item.isPinned ? 'active' : ''}" data-act="pin" title="${item.isPinned ? 'Unpin' : 'Pin'}">${icon('pin', 14)}</button>
+      <button class="icon-btn icon-btn-sm ${item.isFavorite ? 'fav-on' : ''}" data-act="fav" title="${item.isFavorite ? 'Remove from favorites' : 'Favorite'}">${icon(item.isFavorite ? 'star-filled' : 'star', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="del" title="Delete">${icon('trash', 14)}</button>
+    </div>`;
+
+  const previewEl = row.querySelector('.clip-preview');
+  previewEl.innerHTML = preview;
+  if (item.isSensitive) {
+    previewEl.addEventListener('click', () => {
+      if (previewEl.dataset.revealed) return;
+      previewEl.dataset.revealed = '1';
+      previewEl.textContent = item.content.length > 500
+        ? item.content.slice(0, 500) + '…'
+        : item.content;
+    });
+  }
+
+  row.querySelector('[data-act="copy"]').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    await copyClipboardItem(item.id);
+    toast('Copied to clipboard');
+  });
+  row.querySelector('[data-act="pin"]').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    await toggleClipboardPin(item.id);
+  });
+  row.querySelector('[data-act="fav"]').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    await toggleClipboardFavorite(item.id);
+  });
+  row.querySelector('[data-act="del"]').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    await deleteClipboardItem(item.id);
+    toast('Removed from history', {
+      type: 'info',
+      duration: 4000,
+      action: { label: 'Undo', onClick: () => restoreClipboardItem(item).then(() => toast('Restored')) },
+    });
+  });
+
+  return row;
+}
