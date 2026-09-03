@@ -1,6 +1,6 @@
 # TextVault
 
-A modern, polished desktop application for saving, organizing, searching and exporting every piece of text you copy — with **first-class Persian + English mixed (bidirectional) text support**.
+A modern, privacy-first desktop **clipboard manager and text workspace** for Windows: TextVault watches your clipboard, saves everything locally, and makes every piece of text instantly searchable, organiz­able and exportable — with **first-class Persian + English mixed (bidirectional) text support**.
 
 Stop scattering `text.txt` files over your desktop: open TextVault, paste, save. Later, search, view, edit, copy, star, tag and export to **TXT / Word (.docx) / PDF**.
 
@@ -12,6 +12,13 @@ Stop scattering `text.txt` files over your desktop: open TextVault, paste, save.
 
 | Area | What you get |
 |---|---|
+| **Clipboard history** | Automatic local capture of everything you copy (300 ms change detection), with duplicate handling (re-copy moves the item to the top), pinned/favorite protection and configurable history size + time retention. |
+| **Quick Clipboard** | A frameless, always-on-top launcher (default `Ctrl+Shift+V`, configurable) with instant search — copy any recent item without opening the main window. `Esc` hides it. |
+| **Privacy** | Pause/resume monitoring (tray + UI), session-scoped **Private mode**, sensitive-content flagging (passwords/keys/tokens are masked until you reveal them) with an optional never-save rule, time-based retention that never deletes pinned/favorite items. Closing the window can keep monitoring running in the tray. |
+| **Snippets & Collections** | Save reusable texts on purpose (commands, templates, replies) and group clipboard items and snippets into named collections. |
+| **Command palette** | `Ctrl+K` opens a searchable, keyboard-driven command palette on a central command registry. |
+| **English + فارسی** | The interface itself is bilingual (English/RTL Persian) with translated chrome and tray; mixed bidi content stays correct everywhere. |
+| **Text tools** | 16 local transformations (case, sort/unique lines, JSON format/minify, Base64, URL encode/decode) applied in the editor — always undoable, never persisted until you save. |
 | **Quick capture** | Paste into the dashboard bar → `Ctrl+Enter` → saved. Or `+ New Text` for the full editor. |
 | **Selection Mode** | Click the ☑ button, press `Ctrl+M`, or click a card's circle badge to enter a dedicated multi-select state: **clicking anywhere on a card toggles its selection** (accent ring + filled circle badge — the editor never opens), with a clear toolbar showing `N selected`, plus **Select All / Clear Selection / Cancel**. `Ctrl+A` selects all, `Esc` cancels, `Delete` deletes the selection (with confirmation) and the toast offers **Undo**. |
 | **Card actions** | Hover a card for **⭐ Star** and **🗑 Trash** side-by-side at its top-right. Star toggles favorite only; Trash asks “Delete this text?” (Cancel / **Move to Trash**) and never opens the text — with an **Undo** toast right after. |
@@ -53,7 +60,7 @@ npm start          # launches TextVault
 
 ### Tests
 ```bash
-npm test           # unit tests (bidi, stats, filenames, snippets, TXT/DOCX/PDF builders)
+npm test           # syntax + unit (bidi, stats, filenames, snippets, exporters, policies, i18n) + IPC/architecture boundary checks
 npm run test:e2e   # full app end-to-end (launches the real window, exports files, screenshots)
 ```
 
