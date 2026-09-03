@@ -24,7 +24,57 @@ This document defines:
 
 ---
 
-# 2. Roadmap Authority
+# 2. Official Phase Model (Authoritative)
+
+The official execution model for TextVault Pro is the **10-phase model** defined in `MASTER_PROMPT.md` and `PROGRESS.md`:
+
+```text
+Phase 0  — Repository Baseline
+Phase 1  — Core Architecture
+Phase 2  — Storage Layer
+Phase 3  — Clipboard Engine
+Phase 4  — Core Library
+Phase 5  — Search & Organization
+Phase 6  — UI/UX Polish
+Phase 7  — Privacy & Security
+Phase 8  — Import / Export / Backup
+Phase 9  — Performance & Reliability
+Phase 10 — Testing & Release
+```
+
+This roadmap previously described a 17-phase sequence. Per the project owner's
+decision (2026-09-03), the 10-phase model above is the **only execution
+authority**. The former 17 phases have been reconciled into the official model
+below without losing requirements, using this mapping:
+
+| Former roadmap phase                     | Official phase where the work now lives |
+|------------------------------------------|-----------------------------------------|
+| 0 — Existing Project Audit               | Phase 0 — Repository Baseline (**COMPLETE 2026-09-03**, see PROGRESS.md) |
+| 1 — Foundation and Architecture          | Phase 1 — Core Architecture |
+| 2 — Clipboard Engine and Persistent History | Phase 3 — Clipboard Engine (storage prerequisites in Phase 2) |
+| 3 — Search, Filtering and History UX     | Phase 5 — Search & Organization |
+| 4 — Organization: Tags, Collections, Favorites | Phase 4 — Core Library (filter integration verified in Phase 5) |
+| 5 — Tray, Lifecycle and Application Behavior | Phase 1 (lifecycle architecture), Phase 3 (background monitoring + tray), Phase 6 (tray UX polish) |
+| 6 — Quick Clipboard and Keyboard-First Workflow | Phase 6 — UI/UX Polish |
+| 7 — Snippets and Reusable Text           | Phase 4 — Core Library |
+| 8 — Smart Content Detection              | Phase 4 — Core Library (presentation in Phase 6) |
+| 9 — Privacy and Security Controls        | Phase 7 — Privacy & Security |
+| 10 — Text Utilities and Transformations  | Phase 4 — Core Library (presentation in Phase 6) |
+| 11 — Import, Export and Backup           | Phase 8 — Import / Export / Backup |
+| 12 — Settings and Configuration          | Phase 2 (settings storage/service) + Phase 6 (settings UI) |
+| 13 — UI Polish, Themes, i18n and RTL     | Phase 6 — UI/UX Polish |
+| 14 — Performance and Reliability         | Phase 9 — Performance & Reliability |
+| 15 — Advanced Desktop Productivity       | Deferred (post-MVP) — see §16 |
+| 16 — Release Hardening                   | Phase 10 — Testing & Release |
+| 17 — Post-MVP Optional Features          | Deferred (post-MVP) — see §16 |
+
+If any requirement appears to be lost in this mapping, the former phase text in
+Git history (`git show 4945693:docs/ROADMAP.md`) is the recovery reference, and
+the conflict must be documented rather than silently dropped.
+
+---
+
+# 3. Roadmap Authority
 
 This roadmap must be used together with the following project documents:
 
@@ -62,7 +112,7 @@ Defines the technical architecture, process boundaries, domain/application/infra
 
 ### ROADMAP.md
 
-Defines implementation order and phase boundaries.
+Defines implementation order and phase boundaries under the official 10-phase model.
 
 ### DEVELOPMENT.md
 
@@ -82,7 +132,7 @@ Defines the current project state and completed work.
 
 ### MASTER_PROMPT.md
 
-Defines the final agent operating instructions and references the rest of the documentation.
+Defines the final agent operating instructions and the official phase model.
 
 If a conflict exists between documents, the agent must not silently ignore it.
 
@@ -90,7 +140,7 @@ The agent must determine the safest interpretation according to the project docu
 
 ---
 
-# 3. Development Philosophy
+# 4. Development Philosophy
 
 TextVault Pro must be developed as a real desktop product rather than as a collection of isolated features.
 
@@ -111,7 +161,7 @@ A technically sophisticated implementation that creates unnecessary complexity m
 
 ---
 
-# 4. Phase Execution Rules
+# 5. Phase Execution Rules
 
 Every phase follows this exact lifecycle:
 
@@ -137,7 +187,7 @@ STOP
 
 The agent must follow these rules.
 
-## 4.1 Read first
+## 5.1 Read first
 
 Before implementing a phase, read:
 
@@ -154,11 +204,9 @@ Also read the relevant sections of:
 * `TESTING.md`
 * `SECURITY.md`
 
-when those documents exist.
-
 ---
 
-## 4.2 Inspect before modifying
+## 5.2 Inspect before modifying
 
 Before changing existing functionality:
 
@@ -172,7 +220,7 @@ Do not replace working code simply because it is unfamiliar.
 
 ---
 
-## 4.3 Implement only the current phase
+## 5.3 Implement only the current phase
 
 The agent must implement only the phase currently assigned.
 
@@ -182,13 +230,9 @@ If a later feature is encountered during implementation:
 * document it if necessary
 * continue with the current phase
 
-Example:
-
-If Phase 3 encounters functionality that belongs to Phase 7, do not implement Phase 7.
-
 ---
 
-## 4.4 Avoid speculative architecture
+## 5.4 Avoid speculative architecture
 
 Do not introduce abstractions, frameworks, libraries, services, or infrastructure without a concrete current or near-term requirement.
 
@@ -196,7 +240,7 @@ The architecture should be extensible but not unnecessarily over-engineered.
 
 ---
 
-## 4.5 Preserve working functionality
+## 5.5 Preserve working functionality
 
 Existing features must be classified before removal.
 
@@ -214,7 +258,7 @@ Do not remove functionality solely to simplify development.
 
 ---
 
-## 4.6 Test after implementation
+## 5.6 Test after implementation
 
 Every meaningful phase must include:
 
@@ -227,7 +271,7 @@ A phase cannot be marked complete while known critical failures remain.
 
 ---
 
-## 4.7 Documentation update
+## 5.7 Documentation update
 
 At the end of every phase:
 
@@ -241,33 +285,17 @@ Documentation must describe what actually exists, not what was intended.
 
 ---
 
-## 4.8 Commit
+## 5.8 Commit
 
 Every completed phase must produce a clean Git commit.
 
-Commit messages must be natural and professional.
-
-Avoid:
-
-```text
-AI generated
-Generated by Claude
-Implemented from prompt
-Agent completed phase
-```
-
-Prefer:
-
-```text
-feat: add persistent clipboard history
-refactor: separate clipboard application services
-feat: add clipboard search and filtering
-fix: prevent duplicate clipboard captures
-```
+Commit messages must be natural and professional. Avoid messages such as
+"AI generated" or "wip". Prefer the conventional forms shown in each phase
+below (`feat: …`, `refactor: …`, `fix: …`).
 
 ---
 
-## 4.9 Stop boundary
+## 5.9 Stop boundary
 
 After completing the current phase:
 
@@ -276,416 +304,92 @@ After completing the current phase:
 3. update documentation
 4. update `PROGRESS.md`
 5. commit the phase
-6. stop
+6. stop (or continue only under an explicit autonomous-execution authorization
+   that requires evaluating the next phase's entry gate first)
 
-Do not automatically continue to the next phase.
+Do not skip phase boundaries.
 
 ---
 
-# 5. Phase 0 — Existing Project Audit
+# 6. Official Phase 0 — Repository Baseline
+
+**Status: COMPLETE and VERIFIED (2026-09-03).** Evidence, findings, and gate
+records live in `docs/PROGRESS.md` §10. The former "Existing Project Audit"
+requirements (feature inventory with KEEP/REFACTOR/REWRITE/REPLACE/REMOVE
+classification, storage audit input, UI audit input, testing audit) were
+satisfied there. Do not repeat this phase.
+
+---
+
+# 7. Official Phase 1 — Core Architecture
 
 ## Objective
 
-Understand the existing TextVault implementation before making major architectural changes.
-
-This phase is primarily investigative.
-
-No large rewrite should occur during this phase.
-
----
+Establish or correct the core Electron and application architecture while preserving all existing functionality.
 
 ## Scope
 
-Inspect:
+* Renderer / UI → Application / Domain → Infrastructure dependency direction
+* Electron-specific functionality isolated outside domain logic
+* Decompose the single-file main process into focused modules
+  (protocol, window, menu, IPC, exporters) with `electron/main.js` as a thin
+  composition root
+* Central, explicit IPC channel definitions shared by preload and main
+* Input validation at the IPC boundary for every channel
+* Controlled preload API (`window.tv`) — no generic invoke/send exposure
+* Application lifecycle architecture: startup sequence, single-instance
+  handling, quit/shutdown sequencing, window lifecycle events, navigation
+  guard
+* Shared contracts for cross-process data (channel names, payload shapes)
+* No unrelated refactors; keep the project buildable at each step
 
-```text
-electron/
-src/
-shared/
-test/
-package.json
-README.md
-installer.iss
-start.bat
-```
-
-Also inspect:
-
-* build configuration
-* Electron configuration
-* scripts
-* dependencies
-* storage implementation
-* preload
-* IPC
-* renderer state
-* clipboard handling
-* shortcuts
-* tray behavior
-* settings
-* import/export
-* testing setup
-
----
-
-## Existing Feature Audit
-
-Create an inventory of existing functionality.
-
-Each feature must be classified as:
-
-```text
-KEEP
-REFACTOR
-REWRITE
-REPLACE
-REMOVE
-UNKNOWN
-```
-
-Evaluate existing:
-
-* clipboard capture
-* dashboard
-* history
-* favorites
-* trash
-* undo
-* tags
-* search
-* filters
-* editor
-* text utilities
-* export
-* backup
-* import
-* themes
-* language support
-* RTL behavior
-* shortcuts
-* tray behavior
-* autosave
-* crash safety
-* notifications
-* responsive layout
-* tests
-
----
-
-## Storage Audit
-
-Inspect the existing IndexedDB implementation.
-
-Document:
-
-* database name
-* object stores
-* fields
-* indexes
-* migrations
-* serialization
-* duplicate handling
-* deletion behavior
-* backup format
-* import format
-
-Do not replace storage unless there is a demonstrated reason.
-
----
-
-## UI Audit
-
-Inspect:
-
-* application shell
-* navigation
-* history interface
-* editor
-* cards
-* dialogs
-* menus
-* settings
-* notifications
-* themes
-* typography
-* RTL
-* responsive behavior
-* accessibility
-* keyboard navigation
-
-Identify major UX problems.
-
----
-
-## Testing Audit
-
-Determine:
-
-* unit tests
-* integration tests
-* E2E tests
-* missing critical coverage
-* obsolete tests
-* flaky tests
-* test infrastructure weaknesses
-
----
-
-## Deliverables
-
-Update:
-
-```text
-docs/PROGRESS.md
-```
-
-with:
-
-* existing architecture summary
-* feature inventory
-* KEEP/REFACTOR/REWRITE/REPLACE/REMOVE decisions
-* storage findings
-* UI findings
-* testing findings
-* risks
-* recommended migration strategy
-
----
-
-## Acceptance Criteria
-
-Phase 0 is complete when:
-
-* the repository is understood
-* existing major functionality is inventoried
-* storage is understood
-* Electron boundaries are understood
-* UI architecture is understood
-* testing gaps are understood
-* migration risks are documented
-
-No major rewrite should have started.
-
----
-
-## Suggested Commit
-
-```text
-docs: audit existing TextVault implementation
-```
-
----
-
-## Stop Boundary
-
-STOP.
-
-Do not begin Phase 1.
-
----
-
-# 6. Phase 1 — Foundation and Architecture
-
-## Objective
-
-Introduce the target application architecture while preserving existing functionality.
-
----
-
-## Scope
-
-Establish:
-
-```text
-Renderer / UI
-      ↓
-Application / Use Cases
-      ↓
-Domain
-      ↓
-Infrastructure
-```
-
-Electron-specific functionality must remain outside the domain layer.
-
----
-
-## Electron Security Boundary
-
-Verify:
+## Electron Security Boundary (verify)
 
 ```text
 contextIsolation: true
-nodeIntegration: false
+nodeIntegration:  false
+sandbox:          true
 ```
 
-Preload must expose only a controlled API.
-
-Do not expose:
-
-* `ipcRenderer`
-* `fs`
-* `child_process`
-* arbitrary Node APIs
-
-directly to the renderer.
-
----
+Preload must expose only a controlled API. Do not expose `ipcRenderer`, `fs`,
+`child_process`, or arbitrary Node APIs directly to the renderer.
 
 ## IPC
 
-Create explicit typed IPC operations.
-
-Avoid unrestricted generic IPC.
-
-Operations should represent actual application capabilities such as:
-
-```text
-clipboard:get-history
-clipboard:delete
-clipboard:clear
-clipboard:search
-settings:get
-settings:update
-app:minimize
-app:quit
-```
-
-Exact naming may follow the existing project conventions.
-
----
-
-## Shared Contracts
-
-Create shared contracts for relevant:
-
-* clipboard entries
-* settings
-* tags
-* collections
-* snippets
-* queries
-* pagination
-* errors
-* application events
-* IPC messages
-
----
-
-## Domain Layer
-
-Domain models and business rules must not depend on:
-
-* Electron
-* React
-* IndexedDB
-* DOM APIs
-* renderer implementation details
-
----
-
-## Application Layer
-
-Introduce use cases/services where justified.
-
-Potential examples:
-
-```text
-CreateClipboardEntry
-GetClipboardHistory
-SearchClipboard
-DeleteClipboardEntry
-ClearClipboardHistory
-ToggleFavorite
-TogglePin
-UpdateSettings
-ExportLibrary
-ImportLibrary
-```
-
-Only create services that provide real value.
-
----
-
-## Repository Interfaces
-
-Define storage-independent repository contracts.
-
-Potential repositories:
-
-```text
-ClipboardRepository
-SettingsRepository
-TagRepository
-CollectionRepository
-SnippetRepository
-```
-
-Do not implement unused repositories just for theoretical completeness.
-
----
-
-## Error Handling
-
-Establish a consistent error model.
-
-Errors must:
-
-* be predictable
-* be handled at appropriate boundaries
-* avoid leaking sensitive information
-* provide useful user-facing messages where appropriate
-* be logged safely
-
----
+Explicit validated IPC operations; no unrestricted generic IPC. Every handler
+must validate type, structure, required fields, string bounds, and allowed
+values before doing privileged work. Renderer-requested filesystem paths must
+be allow-listed or dialog-mediated (fix the `tv:open-path` and
+`tv:backup-import pathOverride` findings recorded in PROGRESS.md §10.1 D).
 
 ## Acceptance Criteria
 
 * Renderer cannot directly access Node APIs.
-* Preload is a controlled security boundary.
-* IPC is explicit.
-* Shared contracts exist.
-* Domain logic is UI-independent.
-* Application logic is separated from storage.
-* Existing critical functionality remains operational.
-* Existing tests remain useful.
-
----
+* Preload is a controlled security boundary with a defined API surface.
+* IPC channels are explicit, centralized, and validated at the boundary.
+* Main process is decomposed into focused modules without behavior change.
+* Application lifecycle has explicit startup/shutdown sequencing and
+  single-instance handling.
+* Existing critical functionality remains operational (all prior tests pass).
+* New architecture/IPC tests pass.
+* Application launches successfully.
 
 ## Tests
 
-Verify:
-
-* application startup
-* renderer startup
-* preload API
-* IPC
-* basic storage
-* existing critical workflows
-
----
+* IPC validator unit tests (valid/invalid/malformed/oversized inputs)
+* Architecture boundary tests (preload exposure, channel allowlist)
+* Full existing regression suite (syntax, unit, e2e, smoke)
 
 ## Documentation
 
-Update:
-
-```text
-ARCHITECTURE.md
-DEVELOPMENT.md
-PROGRESS.md
-```
-
-where required.
-
----
+Update `ARCHITECTURE.md` (module map, IPC table, decisions),
+`DEVELOPMENT.md`, `TESTING.md` (test commands if changed), `PROGRESS.md`.
 
 ## Suggested Commit
 
 ```text
-refactor: establish application architecture boundaries
+refactor(core): establish secure application architecture
 ```
-
----
 
 ## Stop Boundary
 
@@ -693,168 +397,141 @@ STOP.
 
 ---
 
-# 7. Phase 2 — Clipboard Engine and Persistent History
+# 8. Official Phase 2 — Storage Layer
 
 ## Objective
 
-Build the reliable core clipboard engine.
+Establish reliable, validated, versioned persistent local storage without replacing IndexedDB unless evidence demands it.
 
-This is the foundation of TextVault Pro.
+## Scope
+
+* Complete the storage audit begun in Phase 0 and record the KEEP/REFACTOR
+  decision for the renderer-side IndexedDB implementation
+* Data models and schemas for all supported entities (text entries, settings;
+  clipboard/snippet/collection schemas land with their phases)
+* Schema versioning + deterministic migration runner (database version record,
+  forward-only migrations, failure-safe behavior)
+* Record-level validation on write and on read (repair/reject invalid records
+  safely)
+* Explicit content size limits with safe rejection (no silent truncation)
+* Atomic multi-record operations: library import/replace and bulk deletes must
+  run inside single IndexedDB transactions (fix the non-transactional replace
+  recorded in PROGRESS.md §10.1 F)
+* Settings storage as a validated, versioned service with safe defaults
+* Storage failures surfaced safely; corrupted-state recovery behavior defined
+
+## Requirements
+
+```text
+Fresh installation, existing installation, upgrade, corrupted data,
+missing fields, unknown fields — all handled predictably.
+No silent data loss. No destructive migration without validation.
+Renderer cannot bypass the storage layer.
+```
+
+## Acceptance Criteria
+
+* Canonical data source defined; schema documented
+* Stable IDs, Unicode-safe persistence, defined timestamp representation
+* Migration strategy implemented and tested
+* Invalid data cannot corrupt existing state
+* Multi-record operations are transactional
+* Size limits enforced with understandable errors
+* Storage errors handled safely; sensitive content never logged
+
+## Tests
+
+* Migration logic unit tests (pure transform functions)
+* Validator unit tests (records, settings, limits)
+* E2E restart-persistence regression (existing) extended where needed
+* Failure-scenario tests where practical
+
+## Suggested Commit
+
+```text
+feat(storage): implement validated persistent storage layer
+```
+
+## Stop Boundary
+
+STOP.
 
 ---
 
-## Clipboard Flow
+# 9. Official Phase 3 — Clipboard Engine
 
-Implement the conceptual flow:
+## Objective
+
+Build the reliable core clipboard engine: the foundation of TextVault Pro.
+
+## Clipboard Flow
 
 ```text
 System Clipboard
       ↓
-Clipboard Monitor
+Clipboard Monitor (main process, polling with change detection)
       ↓
-Content Extraction
+Content Extraction / Normalization
       ↓
-Normalization
+Privacy Checks (paused? private mode? exclusions?)
       ↓
-Privacy Checks
-      ↓
-Sensitive Content Detection
+Sensitive Content Detection (where implemented)
       ↓
 Duplicate Policy
       ↓
-Persistence
+Persistence (validated, size-limited)
       ↓
-Application Event
-      ↓
-UI Update
+Application Event → UI Update
 ```
 
----
+## Scope
 
-## Clipboard Monitoring
-
-Requirements:
-
-* background monitoring
-* efficient polling or event strategy
-* duplicate event prevention
-* failure recovery
-* configurable monitoring
-* safe shutdown
-* no excessive CPU usage
-
----
-
-## Clipboard Model
-
-The model should support future extensibility.
-
-At minimum consider:
-
-```text
-id
-content
-contentType
-createdAt
-updatedAt
-sourceApplication
-sourceTitle
-isFavorite
-isPinned
-isSensitive
-metadata
-```
-
-Use the architecture specification as the final authority for the actual implementation.
-
----
-
-## Persistence
-
-Clipboard history must survive:
-
-* window close
-* tray operation
-* application restart
-* system restart
-
----
-
-## Duplicate Handling
-
-Identical clipboard content should not unnecessarily flood history.
-
-Implement a predictable duplicate policy.
-
----
-
-## History Management
-
-Implement reliable:
-
-* viewing
-* deletion
-* bulk deletion
-* clearing
-* favorite
-* pin
-
-Trash/restore behavior should remain compatible with the existing product where applicable.
-
----
+* Main-process clipboard monitoring (efficient polling; no native deps),
+  independent of window visibility
+* Text capture with content-type field (plain text now; extensible model)
+* Configurable duplicate policy (move-to-top/update timestamp), centralized
+* Persistent clipboard history in a dedicated store (schema migration)
+* Pause/resume monitoring with obvious UI state; pause respected by ALL
+  capture paths
+* Background operation: closing the window must not stop monitoring —
+  close-to-tray behavior and system tray menu (open, pause/resume, quit) are
+  Phase 3 deliverables because background monitoring requires them
+* Configurable close behavior (quit vs. minimize/hide to tray)
+* Retention hooks (max history size) — full retention UI in later phases
+* Sensitive-content handling foundation (detection is a privacy aid, not a
+  guarantee; conservative patterns; never destroys data)
+* Application exclusions: architecture + rule evaluation implemented; source
+  application detection is NOT available without native modules — document
+  this limitation and apply exclusions when source is known (currently never)
+* Startup behavior hooks (start minimized/hidden where practical)
+* Notifications used sparingly; no notification per capture
 
 ## Acceptance Criteria
 
-* Clipboard changes are captured reliably.
-* History persists.
-* Duplicate captures are controlled.
-* Delete works.
-* Bulk delete works.
-* Clear history works.
-* Favorite/pin state persists.
-* Application remains stable during long-running clipboard monitoring.
-
----
+* Clipboard changes are captured reliably, including while the window is hidden
+* History persists across window close, app restart, and system restart
+* Duplicate captures are controlled by the configured policy
+* Delete, bulk delete, clear history work with safeguards
+* Favorite/pin state persists
+* Paused monitoring never persists new entries (privacy regression test)
+* Clipboard content is never executed, never logged, never transmitted
+* Application remains stable during long-running monitoring
+* Quit fully shuts down monitoring and releases resources
 
 ## Tests
 
-Test:
-
-* clipboard capture
-* duplicate handling
-* persistence
-* restart recovery
-* deletion
-* bulk deletion
-* clear history
-* malformed clipboard data
-* clipboard access failures
-* long-running monitoring
-
----
-
-## Documentation
-
-Update:
-
-```text
-PROGRESS.md
-ARCHITECTURE.md
-TESTING.md
-SECURITY.md
-```
-
-where relevant.
-
----
+* Capture, duplicate handling, persistence, restart recovery
+* Deletion, bulk deletion, clear history
+* Malformed clipboard data, clipboard access failures
+* Pause/resume privacy regression
+* Rapid clipboard changes (stress)
+* Manual Windows QA: tray, close behavior, background monitoring
 
 ## Suggested Commit
 
 ```text
-feat: build persistent clipboard history engine
+feat(clipboard): add persistent clipboard history engine
 ```
-
----
 
 ## Stop Boundary
 
@@ -862,118 +539,71 @@ STOP.
 
 ---
 
-# 8. Phase 3 — Search, Filtering and History UX
+# 10. Official Phase 4 — Core Library
 
 ## Objective
 
-Make clipboard history useful even when thousands of entries exist.
+Expand from clipboard history into the reusable content-management experience.
 
----
+## Scope
 
-## Search
+### Snippets (from former Phase 7)
 
-Search should support:
+* Create, edit, delete, search, copy, favorite, organize snippets
+* Metadata: title, content, description, tags, createdAt, updatedAt, favorite
+* Persisted, searchable, integrated with quick access
+* Variables ({{name}} etc.) remain OUT of scope until explicitly scheduled
 
-* clipboard content
-* titles
-* tags
-* useful metadata
+### Organization (from former Phase 4)
 
-Implement fuzzy matching where appropriate.
+* Tags: create/rename/delete/assign/remove/suggest/filter — operations must
+  not corrupt entries
+* Collections: create/rename/delete/add/remove/browse; no data duplication
+* Favorites and pins with clearly distinct semantics:
+  Favorite = user considers the item important;
+  Pin = user wants the item persistently prominent/quickly accessible
+* Bulk operations: select multiple, favorite/un-favorite, pin/unpin, tag,
+  move to collection, delete
 
-Search must remain responsive for realistic history sizes.
+### Smart Content Detection (from former Phase 8)
 
----
+* Local-only detection of URL / email / phone / IP / file path / JSON / code /
+  command / markdown / plain text
+* Detection influences presentation and available actions; must never
+  execute, download, open, or modify content automatically
+* False positives controlled; ambiguous content handled safely
 
-## Filters
+### Text Utilities (from former Phase 10)
 
-Support useful filters such as:
-
-```text
-tag:python
-is:fav
-is:pinned
-type:text
-```
-
-The syntax may evolve based on the final implementation.
-
----
-
-## Sorting
-
-Support useful ordering such as:
-
-* newest
-* oldest
-* recently updated
-* favorites
-* pinned
-* relevance
-
----
-
-## History Interface
-
-Improve:
-
-* visual hierarchy
-* content preview
-* selected state
-* keyboard navigation
-* context menus
-* bulk selection
-* deletion
-* favorite
-* pin
-* copy/paste actions
-
-Follow `UI_PROMPT.md`.
-
----
-
-## Detail View
-
-Provide a useful way to inspect long clipboard content without making the main history interface difficult to scan.
-
----
+* Local transformations: uppercase, lowercase, title case, trim/normalize
+  whitespace, sort lines, remove duplicate lines, JSON format/minify,
+  Base64 encode/decode, URL encode/decode — only tools that provide value
+* Never silently destroy source content; copy/replace only by explicit action
+* Each transformation tested for normal/empty/Unicode/Persian/large/malformed
+  input
 
 ## Acceptance Criteria
 
-* Search is fast.
-* Search results are understandable.
-* Filters work correctly.
-* Sorting works.
-* Large history remains usable.
-* Keyboard navigation works.
-* Existing history workflows do not regress.
-
----
+* Snippets, collections, tags, favorites, pins persist and are searchable
+* Bulk operations are predictable; deletion edge cases handled
+* Organization works without data corruption
+* Search and filters understand organization metadata
+* Detection is accurate enough, fast, local, and user-initiated for actions
+* Transformations are correct and source-preserving
 
 ## Tests
 
-Test:
-
-* exact search
-* partial search
-* fuzzy search
-* tag filters
-* favorite filters
-* pinned filters
-* content-type filters
-* sorting
-* empty results
-* large result sets
-
----
+* Snippet CRUD/search/copy/favorite/persistence/invalid data
+* Tag CRUD + assignment; collection CRUD + membership
+* Favorite/pin state + bulk operations + deletion edge cases
+* Detection: valid/invalid/ambiguous per type; no execution
+* Utilities: per-transformation input matrix
 
 ## Suggested Commit
 
 ```text
-feat: add clipboard search and filtering
+feat(library): add snippets, collections, pins and text utilities
 ```
-
----
 
 ## Stop Boundary
 
@@ -981,109 +611,49 @@ STOP.
 
 ---
 
-# 9. Phase 4 — Organization: Tags, Collections and Favorites
+# 11. Official Phase 5 — Search & Organization
 
 ## Objective
 
-Allow users to organize clipboard information instead of treating history as a flat list.
+Make all content instantly findable even with thousands of entries.
 
----
+## Scope (from former Phase 3)
 
-## Tags
-
-Implement:
-
-* create tag
-* rename tag
-* delete tag
-* assign tag
-* remove tag
-* tag suggestions
-* tag filtering
-
-Tag operations must not corrupt clipboard entries.
-
----
-
-## Collections
-
-Implement:
-
-* create collection
-* rename collection
-* delete collection
-* add items
-* remove items
-* browse collection
-
-Avoid unnecessary duplication of clipboard data.
-
----
-
-## Favorites and Pins
-
-Ensure favorites and pins have clearly different meanings.
-
-Suggested distinction:
-
-```text
-Favorite = user considers the item important
-Pin = user wants the item persistently prominent/quickly accessible
-```
-
-The exact semantics must be consistent throughout the UI.
-
----
-
-## Bulk Actions
-
-Support:
-
-* select multiple
-* favorite
-* un-favorite
-* pin
-* unpin
-* tag
-* move to collection
-* delete
-
----
+* Unified search across clipboard content, titles, tags, collections, snippets,
+  useful metadata
+* Fuzzy/tolerant matching where appropriate, performant at scale
+* Filters: `tag:…`, `is:fav`, `is:pinned`, `type:text`, content type, date,
+  collection — syntax may evolve per implementation
+* Sorting: newest, oldest, recently updated, favorites, pinned, relevance
+* History interface: visual hierarchy, previews, selected state, keyboard
+  navigation, context menus, bulk selection, delete/favorite/pin/copy actions
+  (per `UI_PROMPT.md`)
+* Detail view for long content that keeps the main list scannable
+* Empty results, large result sets, long text handled gracefully
+* Persian/English/mixed content search verified; punctuation and numbers
+* Avoid unnecessary renderer-side data loading; chunked/incremental search
+  retained
 
 ## Acceptance Criteria
 
-* Organization works without data corruption.
-* Tags persist.
-* Collections persist.
-* Favorites persist.
-* Pins persist.
-* Bulk operations are predictable.
-* Search and filters understand organization metadata.
-
----
+* Search is fast (~10,000-entry search measured; target ≤100 ms p95 per
+  TESTING.md — record actual measurements, do not claim without evidence)
+* Search results are understandable; filters and sorting work correctly
+* Large history remains usable; keyboard navigation works
+* Existing history workflows do not regress
 
 ## Tests
 
-Test:
-
-* tag CRUD
-* tag assignment
-* collection CRUD
-* collection membership
-* favorite state
-* pin state
-* bulk operations
-* deletion edge cases
-
----
+* Exact, partial, case-variant, fuzzy search; no-result and large-result sets
+* Tag/favorite/pinned/type filters; combined filters; invalid filters
+* Sorting orders; empty results
+* Persian, English, mixed RTL/LTR search fixtures (existing fixture set)
 
 ## Suggested Commit
 
 ```text
-feat: add clipboard organization with tags and collections
+feat(search): add unified clipboard search and filtering
 ```
-
----
 
 ## Stop Boundary
 
@@ -1091,99 +661,84 @@ STOP.
 
 ---
 
-# 10. Phase 5 — Tray, Lifecycle and Application Behavior
+# 12. Official Phase 6 — UI/UX Polish and Desktop Experience
 
 ## Objective
 
-Make TextVault behave like a proper desktop utility.
+Bring the entire application to the quality defined by `UI_PROMPT.md` and
+deliver the keyboard-first desktop surfaces.
 
----
+## Scope
 
-## Window Lifecycle
+### Design system & polish (from former Phase 13)
 
-Define and implement predictable behavior for:
+* Centralized design tokens (spacing, typography, radii, colors, shadows,
+  motion, z-index); audit consistency across all views
+* Light/Dark/System themes; controlled accent colors that preserve contrast
+* Loading, empty, error, disabled, selected states everywhere
+* Responsive desktop behavior (small laptop → large monitor); no clipped
+  content or inaccessible controls
+* Accessibility: keyboard navigation, visible focus, accessible names,
+  semantic controls, contrast, reduced motion
+* Persian typography quality; no emoji as UI icons; professional icon set
 
-* close
-* minimize
-* hide
-* quit
-* tray operation
-* reopening
-* application shutdown
+### Internationalization & RTL (from former Phase 13)
 
----
+* Centralized translations for English and Persian; no hard-coded UI strings
+  in components
+* LTR/RTL layout correctness (logical CSS properties), mixed bidi content,
+  dates, numbers
 
-## System Tray
+### Quick Clipboard (from former Phase 6)
 
-Tray functionality should support:
+* Configurable global shortcut opens a compact, search-first launcher window
+* Search, recent/favorite/pinned priority, keyboard navigation, Enter to use,
+  Escape to close, optional paste behavior
+* Usable without the main window; fast (target ≤300 ms shortcut→usable, per
+  TESTING.md — measure in Phase 9, do not claim without evidence)
 
-* show application
-* hide application
-* quick access
-* pause monitoring
-* quit
+### Command Palette (from former Phase 6)
 
-Do not overload the tray menu.
+* Central command registry (id, label, shortcut, category, execute)
+* Searchable, keyboard-accessible palette exposing meaningful commands only
+* Commands reused by menus/shortcuts where appropriate
 
----
+### Settings UI (from former Phase 12)
 
-## Background Mode
+* Grouped sections (General, Clipboard, Privacy, Shortcuts, Appearance,
+  Language, Storage, Notifications, Advanced) driven by the settings service
+* Validated values, safe defaults, reset behavior, immediate effect where
+  appropriate
 
-The application should be able to remain active without keeping the main window visible.
+### Tray UX (from former Phase 5 UX portion)
 
----
-
-## Startup
-
-Implement optional startup behavior.
-
-Startup preference must be configurable.
-
----
-
-## Notifications
-
-Use notifications sparingly.
-
-Clipboard monitoring should not generate noisy notifications for every capture.
-
----
+* Minimal tray menu (Open, Quick Clipboard, Pause/Resume, Settings, Quit)
+* Tray behavior verified when window is hidden
 
 ## Acceptance Criteria
 
-* Closing the window behaves predictably.
-* Tray mode works.
-* Application can run in background.
-* Quit fully shuts down processes.
-* Startup preference works.
-* Clipboard monitoring survives normal window closure.
-
----
+* Light/Dark/System work; English/Persian work; RTL/LTR work; mixed bidi text
+  is readable
+* Keyboard navigation works; focus is visible; no keyboard traps
+* Quick clipboard opens via global shortcut; Escape closes reliably
+* Command palette discovers and executes registered commands
+* Settings persist, validate, and reset safely
+* UI remains coherent across supported window sizes; no critical UX blocker
 
 ## Tests
 
-Test:
-
-* close
-* minimize
-* hide
-* tray reopen
-* quit
-* startup setting
-* background monitoring
-* shutdown cleanup
-
-Manual Windows verification is required.
-
----
+* Theme switching, language switching, RTL, mixed Persian/English
+* Keyboard navigation and focus; reduced motion
+* Quick clipboard open/close/search/navigate/select; global shortcut
+  registration and conflict handling
+* Command discovery and execution; settings load/save/reset/invalid values
+* Manual visual QA at multiple window sizes (per `UI_PROMPT.md` §85)
 
 ## Suggested Commit
 
 ```text
-feat: improve desktop lifecycle and tray behavior
+feat(ui): polish interface, add quick clipboard and command palette
 ```
-
----
 
 ## Stop Boundary
 
@@ -1191,108 +746,53 @@ STOP.
 
 ---
 
-# 11. Phase 6 — Quick Clipboard and Keyboard-First Workflow
+# 13. Official Phase 7 — Privacy & Security
 
 ## Objective
 
-Make retrieving clipboard content extremely fast.
+Make privacy a first-class product feature and perform the dedicated security hardening pass.
 
-The application should minimize mouse dependency.
+## Scope (from former Phase 9 + continuous requirements)
 
----
-
-## Global Shortcut
-
-Implement a configurable global shortcut for opening the quick clipboard interface.
-
----
-
-## Quick Clipboard
-
-The quick interface should support:
-
-* search
-* recent clipboard entries
-* favorites
-* pinned items
-* keyboard navigation
-* Enter to select
-* Escape to close
-* optional direct paste behavior
-
----
-
-## Keyboard Navigation
-
-Support:
-
-* arrow navigation
-* Enter
-* Escape
-* shortcuts
-* focus management
-
-Avoid keyboard traps.
-
----
-
-## Command Palette
-
-Introduce a command registry architecture.
-
-Commands may include:
-
-```text
-Search Clipboard
-Open Quick Clipboard
-Create Snippet
-Open Settings
-Pause Clipboard Monitoring
-Clear History
-Export Library
-Toggle Theme
-Change Language
-```
-
-Commands must be registered centrally rather than hardcoded throughout the UI.
-
----
+* Clipboard monitoring controls: pause/resume, configurable state, obvious
+  paused indication
+* Application exclusions: understandable, configurable, fail-safe matching
+* Sensitive-content handling: password/token/API-key/private-key-like
+  detection, conservative, user-controlled, never claims perfection
+* Retention: maximum history size, time-based retention options actually
+  supported by the implementation, deterministic cleanup that never deletes
+  protected (pinned) data unexpectedly
+* Private mode: temporary mode where clipboard content is not persisted;
+  clearly communicated state
+* Secure logging: never log clipboard content, passwords, tokens, secrets,
+  private user data — metadata only
+* Security review: Electron settings, preload API, IPC allowlist + validation,
+  filesystem paths, import/export, external links, command-execution paths,
+  HTML/Markdown handling, network behavior (no unexpected transmission),
+  repository secret scan, dependency vulnerabilities
+* Update `SECURITY.md` to reflect the implemented behavior
 
 ## Acceptance Criteria
 
-* Quick clipboard opens using a global shortcut.
-* Search is immediate.
-* Keyboard navigation works.
-* Selecting an item is fast.
-* Escape closes the surface reliably.
-* Command palette can discover supported commands.
-
----
+* Clipboard monitoring can be paused; paused state never persists entries
+* Exclusions work and fail safely
+* Sensitive-content behavior is predictable; detection data never leaves device
+* Retention works deterministically; private mode works where included
+* Sensitive clipboard data never appears in logs
+* No unexpected network transmission exists
+* Release-blocking security thresholds (SECURITY.md §51) pass
 
 ## Tests
 
-Test:
-
-* global shortcut registration
-* shortcut conflict handling
-* quick clipboard open/close
-* keyboard navigation
-* search
-* selection
-* command discovery
-* command execution
-
-Windows manual testing is required.
-
----
+* Pause/resume, exclusions, sensitive patterns (synthetic values only),
+  retention cleanup, private mode, logging scan, network behavior
+* Security regression tests for every fixed issue
 
 ## Suggested Commit
 
 ```text
-feat: add keyboard-first clipboard workflow
+feat(security): add privacy controls and sensitive clipboard handling
 ```
-
----
 
 ## Stop Boundary
 
@@ -1300,520 +800,44 @@ STOP.
 
 ---
 
-# 12. Phase 7 — Snippets and Reusable Text
-
-## Objective
-
-Expand TextVault from clipboard history into a reusable text productivity tool.
-
----
-
-## Snippets
-
-Implement:
-
-* create
-* edit
-* delete
-* search
-* copy
-* favorite
-* organize
-* use from quick access
-
----
-
-## Snippet Metadata
-
-Support useful fields such as:
-
-```text
-title
-content
-description
-tags
-createdAt
-updatedAt
-favorite
-```
-
----
-
-## Variables
-
-Variable support is an advanced feature.
-
-Only introduce variables if the current architecture can support them cleanly.
-
-Potential future syntax:
-
-```text
-{{name}}
-{{email}}
-{{date}}
-```
-
-Do not build a complex templating language prematurely.
-
----
-
-## Acceptance Criteria
-
-* Snippets are persistent.
-* Snippets are searchable.
-* Snippets can be copied quickly.
-* Snippets integrate with quick access.
-* Existing clipboard behavior remains unaffected.
-
----
-
-## Tests
-
-Test:
-
-* CRUD
-* search
-* copy
-* favorite
-* tags
-* persistence
-* invalid snippet data
-
----
-
-## Suggested Commit
-
-```text
-feat: add reusable text snippets
-```
-
----
-
-## Stop Boundary
-
-STOP.
-
----
-
-# 13. Phase 8 — Smart Content Detection
-
-## Objective
-
-Recognize common clipboard content types and provide useful context without requiring cloud services or AI.
-
----
-
-## Content Types
-
-Detect common patterns such as:
-
-```text
-URL
-Email
-Phone number
-IP address
-File path
-JSON
-Code
-Command
-Markdown
-Plain text
-```
-
-Detection must remain local.
-
----
-
-## Actions
-
-Depending on content type, provide useful actions.
-
-Examples:
-
-```text
-URL → Open
-Email → Compose
-JSON → Format
-Code → Format / Transform
-Path → Open or reveal
-```
-
-Do not execute potentially dangerous content automatically.
-
----
-
-## Acceptance Criteria
-
-* Detection is accurate enough for common cases.
-* False positives are controlled.
-* Detection is fast.
-* No network service is required.
-* Actions are explicit and user initiated.
-
----
-
-## Tests
-
-Test:
-
-* valid URLs
-* invalid URLs
-* emails
-* phone numbers
-* JSON
-* code
-* paths
-* plain text
-* ambiguous content
-
----
-
-## Suggested Commit
-
-```text
-feat: add smart clipboard content detection
-```
-
----
-
-## Stop Boundary
-
-STOP.
-
----
-
-# 14. Phase 9 — Privacy and Security Controls
-
-## Objective
-
-Make privacy a first-class product feature.
-
-TextVault Pro is local-first and must not silently send clipboard data to external services.
-
----
-
-## Clipboard Monitoring Controls
-
-Implement:
-
-* pause monitoring
-* resume monitoring
-* configurable monitoring state
-
----
-
-## Application Exclusions
-
-Support excluding configured applications from clipboard capture.
-
-Examples may include:
-
-* password managers
-* secure applications
-* banking applications
-
-The system must make exclusions understandable and configurable.
-
----
-
-## Sensitive Content
-
-Detect potentially sensitive clipboard content where practical.
-
-Potential categories:
-
-* passwords
-* authentication tokens
-* API keys
-* private keys
-* secret-like values
-
-Detection must not claim perfect security.
-
-Users must have control over the behavior.
-
----
-
-## Retention
-
-Allow users to configure history retention.
-
-Potential options:
-
-```text
-Forever
-30 days
-14 days
-7 days
-1 day
-Custom
-```
-
-Use only options supported by the implementation.
-
----
-
-## Private Mode
-
-Introduce a temporary private mode where clipboard content is not persisted.
-
----
-
-## Secure Logging
-
-Never log:
-
-* clipboard content
-* passwords
-* tokens
-* secrets
-* private user data
-
-Logs should contain diagnostic metadata only.
-
----
-
-## Acceptance Criteria
-
-* Clipboard monitoring can be paused.
-* Exclusions work.
-* Sensitive content handling is predictable.
-* Retention works.
-* Private mode works if included in the phase implementation.
-* Sensitive clipboard data is not exposed through logs.
-* No unexpected network transmission exists.
-
----
-
-## Tests
-
-Test:
-
-* pause/resume
-* exclusions
-* sensitive patterns
-* retention cleanup
-* private mode
-* logging
-* network behavior
-
----
-
-## Security Verification
-
-Review:
-
-* Electron security
-* preload API
-* IPC validation
-* filesystem access
-* storage access
-* import/export
-* logs
-* external links
-* dangerous content handling
-
----
-
-## Suggested Commit
-
-```text
-feat: add privacy controls and sensitive clipboard handling
-```
-
----
-
-## Stop Boundary
-
-STOP.
-
----
-
-# 15. Phase 10 — Text Utilities and Transformations
-
-## Objective
-
-Add practical local text manipulation tools.
-
----
-
-## Utilities
-
-Potential tools:
-
-* uppercase
-* lowercase
-* title case
-* sentence case
-* trim whitespace
-* normalize whitespace
-* remove duplicate lines
-* sort lines
-* reverse lines
-* JSON formatting
-* JSON minification
-* URL encoding
-* URL decoding
-* Base64 encoding
-* Base64 decoding
-* escape/unescape
-* line statistics
-* word statistics
-* character statistics
-
-Only include utilities that provide real value.
-
----
-
-## Design
-
-Text transformations should:
-
-* never unexpectedly destroy source data
-* support copy result
-* support replace where explicitly selected
-* provide clear feedback
-* remain local
-
----
-
-## Acceptance Criteria
-
-* Transformations work correctly.
-* Source content is not silently destroyed.
-* Errors are understandable.
-* Large text remains usable.
-* Utilities integrate naturally with clipboard workflows.
-
----
-
-## Tests
-
-Each transformation must have:
-
-* normal cases
-* empty input
-* Unicode input
-* Persian input where relevant
-* malformed input where relevant
-* large input tests
-
----
-
-## Suggested Commit
-
-```text
-feat: add local text transformation tools
-```
-
----
-
-## Stop Boundary
-
-STOP.
-
----
-
-# 16. Phase 11 — Import, Export and Backup
+# 14. Official Phase 8 — Import / Export / Backup
 
 ## Objective
 
 Give users complete control over their local data.
 
----
+## Scope (from former Phase 11)
 
-## Export
-
-Support exporting:
-
-* clipboard history
-* snippets
-* tags
-* collections
-* metadata where appropriate
-
-Potential formats:
-
-```text
-JSON
-TXT
-CSV
-```
-
-Other formats may be supported where already present and stable.
-
----
-
-## Backup
-
-Create a complete local backup format.
-
-The backup must be:
-
-* documented
-* versioned
-* deterministic enough for testing
-* validated before import
-
----
-
-## Import
-
-Support:
-
-```text
-Merge
-Replace
-```
-
-Import must validate data before modifying the existing library.
-
----
-
-## Safety
-
-Never partially destroy an existing library because of malformed import data.
-
-Use transactional or staged import behavior where practical.
-
----
+* Export clipboard history, snippets, tags, collections, metadata — formats:
+  JSON (backup), TXT/CSV where supported and stable
+* Complete local backup format: documented, versioned, deterministic,
+  validated before import; contains everything needed to restore the library
+* Import: merge and replace modes; full validation before modifying existing
+  data; staged/transactional behavior so malformed input can never partially
+  destroy the library
+* Restore safety: validate → stage → restore → verify → commit; failure
+  preserves previous valid state
+* Temporary files use OS temp storage and are cleaned up
+* No network transfer of user data at any point
 
 ## Acceptance Criteria
 
-* Export works.
-* Backup works.
-* Import works.
-* Invalid files are rejected safely.
-* Merge works.
-* Replace works.
-* Data remains consistent.
-
----
+* Export, backup, import work correctly; round-trip preserves data
+* Invalid/unsupported/malformed files are rejected safely
+* Merge and replace both work; data remains consistent
+* Interrupted operations do not corrupt the library
 
 ## Tests
 
-Test:
-
-* export
-* import
-* round-trip
-* malformed files
-* missing fields
-* incompatible versions
-* duplicate data
-* merge
-* replace
-* large backups
-
----
+* Export, import, round-trip comparison; malformed/empty/oversized files
+* Missing fields, extra fields, unsupported versions, duplicate records
+* Merge, replace, large backups; failure/interruption scenarios
 
 ## Suggested Commit
 
 ```text
-feat: add library import export and backup
+feat(data): add library import export and backup
 ```
-
----
 
 ## Stop Boundary
 
@@ -1821,388 +845,50 @@ STOP.
 
 ---
 
-# 17. Phase 12 — Settings and Configuration
+# 15. Official Phase 9 — Performance & Reliability
 
 ## Objective
 
-Centralize application configuration.
+Make TextVault Pro reliable for long-term daily use; measure, do not guess.
 
----
+## Scope (from former Phase 14)
 
-## Settings Categories
+* Performance baseline with realistic data volumes (1k / 5k / 10k / 25k where
+  practical): startup, clipboard capture→persistence, search, quick clipboard
+  launch, memory behavior
+* Optimize based on identified bottlenecks only: polling cost, queries,
+  rendering, virtualization, event subscriptions, retained content
+* Memory: listener/timer leaks, subscriptions, renderer+main growth over time
+* Reliability: repeated startup/shutdown, unexpected window close, corrupted
+  local data, interrupted writes, large clipboard content, malformed imports,
+  long-running background mode
+* Crash safety: atomic/staged writes, validation, safe recovery, no
+  destructive partial operations
+* Compare measurements against `TESTING.md` thresholds; record actual values,
+  warnings, and failures in `PROGRESS.md`
 
-Potential settings:
+## Required Targets (from TESTING.md)
 
-### General
-
-* startup
-* close behavior
-* default view
-* language
-
-### Clipboard
-
-* monitoring
-* retention
-* duplicate policy
-* exclusions
-* sensitive content behavior
-
-### Appearance
-
-* theme
-* accent
-* typography
-* density
-
-### Shortcuts
-
-* global shortcut
-* quick clipboard
-* command palette
-
-### Privacy
-
-* private mode
-* sensitive handling
-* data retention
-
----
-
-## Requirements
-
-Settings must:
-
-* persist
-* validate values
-* have safe defaults
-* be easy to reset
-* not corrupt the application when malformed
-
----
+```text
+Startup:                       ≤ 2.0 s p95 target;  > 4.0 s p95 fail
+Clipboard capture→persistence: ≤ 100 ms p95 target; > 250 ms warn; > 500 ms fail
+Search (~10,000 entries):      ≤ 100 ms p95 target; > 200 ms warn; > 500 ms fail
+Quick Clipboard:               ≤ 300 ms p95 target; > 500 ms warn; > 1000 ms fail
+```
 
 ## Acceptance Criteria
 
-* Settings persist.
-* Invalid settings are handled safely.
-* UI reflects settings immediately where appropriate.
-* Defaults are sensible.
-* Configuration is centralized.
-
----
+* Application remains responsive under realistic history size
+* No obvious memory leaks; monitoring stable for long periods
+* Startup and quick access remain fast
+* Data remains safe during normal failures
+* Measurements recorded; regressions investigated before release
 
 ## Tests
 
-Test:
-
-* load
-* save
-* reset
-* invalid values
-* persistence
-* migration
-* settings-dependent behavior
-
----
-
-## Suggested Commit
-
-```text
-feat: add centralized application settings
-```
-
----
-
-## Stop Boundary
-
-STOP.
-
----
-
-# 18. Phase 13 — UI Polish, Themes, i18n and RTL
-
-## Objective
-
-Bring the entire application to the visual and interaction quality defined by `UI_PROMPT.md`.
-
----
-
-## Design System
-
-Centralize:
-
-* spacing
-* typography
-* radii
-* shadows
-* colors
-* borders
-* component states
-* motion
-* z-index layers
-
-Avoid arbitrary values scattered across components.
-
----
-
-## Themes
-
-Support:
-
-```text
-Light
-Dark
-System
-```
-
-Themes must remain readable and consistent.
-
----
-
-## Accent Colors
-
-Support a controlled set of accent colors.
-
-Accent changes must not destroy accessibility or contrast.
-
----
-
-## English / Persian
-
-Support:
-
-```text
-English
-Persian
-```
-
-The application must support:
-
-```text
-LTR
-RTL
-```
-
-correctly.
-
----
-
-## Bidirectional Text
-
-Mixed content must remain readable.
-
-Examples:
-
-```text
-Persian + English
-Persian + URLs
-Persian + code
-English + numbers
-Persian + numbers
-```
-
-Use appropriate bidi handling instead of fragile string hacks.
-
----
-
-## Typography
-
-Persian text must use a suitable Persian-capable font.
-
-Avoid excessive font switching.
-
----
-
-## Responsive Desktop UI
-
-Support reasonable window sizes.
-
-The UI must remain usable when:
-
-* window is narrow
-* window is maximized
-* content is long
-* sidebar is collapsed
-* quick surfaces are compact
-
----
-
-## Accessibility
-
-Support:
-
-* keyboard navigation
-* focus visibility
-* accessible names
-* semantic controls
-* contrast
-* reduced motion
-* screen-reader-friendly labels where practical
-
----
-
-## Motion
-
-Animations must:
-
-* be subtle
-* communicate state
-* avoid slowing interaction
-* respect reduced-motion settings
-
----
-
-## Acceptance Criteria
-
-* Light/Dark/System work.
-* English/Persian work.
-* RTL/LTR work.
-* Mixed bidi text is readable.
-* Keyboard navigation works.
-* Focus is visible.
-* UI remains coherent across supported window sizes.
-* No emoji are used as substitute UI icons where professional icons are expected.
-
----
-
-## Tests
-
-Test:
-
-* theme switching
-* language switching
-* RTL
-* mixed Persian/English
-* keyboard navigation
-* focus
-* reduced motion
-* responsive layouts
-
-Perform manual visual QA.
-
----
-
-## Suggested Commit
-
-```text
-feat: polish UI themes and bilingual experience
-```
-
----
-
-## Stop Boundary
-
-STOP.
-
----
-
-# 19. Phase 14 — Performance and Reliability
-
-## Objective
-
-Make TextVault Pro reliable for long-term daily use.
-
----
-
-## Performance Targets
-
-The application should remain responsive with realistic data volumes.
-
-Test with:
-
-```text
-1,000 entries
-5,000 entries
-10,000 entries
-25,000 entries
-```
-
-where technically practical.
-
----
-
-## Optimize
-
-Review:
-
-* clipboard polling
-* database queries
-* search
-* rendering
-* virtualization
-* event subscriptions
-* memory usage
-* startup
-* quick clipboard launch
-* large text handling
-
----
-
-## Memory
-
-Investigate:
-
-* event listener leaks
-* timers
-* subscriptions
-* renderer memory
-* main-process memory
-* database connections
-* retained clipboard content
-
----
-
-## Reliability
-
-Test:
-
-* repeated startup/shutdown
-* unexpected window close
-* corrupted local data
-* interrupted writes
-* large clipboard content
-* malformed imports
-* long-running background mode
-
----
-
-## Crash Safety
-
-Ensure writes do not easily corrupt the local library.
-
-Where practical:
-
-* use atomic/staged writes
-* validate data
-* recover safely
-* avoid destructive partial operations
-
----
-
-## Acceptance Criteria
-
-* Application remains responsive under realistic history size.
-* No obvious memory leaks.
-* Clipboard monitoring remains stable for long periods.
-* Search remains usable.
-* Startup and quick access remain fast.
-* Data remains safe during normal failures.
-
----
-
-## Tests
-
-Perform:
-
-* performance tests
-* memory checks
-* stress tests
-* long-running monitoring
-* repeated restart tests
-* large data tests
-* recovery tests
-
----
+* Performance tests, memory checks, stress tests, long-running monitoring
+  (≥2 hours where the environment permits; otherwise record NOT_RUN with
+  reason), repeated restart tests, large data tests, recovery tests
 
 ## Suggested Commit
 
@@ -2210,180 +896,38 @@ Perform:
 perf: improve application performance and reliability
 ```
 
----
-
 ## Stop Boundary
 
 STOP.
 
 ---
 
-# 20. Phase 15 — Advanced Desktop Productivity
+# 16. Official Phase 10 — Testing & Release
 
 ## Objective
 
-Add advanced features only after the core product is stable.
+Perform final quality validation and prepare a release candidate.
 
-Potential capabilities include:
+## Scope (from former Phase 16)
 
-* sequential paste
-* advanced clipboard actions
-* richer command palette
-* advanced history filtering
-* keyboard-driven organization
-* configurable quick actions
-* more powerful snippet workflows
-* improved context-aware actions
-* advanced desktop integration
-
-Every feature must justify its complexity.
-
----
-
-## Rules
-
-Do not introduce advanced features that:
-
-* compromise privacy
-* require cloud services unnecessarily
-* make the application difficult to understand
-* create significant background resource usage
-* duplicate existing workflows
-
----
+* Run the complete test suite (unit, integration where present, E2E, syntax,
+  architecture/security tests); verify exit codes; review failures
+* Verify security, data-integrity, performance, accessibility, i18n status
+* Packaging: portable build + installer; verify installer boots with isolated
+  userData, data stays outside the install dir, Start Menu shortcut, silent
+  uninstall cleanup (existing `make-release.cjs verify` flow)
+* Data safety: existing user data remains accessible, migrations work,
+  backup/restore works, uninstall does not destroy user data
+* Review documentation, package configuration, release configuration
+* Git review: clean tree, no secrets, no accidental files
+* Update `PROGRESS.md`; evaluate the release gate
 
 ## Acceptance Criteria
 
-Advanced features must:
-
-* integrate with existing architecture
-* use existing command/event systems where appropriate
-* remain keyboard accessible
-* have tests
-* have documentation
-* not degrade core workflows
-
----
-
-## Suggested Commit
-
-```text
-feat: add advanced desktop productivity features
-```
-
----
-
-## Stop Boundary
-
-STOP.
-
----
-
-# 21. Phase 16 — Release Hardening
-
-## Objective
-
-Prepare TextVault Pro for a professional release.
-
----
-
-## Application Verification
-
-Verify:
-
-* startup
-* shutdown
-* tray
-* clipboard monitoring
-* history
-* search
-* organization
-* quick clipboard
-* snippets
-* privacy
-* settings
-* import/export
-* themes
-* language
-* RTL
-* shortcuts
-* performance
-
----
-
-## Packaging
-
-Verify Windows packaging.
-
-Check:
-
-* installer
-* portable build if supported
-* application metadata
-* icons
-* versioning
-* data directory
-* first launch
-* upgrade behavior
-* uninstall behavior
-
----
-
-## Data Safety
-
-Verify:
-
-* existing user data remains accessible
-* migrations work
-* backup/restore works
-* uninstall does not unexpectedly destroy user data unless explicitly intended
-* corrupted data is handled safely
-
----
-
-## Security Review
-
-Perform a final review of:
-
-* Electron configuration
-* preload
-* IPC
-* external URLs
-* filesystem operations
-* import/export
-* local storage
-* logs
-* sensitive clipboard handling
-* dependencies
-
----
-
-## Test Matrix
-
-Run:
-
-```text
-Unit tests
-Integration tests
-E2E tests
-Build tests
-Packaging tests
-Manual Windows QA
-Performance tests
-Security review
-RTL/LTR QA
-Accessibility QA
-```
-
----
-
-## Acceptance Criteria
-
-No known critical or high-severity issue may remain.
-
-The application must be usable as a coherent product rather than as a collection of completed features.
-
----
+* No known critical or high-severity issue remains
+* The application is usable as a coherent product
+* All release checklist items in `TESTING.md` §74 and `PROGRESS.md` §36 pass
+  or are explicitly documented as environment-blocked with reasons
 
 ## Suggested Commit
 
@@ -2391,100 +935,53 @@ The application must be usable as a coherent product rather than as a collection
 chore: harden TextVault Pro for release
 ```
 
----
-
 ## Stop Boundary
 
 STOP.
 
 ---
 
-# 22. Phase 17 — Post-MVP Optional Features
+# 17. Deferred (Post-MVP)
 
-These features must not block the core release.
+These features must not block the core release and must not be implemented
+during the official phases unless explicitly scheduled:
 
-They are intentionally postponed until the foundation is stable.
+## Advanced Desktop Productivity (former Phase 15)
 
----
+* Sequential paste, advanced clipboard actions, richer command palette,
+  advanced filtering, keyboard-driven organization, configurable quick
+  actions, more powerful snippet workflows, context-aware actions
 
-## Cloud Sync
+## Cloud Sync (former Phase 17a)
 
-Potential future capabilities:
+* Encrypted sync, multi-device history, conflict resolution, account
+  management — must never become mandatory
 
-* encrypted sync
-* multi-device history
-* conflict resolution
-* account management
-* selective synchronization
+## AI (former Phase 17b)
 
-Cloud sync must never become mandatory.
+* Semantic search, smart categorization, rewriting, summarization — must
+  remain optional; clipboard content must never be sent externally without
+  explicit consent
 
----
+## Cross-Platform (former Phase 17c)
 
-## AI
-
-Potential future capabilities:
-
-* semantic clipboard search
-* smart categorization
-* text rewriting
-* summarization
-* context-aware actions
-
-AI must remain optional.
-
-Clipboard content must not be sent to external AI services without explicit user consent.
+* macOS/Linux via platform adapters; must not contaminate the domain layer
 
 ---
 
-## Cross-Platform
-
-Potential targets:
-
-```text
-macOS
-Linux
-```
-
-Platform-specific functionality must use adapters rather than contaminating the domain layer.
-
----
-
-## Rule
-
-Do not implement these features during the core roadmap unless the assigned phase explicitly includes them.
-
----
-
-# 23. Cross-Phase Testing Requirements
+# 18. Cross-Phase Testing Requirements
 
 Every phase must consider four categories of testing.
 
 ## Unit Tests
 
-For:
-
-* business rules
-* parsers
-* transformations
-* utilities
-* repositories
-* services
-
----
+For: business rules, parsers, transformations, utilities, repositories,
+services.
 
 ## Integration Tests
 
-For:
-
-* storage
-* application services
-* IPC
-* Electron integration
-* settings
-* clipboard engine
-
----
+For: storage, application services, IPC, Electron integration, settings,
+clipboard engine.
 
 ## E2E Tests
 
@@ -2508,11 +1005,10 @@ Export
 
 ---
 
-## Manual Desktop QA
+# 19. Manual Desktop QA
 
-Manual testing is required for platform behavior that automated tests cannot fully guarantee.
-
-Especially:
+Manual testing is required for platform behavior that automated tests cannot
+fully guarantee. Especially:
 
 * global shortcuts
 * system tray
@@ -2524,7 +1020,7 @@ Especially:
 
 ---
 
-# 24. Regression Rule
+# 20. Regression Rule
 
 A new phase must not intentionally break completed functionality from previous phases.
 
@@ -2540,7 +1036,7 @@ Do not mark a phase complete while a known regression remains.
 
 ---
 
-# 25. Database Migration Rule
+# 21. Database Migration Rule
 
 Whenever a phase changes persistent data structures:
 
@@ -2558,7 +1054,7 @@ Development must account for users upgrading from previous versions.
 
 ---
 
-# 26. Dependency Rule
+# 22. Dependency Rule
 
 Before adding a dependency:
 
@@ -2579,7 +1075,7 @@ Do not replace major frameworks unless there is a compelling documented reason.
 
 ---
 
-# 27. UI Implementation Rule
+# 23. UI Implementation Rule
 
 All UI implementation must follow:
 
@@ -2610,7 +1106,7 @@ Prioritize:
 
 ---
 
-# 28. Security Rule
+# 24. Security Rule
 
 Security and privacy are continuous requirements, not a single phase.
 
@@ -2629,7 +1125,7 @@ If yes, review the relevant security implications before implementation.
 
 ---
 
-# 29. Performance Rule
+# 25. Performance Rule
 
 Performance must be considered continuously.
 
@@ -2657,7 +1153,7 @@ Only optimize based on real bottlenecks or realistic requirements.
 
 ---
 
-# 30. Documentation Rule
+# 26. Documentation Rule
 
 Documentation must reflect reality.
 
@@ -2686,7 +1182,7 @@ The next phase must remain marked as pending until it actually begins.
 
 ---
 
-# 31. Git Commit Rule
+# 27. Git Commit Rule
 
 Each phase should normally produce one logical commit.
 
@@ -2714,88 +1210,41 @@ perf: optimize history rendering
 
 ---
 
-# 32. Phase Dependency Map
+# 28. Phase Dependency Map
 
-The intended dependency chain is:
+The official dependency chain is strictly linear:
 
 ```text
-Phase 0
-Audit
-  │
-  ▼
-Phase 1
-Architecture Foundation
-  │
-  ▼
-Phase 2
-Clipboard Engine
-  │
-  ▼
-Phase 3
-Search & History UX
-  │
-  ▼
-Phase 4
-Organization
-  │
-  ▼
-Phase 5
-Desktop Lifecycle
-  │
-  ▼
-Phase 6
-Quick Clipboard & Keyboard
-  │
-  ▼
-Phase 7
-Snippets
-  │
-  ▼
-Phase 8
-Smart Detection
-  │
-  ▼
-Phase 9
-Privacy & Security
-  │
-  ▼
-Phase 10
-Text Utilities
-  │
-  ▼
-Phase 11
-Import / Export / Backup
-  │
-  ▼
-Phase 12
-Settings
-  │
-  ▼
-Phase 13
-UI / i18n / RTL / Accessibility
-  │
-  ▼
-Phase 14
-Performance & Reliability
-  │
-  ▼
-Phase 15
-Advanced Productivity
-  │
-  ▼
-Phase 16
-Release Hardening
-  │
-  ▼
-Phase 17
-Optional Future Features
+Phase 0 — Repository Baseline   (COMPLETE 2026-09-03)
+        ↓
+Phase 1 — Core Architecture
+        ↓
+Phase 2 — Storage Layer
+        ↓
+Phase 3 — Clipboard Engine
+        ↓
+Phase 4 — Core Library
+        ↓
+Phase 5 — Search & Organization
+        ↓
+Phase 6 — UI/UX Polish
+        ↓
+Phase 7 — Privacy & Security
+        ↓
+Phase 8 — Import / Export / Backup
+        ↓
+Phase 9 — Performance & Reliability
+        ↓
+Phase 10 — Testing & Release
+        ↓
+Deferred — Post-MVP (cloud sync, AI, advanced productivity, cross-platform)
 ```
 
-Some phases may require small prerequisite adjustments, but the agent must not reorder major phases without documenting the reason.
+Phases must not be reordered without a documented reason approved by the owner.
 
 ---
 
-# 33. Definition of Done
+# 29. Definition of Done
 
 A phase is DONE only when all applicable conditions are satisfied.
 
@@ -2841,50 +1290,20 @@ A phase is DONE only when all applicable conditions are satisfied.
 
 * [ ] Current phase complete
 * [ ] Next phase NOT implemented
-* [ ] Agent stopped
+* [ ] Agent stopped (unless autonomous continuation is authorized and the next
+      entry gate is evaluated first)
 
 ---
 
-# 34. Progress Tracking Format
+# 30. Progress Tracking Format
 
-`PROGRESS.md` should maintain a concise implementation state.
-
-Recommended structure:
-
-```text
-Current Phase:
-Phase X — Name
-
-Status:
-In Progress / Complete / Blocked
-
-Completed:
-- ...
-
-Changed:
-- ...
-
-Tests:
-- ...
-
-Known Issues:
-- ...
-
-Architecture Changes:
-- ...
-
-Next Phase:
-Phase X+1 — Name
-
-Last Completed Commit:
-<commit>
-```
-
-Do not mark a phase complete before its acceptance criteria are satisfied.
+`PROGRESS.md` maintains the concise implementation state (see its §34 and
+§43 formats). Do not mark a phase complete before its acceptance criteria are
+satisfied.
 
 ---
 
-# 35. Agent Resume Rule
+# 31. Agent Resume Rule
 
 If an agent session ends unexpectedly, the next agent must:
 
@@ -2902,7 +1321,7 @@ Do not assume undocumented work is complete.
 
 ---
 
-# 36. Agent Interruption Rule
+# 32. Agent Interruption Rule
 
 If the agent encounters:
 
@@ -2919,7 +1338,7 @@ Minor implementation decisions may be made independently when they clearly follo
 
 ---
 
-# 37. Scope Control
+# 33. Scope Control
 
 The following must NOT become accidental scope creep:
 
@@ -2951,7 +1370,7 @@ Extensible
 
 ---
 
-# 38. Final Product Quality Bar
+# 34. Final Product Quality Bar
 
 At the end of the roadmap, TextVault Pro should feel like a mature desktop application.
 
@@ -2988,7 +1407,7 @@ It should feel like a focused, polished desktop productivity tool.
 
 ---
 
-# 39. Final Development Principle
+# 35. Final Development Principle
 
 The goal is not to implement the largest number of features.
 
