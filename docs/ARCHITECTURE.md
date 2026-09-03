@@ -2471,3 +2471,31 @@ Decisions and properties:
 4. **Merge semantics**: exact-duplicate skip per store (content equality for
    clipboard/snippets, hash for texts); collection id conflicts resolve in
    favor of existing data; members always reference existing ids.
+
+## 77.12 Performance & Reliability (Phase 9, as-built)
+
+Measured 2026-09-03 on the development machine (Windows, Electron 33,
+real E2E run — values in `test-output/perf-measurements.json` and
+`PROGRESS.md` §19; not estimates):
+
+| Metric | Measured | Target (TESTING.md §62) | Result |
+|---|---|---|---|
+| Process boot → renderer loaded (SMOKE) | 568 ms | ≤ 2.0 s p95 | PASS |
+| Page boot (nav start → interactive) | 239 ms | ≤ 2.0 s p95 | PASS |
+| Capture → persistence (write) | 0.6–1.5 ms | ≤ 100 ms p95 | PASS |
+| Capture end-to-end (incl. 300 ms poll) | ~305 ms | (poll-aware; detection latency documented) | INFO |
+| Search, full term scan @ 10,005 entries | p95 12.9 ms | ≤ 100 ms p95 | PASS |
+| Quick Clipboard launch | cold 14 ms / warm 15 ms | ≤ 300 ms p95 | PASS |
+| Renderer heap @ 10k items | 6.8 → 9.3 MB | bounded | PASS |
+| Main RSS @ 10k items | 135 → 135 MB | bounded | PASS |
+| Rapid-write stress (30 @ 120 ms) | 12 captures, no crash/flood | bounded | PASS |
+
+1. **Polling tradeoff (documented)**: without native clipboard hooks,
+   changes made within one poll interval (300 ms) collapse to the latest
+   content. The stress test asserts the bounded subset, not 1:1 capture.
+2. **No index**: the measured full-scan search meets the target with wide
+   margin; a search index remains unjustified (§77.8).
+3. **Long-running ≥2h soak**: NOT RUN in this environment (session-bound
+   execution). The release gate item stays open for Phase 10 with an
+   explicit environment-blocked note; the 10k-item load + stress tests are
+   the interim reliability evidence.

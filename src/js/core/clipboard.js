@@ -14,7 +14,8 @@ import { collectionList } from './snippets.js';
 const items = new Map();      // id -> clipboard item
 let ackQueue = [];
 let ackTimer = null;
-let monitorState = { enabled: true, paused: false, lastCaptureAt: 0, skipped: 0, pending: 0 };
+let monitorState = { enabled: true, paused: false, private: false, lastCaptureAt: 0, skipped: 0, pending: 0 };
+let lastPersistMs = null;     // capture→persistence duration (perf metric)
 
 function emitChanged() { App.emit('clipboard-changed'); }
 function emitState() { App.emit('clipboard-state', monitorState); }
@@ -28,6 +29,9 @@ export function clipboardCount() { return items.size; }
 export function getClipboardItem(id) { return items.get(id); }
 
 export function getMonitorState() { return monitorState; }
+
+/** Duration of the most recent capture→persistence write (ms), or null. */
+export function getLastPersistMs() { return lastPersistMs; }
 
 export function setMonitorState(st) {
   monitorState = { ...monitorState, ...st };
@@ -77,7 +81,9 @@ export async function applyCapture(item) {
     }
 
     items.set(item.id, item);
+    const t0 = performance.now();
     await db.putClipboardItem(item);
+    lastPersistMs = performance.now() - t0;
     ack(item.id);
 
     // Retention: newest maxItems win and time-based sweep runs here;

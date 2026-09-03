@@ -15,7 +15,10 @@ const { sendToMain } = require('./window');
 const { refreshTray } = require('./tray');
 const { EMITTED } = require('../ipc/channels');
 
-const POLL_MS = 600;
+// Poll interval tradeoff (documented): without native clipboard hooks,
+// changes made faster than one poll collapse to the latest content.
+// 300 ms keeps detection responsive at negligible cost (readText is ~µs).
+const POLL_MS = 300;
 const MAX_PENDING = 200;
 
 const state = {

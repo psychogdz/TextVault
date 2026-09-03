@@ -993,6 +993,93 @@ async function main() {
   })()`);
   check('v1 backup entries merge into the library', v1res === true);
 
+  /* ---------- Phase 9: performance & reliability measurements ---------- */
+  const measurements = {};
+
+  // 1. page-boot time (navigation start → app interactive), after a reload
+  await win.webContents.reload();
+  await waitHook();
+  measurements.pageBootMs = await js(`window.__TV_BOOT_MS__`);
+  check('page boot ≤2000ms target (renderer interactive)',
+    measurements.pageBootMs <= 2000, `${measurements.pageBootMs}ms`);
+
+  // 2. capture → persistence latency (the write itself, monitor poll adds ≤600ms)
+  const capMarker = 'PERF_CAP ' + Date.now();
+  sysClipboard.writeText(capMarker);
+  const capStart = Date.now();
+  await waitForClipboard(() => js(`window.__TV_TEST__.clipboard.has('${capMarker}')`));
+  measurements.persistMs = await js(`window.__TV_TEST__.clipboard.lastPersistMs()`);
+  measurements.captureE2EMs = Date.now() - capStart;
+  check('capture→persistence write ≤100ms p95 target',
+    measurements.persistMs <= 100, `persist=${measurements.persistMs && measurements.persistMs.toFixed(1)}ms`);
+  console.log(`  📊 capture: persist=${measurements.persistMs && measurements.persistMs.toFixed(1)}ms end-to-end=${measurements.captureE2EMs}ms (poll interval 600ms included)`);
+
+  // 3. quick-clipboard launch: cold (first create) vs warm (toggle)
+  const qStart = Date.now();
+  quickSvc.toggleQuickWindow();
+  for (let i = 0; i < 60; i++) {
+    try {
+      if (await quickSvc.getQuickWindow().webContents
+        .executeJavaScript(`!!document.getElementById('quick-input')`, true)) break;
+    } catch { /* loading */ }
+    await sleep(100);
+  }
+  measurements.quickColdMs = Date.now() - qStart;
+  quickSvc.hideQuickWindow();
+  const qWarmStart = Date.now();
+  quickSvc.toggleQuickWindow();
+  const quickWarm = await (async () => {
+    for (let i = 0; i < 30; i++) {
+      try {
+        if (await quickSvc.getQuickWindow().webContents
+          .executeJavaScript(`!!document.getElementById('quick-input')`, true)) return true;
+      } catch { /* loading */ }
+      await sleep(50);
+    }
+    return false;
+  })();
+  measurements.quickWarmMs = Date.now() - qWarmStart;
+  quickSvc.hideQuickWindow();
+  check('quick clipboard launch ≤300ms p95 target (warm)',
+    quickWarm && measurements.quickWarmMs <= 300,
+    `warm=${measurements.quickWarmMs}ms cold=${measurements.quickColdMs}ms`);
+  console.log(`  📊 quick clipboard: cold=${measurements.quickColdMs}ms warm=${measurements.quickWarmMs}ms`);
+
+  // 4. memory behavior: main process RSS + renderer heap before/after 10k load
+  measurements.memBeforeMainMB = Math.round(process.memoryUsage().rss / 1048576);
+  measurements.memBeforeRendererMB = await js(`window.__TV_TEST__.clipboard.memoryMB()`);
+  await js(`window.__TV_TEST__.clipboard.seedPerf(10000)`);
+  measurements.memAfterMainMB = Math.round(process.memoryUsage().rss / 1048576);
+  measurements.memAfterRendererMB = await js(`window.__TV_TEST__.clipboard.memoryMB()`);
+  console.log(`  📊 memory (10k items): main ${measurements.memBeforeMainMB}→${measurements.memAfterMainMB}MB, renderer heap ${measurements.memBeforeRendererMB}→${measurements.memAfterRendererMB}MB`);
+  check('memory stays bounded with 10k items (renderer heap < 400MB)',
+    measurements.memAfterRendererMB < 400,
+    `${measurements.memBeforeRendererMB}→${measurements.memAfterRendererMB}MB`);
+  await js(`window.__TV_TEST__.clipboard.clearAll()`);
+
+  // 5. rapid clipboard stress: 30 writes at ~120ms over 3.6s. Polling
+  // collapses sub-interval changes (documented tradeoff): with a 300ms poll
+  // ~12 ticks occur, so expect a bounded subset — never a crash or an
+  // unbounded duplicate flood.
+  const stressBefore = await js(`window.__TV_TEST__.clipboard.count()`);
+  for (let i = 0; i < 30; i++) {
+    sysClipboard.writeText(`STRESS ${i} متن ${Date.now()}`);
+    await sleep(120);
+  }
+  await sleep(1500);
+  const stressAfter = await js(`({
+    count: window.__TV_TEST__.clipboard.count(),
+    alive: !!window.__TV_TEST__,
+  })`);
+  check('rapid clipboard stress: app alive, bounded captures, no crash/flood',
+    stressAfter.alive && stressAfter.count >= stressBefore + 8 && stressAfter.count <= stressBefore + 31,
+    `before=${stressBefore} after=${stressAfter.count} (polling collapses sub-interval writes)`);
+  console.log(`  📊 stress: ${stressBefore} → ${stressAfter.count} items after 30 rapid writes (300ms poll)`);
+  await js(`window.__TV_TEST__.clipboard.clearAll()`);
+
+  fs.writeFileSync(path.join(OUT, 'perf-measurements.json'), JSON.stringify(measurements, null, 2));
+  console.log('  📊 measurements written to test-output/perf-measurements.json');
+
   finish();
 }
 

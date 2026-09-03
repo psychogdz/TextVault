@@ -15,6 +15,7 @@ let mainWindow = null;
 let quitting = false;
 let flushed = true;
 let closeResolver = null; // pending close-disposition callback
+const bootStart = Date.now(); // process-start reference for boot measurements
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -58,11 +59,14 @@ function createWindow() {
       app.exit(1);
     });
     mainWindow.webContents.once('did-finish-load', () => {
+      const finishedAt = Date.now();
       setTimeout(async () => {
         try {
           const ok = await mainWindow.webContents.executeJavaScript(
             '!!(window.__TV_TEST__ || document.querySelector(\'#app\'))', true);
-          console.log(ok ? 'SMOKE OK' : 'SMOKE no-app');
+          // boot = process start (module load) → renderer finished loading;
+          // independent of the fixed 2.5s smoke settle delay.
+          console.log(`${ok ? 'SMOKE OK' : 'SMOKE no-app'} boot=${finishedAt - bootStart}ms`);
           app.exit(failed || !ok ? 1 : 0);
         } catch (err) {
           console.error('SMOKE eval failed:', err.message);

@@ -19,7 +19,7 @@ import { exportLibrary as exportBackup, importBackup } from './core/backup.js';
 import {
   initClipboard, applyCapture, setMonitorState, setMonitorEnabled, clipboardCount,
   clipboardItems, getMonitorState, clearClipboardHistory,
-  seedPerfItems, searchPerf,
+  seedPerfItems, searchPerf, getLastPersistMs,
 } from './core/clipboard.js';
 import { initCommands, openCommandPalette } from './commands.js';
 import { setLanguage as setI18nLanguage, languageDirection, t as translate } from '../../shared/i18n.mjs';
@@ -468,6 +468,8 @@ async function boot() {
         clearAll: () => clearClipboardHistory(),
         seedPerf: (n) => seedPerfItems(n),
         searchPerf: (q, runs) => searchPerf(q, runs),
+        lastPersistMs: () => getLastPersistMs(),
+        memoryMB: () => Math.round((performance.memory?.usedJSHeapSize || 0) / 1048576 * 10) / 10,
         items: () => clipboardItems().map((i) => ({
           id: i.id, content: i.content, pinned: i.isPinned, fav: i.isFavorite,
           sensitive: i.isSensitive, updatedAt: i.updatedAt,
@@ -548,6 +550,9 @@ async function boot() {
   if (App.liveEntries().length === 0 && App.trashedEntries().length === 0) {
     toast('Welcome to TextVault — paste a text above to save it.', { type: 'info', duration: 5000 });
   }
+
+  // page-boot time (navigation start → interactive), used by perf checks
+  window.__TV_BOOT_MS__ = Math.round(performance.now());
 }
 
 boot();
