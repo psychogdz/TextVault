@@ -2199,3 +2199,90 @@ When a rewrite and a safe incremental refactor provide the same result, choose t
 The architecture exists to serve the product.
 
 The product does not exist to demonstrate the architecture.
+
+---
+
+# 77. As-Built Implementation Notes (Phase 1, 2026-09-03)
+
+This section records how the architecture is actually implemented so the
+document never drifts from the code. Update it whenever the boundaries change.
+
+## 77.1 Main-process module map
+
+`electron/main.js` is a thin composition root. All responsibilities live in
+dedicated modules:
+
+```text
+electron/
+├── main.js                    composition root: env/userData hook, privileged
+│                              scheme registration, single-instance lock,
+│                              whenReady wiring, lifecycle
+├── preload.js                 contextBridge → window.tv (see 77.3)
+├── ipc/
+│   ├── channels.js            single registry of IPC channel names
+│   ├── validate.js            pure input validators (unit-tested in Node)
+│   └── register.js            the ONLY module that registers ipcMain handlers
+├── services/
+│   ├── app-protocol.js        app:// scheme (src/ + shared/, path-contained)
+│   ├── window.js              main window, webPreferences, flush handshake,
+│                              will-navigate guard, window-open denial
+│   ├── menu.js                application menu (commands relayed to renderer)
+│   ├── export-service.js      TXT/DOCX/PDF rendering, hidden print window
+│   └── file-dialogs.js        native dialogs, atomic writes, TEST_DIR hook
+└── exporters/                 pure format builders (txt, docx, pdf-html)
+```
+
+## 77.2 IPC channel table
+
+Channel names are defined once in `electron/ipc/channels.js`
+(`HANDLED` = renderer→main, `EMITTED` = main→renderer). `test/ipc-tests.mjs`
+enforces registry/preload/handler consistency. Every handler validates its
+payload at the boundary (`ipc/validate.js`) and answers with a predictable
+`{ ok, ... }` object; validation errors are generic strings safe for display.
+
+| Channel | Direction | Validation summary |
+|---|---|---|
+| `tv:export` | R→M | kind ∈ {txt,docx,pdf}; mode ∈ {single,combined,separate}; entries 1–5000 × string content ≤5 MB; total ≤64 MB; bounded defaultName |
+| `tv:backup-export` | R→M | entries ≤100k × string content ≤10 MB; total ≤64 MB |
+| `tv:backup-import` | R→M | `pathOverride` accepted ONLY when `TEXTVAULT_TEST_DIR` is set AND the resolved path stays inside it; production is dialog-only |
+| `tv:clipboard-read` | R→M | no payload |
+| `tv:clipboard-write` | R→M | string or nullish; ≤5 MB |
+| `tv:app-info` | R→M | no payload |
+| `tv:open-path` | R→M | path allowlist: only the app's own userData directory may be opened |
+| `tv:flushed`, `tv:mark-dirty` | R→M | no payload (flush handshake) |
+| `menu` | M→R | static command strings from the menu module |
+| `tv:flush`, `tv:flushed-reply` | M→R | flush handshake |
+
+## 77.3 Preload surface
+
+`window.tv` exposes exactly: `export, backupExport, backupImport,
+clipboardRead, clipboardWrite, appInfo, openPath, onFlush, notifyFlushed,
+markDirty, onMenu`. No generic invoke/send, no Node APIs. Channel names are
+inlined in preload (sandboxed preloads cannot require local files); the
+registry/preload sync is enforced by tests, not by convention.
+
+## 77.4 Security-relevant decisions
+
+1. **Single instance** (`app.requestSingleInstanceLock`): a second launch
+   focuses the existing window. Reason: two processes writing the same
+   IndexedDB store is a data-integrity hazard. Alternatives considered:
+   none that preserve a single local database safely.
+2. **`tv:open-path` allowlist**: the only legitimate renderer use is
+   Settings → "Open Folder" for the userData path. The handler accepts only
+   that directory (validator unit-tested).
+3. **Backup import path override**: removed in production; retained solely as
+   a test-mode capability (`TEXTVAULT_TEST_DIR` + containment check) because
+   the E2E suite must read exports from disk without native dialogs.
+4. **Navigation guard**: `will-navigate` blocks any non-`app://` navigation;
+   `window.open` is denied outright.
+5. **Atomic writes**: every file the main process writes for the user
+   (exports, backups) goes through temp-file + rename.
+6. **Filename sanitization**: export filenames use the shared, unit-tested
+   `sanitizeFilename`/`uniqueFilename` (the former main-process duplicate was
+   removed).
+
+## 77.5 Storage note
+
+User data remains in the renderer-side IndexedDB database (`textvault` v1).
+The KEEP/REFACTOR decision and any migration work belong to the storage phase
+and will be recorded in `ARCHITECTURE.md` and `PROGRESS.md` at that time.

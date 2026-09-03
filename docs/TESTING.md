@@ -1610,7 +1610,7 @@ At the current stage, the following commands are executable:
 npm start
 ```
 
-### Run the unit test suite
+### Run the automated test suite (syntax + unit + IPC/architecture)
 
 ```powershell
 npm test
@@ -1619,8 +1619,16 @@ npm test
 Equivalent command:
 
 ```powershell
-node test/unit.mjs
+node test/syntax.cjs && node test/unit.mjs && node test/ipc-tests.mjs
 ```
+
+Composition (added in Phase 1, 2026-09-03):
+
+* `test/syntax.cjs` — parses every renderer ES module (`node --check`)
+* `test/unit.mjs` — unit tests for shared modules and exporters
+* `test/ipc-tests.mjs` — IPC validator unit tests + static architecture
+  boundary checks (preload surface, channel registry consistency, handler
+  placement, window security flags)
 
 ### Run E2E tests
 

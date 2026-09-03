@@ -8,7 +8,7 @@
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "test": "node test/unit.mjs",
+    "test": "node test/syntax.cjs && node test/unit.mjs && node test/ipc-tests.mjs",
     "test:e2e": "electron test/e2e.js",
     "package": "node test/make-portable.cjs all",
     "release": "node test/make-portable.cjs all && node test/make-release.cjs all"

@@ -1,5 +1,13 @@
 'use strict';
 
+// Preload — the controlled renderer↔main bridge (contextBridge).
+// Exposes ONLY the explicit window.tv API below; no generic invoke/send,
+// no Node APIs.
+//
+// Channel names are inlined as literals because sandboxed preload scripts can
+// only require a fixed module allowlist (no local files). Consistency with the
+// main-process registry (ipc/channels.js) is enforced by test/ipc-tests.mjs.
+
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('tv', {

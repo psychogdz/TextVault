@@ -138,13 +138,13 @@ Architecture: Electron Desktop Application (Electron ^33.2.0, vanilla-JS rendere
 Primary Model: Local-First / Privacy-First
 
 Current Phase:
-Phase 0 — Repository Baseline
+Phase 2 — Storage Layer (next; Phase 1 verified 2026-09-03)
 
 Current Phase Status:
-VERIFIED (2026-09-03 — see §10 for gate evidence)
+Phase 1 VERIFIED; Phase 2 entry gate not yet evaluated
 
 Release Status:
-NOT_READY (v1.0.0 exists; TextVault Pro rebuild has not started)
+NOT_READY (v1.0.0 exists; TextVault Pro rebuild in progress)
 ```
 
 Baseline facts established 2026-09-03 by repository inspection and executed tests (see §42 history and §10 evidence). The v1.0.0 application is a *text/note manager* (manual save of pasted texts). The TextVault Pro clipboard-centric scope (clipboard monitoring, tray, global shortcuts, quick clipboard, snippets, collections, privacy controls) is NOT implemented in the repository at this time.
@@ -547,28 +547,33 @@ Renderer access: storage is implemented and called directly in the renderer
 
 ### D. Security findings (baseline review, none fixed in Phase 0)
 
-1. `tv:open-path` IPC handler (electron/main.js:426) calls `shell.openPath(p)`
-   for any string supplied by the renderer with no validation or allowlist.
-   A compromised renderer could open arbitrary local files/folders.
-   Severity: MEDIUM. Address in Phase 1 (IPC hardening) / Phase 7.
-2. `tv:backup-import` (electron/main.js:388) accepts a renderer-supplied
-   `pathOverride` and reads an arbitrary file. Content is only returned when
-   it parses as a valid textvault-backup JSON, which limits exposure, but the
-   arbitrary-read primitive should not exist. Severity: LOW.
+Status update 2026-09-03 (Phase 1): findings D.1 and D.2 are RESOLVED, and
+D.4 is partially resolved (will-navigate guard added). The remainder are open.
+
+1. ~~`tv:open-path` IPC handler (electron/main.js:426) calls `shell.openPath(p)`
+   for any string supplied by the renderer with no validation or allowlist.~~
+   **RESOLVED in Phase 1**: handler now allowlists the userData directory only
+   (electron/ipc/register.js + electron/ipc/validate.js, unit-tested).
+2. ~~`tv:backup-import` (electron/main.js:388) accepts a renderer-supplied
+   `pathOverride` and reads an arbitrary file.~~ **RESOLVED in Phase 1**:
+   `pathOverride` is accepted only when `TEXTVAULT_TEST_DIR` is set and the
+   resolved path is inside it; production is dialog-only.
 3. `confirmDialog` (src/js/ui/components.js) assigns the message to
    `innerHTML`. All current callers use the safe `<b></b>`-placeholder +
    `textContent` pattern, so no injection exists today, but the sink is
-   fragile against future callers. Severity: LOW (tech debt).
+   fragile against future callers. Severity: LOW (tech debt; Phase 6/7).
 4. No `will-navigate` guard on the main window; `window.open` is denied
    (setWindowOpenHandler). CSP is restrictive (`default-src 'none'`,
    `script-src app:`) but allows `style-src 'unsafe-inline'` (required by
-   inline styles). Severity: LOW (hardening item).
+   inline styles). Severity: LOW. **Partially resolved in Phase 1**:
+   will-navigate guard added (blocks non-app:// navigation).
 5. Dependency audit (npm audit, 2026-09-03): 15 vulnerabilities — 1 moderate,
    13 high, 1 critical. Shipped-runtime exposure: `electron` ^33.2.0 (high
    advisories against the runtime) and `@xmldom/xmldom` 0.9.x via the `docx`
    dependency (moderate). Build-time-only exposure: electron-builder chain
    (`tar` critical, `extract-zip`, `app-builder-lib`, `builder-util-runtime`
-   high) — used by packaging scripts, not shipped. Not remediated in Phase 0.
+   high) — used by packaging scripts, not shipped. Not remediated in Phase 0;
+   revisit in Phase 7.
 6. No content logging found: console usage is limited to error objects and
    smoke-test status strings. `console.error(err)` may include internal paths
    in dev console; acceptable, reviewed.
@@ -635,17 +640,17 @@ macOS/Linux          NOT VERIFIED (Windows-only target; not tested)
 Status:
 
 ```text
-NOT_STARTED
+VERIFIED (2026-09-03)
 ```
 
-## Entry Gate
+## Entry Gate — PASSED (2026-09-03)
 
 ```text
-[ ] Phase 0 is VERIFIED
-[ ] Existing architecture is understood
-[ ] Current Electron security model is known
-[ ] Existing IPC implementation is understood
-[ ] Existing renderer/preload boundaries are understood
+[x] Phase 0 is VERIFIED
+[x] Existing architecture is understood (Phase 0 findings §10.1)
+[x] Current Electron security model is known (isolation/sandbox on, node integration off)
+[x] Existing IPC implementation is understood (9 channels mapped)
+[x] Existing renderer/preload boundaries are understood
 ```
 
 ## Objectives
@@ -655,34 +660,63 @@ Establish secure Electron architecture
 Define main/preload/renderer boundaries
 Define IPC architecture
 Define application services
-Define repository/storage boundaries
+Define repository/storage boundaries (deferred detail to Phase 2)
 Remove unnecessary privileged access
 ```
 
-## Exit Gate
+## Exit Gate — PASSED (2026-09-03)
 
 ```text
-[ ] contextIsolation configured correctly
-[ ] nodeIntegration disabled where required
-[ ] sandbox evaluated/enabled where compatible
-[ ] preload API defined
-[ ] IPC channels explicitly defined
-[ ] IPC validation implemented
-[ ] Renderer privilege minimized
-[ ] Application service boundaries defined
-[ ] Storage access isolated
-[ ] Architecture tests pass
-[ ] IPC security tests pass
-[ ] Application launches successfully
-[ ] No critical architecture regression exists
+[x] contextIsolation configured correctly (true; asserted by test)
+[x] nodeIntegration disabled where required (false; asserted by test)
+[x] sandbox evaluated/enabled where compatible (enabled on all windows)
+[x] preload API defined (window.tv surface; asserted by test)
+[x] IPC channels explicitly defined (electron/ipc/channels.js registry; consistency test-enforced)
+[x] IPC validation implemented (electron/ipc/validate.js; 30 unit tests)
+[x] Renderer privilege minimized (open-path allowlisted, backup pathOverride test-only)
+[x] Application service boundaries defined (main process decomposed into services/)
+[x] Storage access isolated (renderer-owned IndexedDB retained — KEEP decision deferred to Phase 2 audit)
+[x] Architecture tests pass (test/ipc-tests.mjs)
+[x] IPC security tests pass (same suite)
+[x] Application launches successfully (SMOKE OK; E2E 79/79)
+[x] No critical architecture regression exists
 ```
 
-Only then:
+## Gate Evidence
 
 ```text
-Phase 1:
-VERIFIED
-```
+Phase: Phase 1 — Core Architecture
+Entry/Exit: ENTRY PASSED / EXIT PASSED
+Date: 2026-09-03
+
+Implementation:
+- Decomposed electron/main.js (446 lines) into: ipc/{channels,validate,register}.js
+  and services/{app-protocol,window,menu,export-service,file-dialogs}.js;
+  main.js is now a thin composition root. Behavior preserved (E2E 79/79).
+- Central channel registry shared conceptually with preload (inline literals
+  required by sandbox; sync enforced by tests).
+- IPC validation at every boundary; size limits defined (ARCHITECTURE.md §77.2).
+- SECURITY FIX: tv:open-path now allowlisted to the userData directory only
+  (Phase 0 finding D.1 resolved).
+- SECURITY FIX: backup-import pathOverride accepted only under TEXTVAULT_TEST_DIR
+  (Phase 0 finding D.2 resolved); production is dialog-only.
+- Added will-navigate guard (Phase 0 finding D.4 partially resolved).
+- Added single-instance lock (second launch focuses the existing window).
+- Export filename dedupe: main-process sanitizeTitle replaced by the shared,
+  tested sanitizeFilename/uniqueFilename.
+
+Tests actually executed:
+- npm test (syntax 12 OK + unit 24/24 + ipc-tests 30/30) → exit 0
+- npm run test:e2e → 79/79 passed, exit 0
+- TEXTVAULT_SMOKE=1 isolated launch → SMOKE OK, exit 0
+
+Security: IPC hardening reviewed; two Phase 0 findings resolved; no new
+surface added without validation. Dependency advisories remain (Phase 7 scope).
+
+Notes:
+- Single-instance lock is new behavior: launching twice focuses the running
+  app instead of starting a second process (documented ARCHITECTURE.md §77.4).
+- npm test composition changed to syntax + unit + ipc (TESTING.md §59 updated).
 
 ---
 
@@ -2140,6 +2174,41 @@ PASSED (evidence in §10)
 Next:
 Await owner review and phase-model decision, then Phase 1 — Core Architecture.
 
+## 2026-09-03 (Phase 1)
+
+Phase:
+Phase 1 — Core Architecture
+
+Entry Gate:
+PASSED
+
+Completed:
+- ROADMAP.md reconciled to the official 10-phase model (owner decision applied)
+- Main process decomposed: electron/ipc/{channels,validate,register}.js,
+  electron/services/{app-protocol,window,menu,export-service,file-dialogs}.js;
+  main.js reduced to a composition root
+- IPC validation at every channel; size limits defined (ARCHITECTURE.md §77.2)
+- SECURITY: tv:open-path allowlisted to userData (finding D.1 resolved)
+- SECURITY: backup pathOverride restricted to test dir (finding D.2 resolved)
+- will-navigate guard added; single-instance lock added
+- Architecture as-built notes added to ARCHITECTURE.md (§77)
+- TESTING.md §59 updated for new npm test composition
+
+Tests:
+- npm test → syntax 12 OK + unit 24/24 + ipc/architecture 30/30 (exit 0)
+- npm run test:e2e → 79/79 passed (exit 0)
+- SMOKE launch → SMOKE OK (exit 0)
+
+Security:
+IPC boundary hardened; 2 Phase 0 findings resolved, 1 partially; remaining
+items tracked (confirmDialog innerHTML sink, dependency advisories → Phase 7).
+
+Exit Gate:
+PASSED (evidence in §11)
+
+Next:
+Phase 2 — Storage Layer (entry gate to be evaluated at phase start).
+
 ---
 
 # 43. Current Progress Snapshot
@@ -2148,50 +2217,51 @@ This section must always be kept current.
 
 ```text
 Project:
-TextVault Pro (repository currently holds TextVault v1.0.0)
+TextVault Pro (repository currently holds TextVault v1.0.0 + Phase 1 architecture)
 
 Active Phase:
-Phase 0 — Repository Baseline
+Phase 2 — Storage Layer (next)
 
 Phase Entry Gate:
-PASSED (2026-09-03)
+NOT_EVALUATED (Phase 1 verified 2026-09-03)
 
 Phase Status:
-VERIFIED (2026-09-03)
+Phase 1 VERIFIED; Phase 2 not started
 
 Phase Exit Gate:
-PASSED (2026-09-03 — evidence in §10)
+Phase 1 PASSED (2026-09-03 — evidence in §11)
 
 Overall Release Status:
 NOT_READY
 
 Last Verified Test:
-npm run test:e2e → 79/79 passed (2026-09-03)
+npm test (66 checks) + npm run test:e2e (79/79) + SMOKE launch — all exit 0 (2026-09-03)
 
 Security Status:
-REVIEWED_AT_BASELINE — 7 findings recorded (§10.1 D), 0 remediated;
-dependency advisories present (electron, @xmldom/xmldom, build chain)
+IN_PROGRESS — IPC boundary hardened (2 baseline findings resolved);
+open: confirmDialog innerHTML sink (LOW), dependency advisories (Phase 7)
 
 Performance Status:
 NOT_MEASURED
 
 Data Integrity Status:
 REVIEWED_AT_BASELINE — one MEDIUM risk recorded (import replace mode
-is non-transactional, §10.1 F); no data corruption observed in tests
+is non-transactional, §10.1 F); scheduled for Phase 2
 
 Coverage Status:
 NOT_AVAILABLE (no coverage tooling exists)
 
 Documentation Status:
-COMPLETE for Phase 0 (baseline recorded in this file)
+COMPLETE through Phase 1 (ARCHITECTURE.md §77 as-built notes; TESTING.md §59;
+ROADMAP.md reconciled to 10-phase model)
 
 Current Task:
-None — Phase 0 complete
+None — Phase 1 complete
 
 Next Task:
-Owner review of Phase 0; resolve the 10-phase vs 17-phase roadmap-model
-conflict (§10.1 E.1); then Phase 1 — Core Architecture upon explicit
-instruction
+Phase 2 — Storage Layer: evaluate entry gate, record the IndexedDB
+KEEP/REFACTOR decision, add schema versioning + migrations, record
+validation + size limits, make multi-record operations transactional
 ```
 
 The agent must update this snapshot whenever the project state changes.
