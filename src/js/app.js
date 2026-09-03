@@ -18,6 +18,7 @@ import {
 import {
   initClipboard, applyCapture, setMonitorState, setMonitorEnabled, clipboardCount,
   clipboardItems, getMonitorState, clearClipboardHistory,
+  seedPerfItems, searchPerf,
 } from './core/clipboard.js';
 
 /* ---------------- view switching ---------------- */
@@ -428,6 +429,8 @@ async function boot() {
       clipboard: {
         count: () => clipboardCount(),
         clearAll: () => clearClipboardHistory(),
+        seedPerf: (n) => seedPerfItems(n),
+        searchPerf: (q, runs) => searchPerf(q, runs),
         items: () => clipboardItems().map((i) => ({
           id: i.id, content: i.content, pinned: i.isPinned, fav: i.isFavorite,
           sensitive: i.isSensitive, updatedAt: i.updatedAt,

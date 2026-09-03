@@ -12,6 +12,8 @@ import { icon, emptyArt } from '../ui/icons.js';
 import { toast, confirmDialog, timeAgo, formatNumber } from '../ui/components.js';
 import { escapeHtml } from '../../../shared/snippets.mjs';
 import { detectContentType } from '../../../shared/detect.mjs';
+import { parseQuery, matchClipboardItem } from '../../../shared/query.mjs';
+import { collectionList } from '../core/snippets.js';
 
 const els = {};
 let query = '';
@@ -71,21 +73,22 @@ function refreshStatus() {
   els.pauseBtn.textContent = st.paused ? 'Resume' : 'Pause';
 }
 
-function matches(item) {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  return (item.content || '').toLowerCase().includes(q);
+
+function collectionNameMap() {
+  return new Map(collectionList().map((c) => [c.id, c.name]));
 }
 
 export function refresh() {
   if (!els.list) return;
   refreshStatus();
   const token = ++listToken;
+  const q = parseQuery(query);
+  const idToName = collectionNameMap();
 
   const pinned = [];
   const rest = [];
   for (const it of clipboardItems()) {
-    if (!matches(it)) continue;
+    if (!matchClipboardItem(it, q, idToName, detectContentType)) continue;
     (it.isPinned ? pinned : rest).push(it);
   }
   const rows = [...pinned, ...rest];

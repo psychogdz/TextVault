@@ -12,6 +12,7 @@ import {
 import { icon, emptyArt } from '../ui/icons.js';
 import { toast, confirmDialog, timeAgo, formatNumber } from '../ui/components.js';
 import { detectContentType } from '../../../shared/detect.mjs';
+import { parseQuery, matchSnippet } from '../../../shared/query.mjs';
 
 const els = {};
 let snippetQuery = '';
@@ -33,11 +34,9 @@ export function initSnippetsView() {
 
 export function refreshSnippets() {
   if (!els.list) return;
-  const q = snippetQuery.trim().toLowerCase();
-  const rows = snippetList().filter((s) => !q
-    || s.title.toLowerCase().includes(q)
-    || s.content.toLowerCase().includes(q)
-    || (s.tags || []).some((t) => t.toLowerCase().includes(q)));
+  const q = parseQuery(snippetQuery);
+  const idToName = new Map(collectionList().map((c) => [c.id, c.name]));
+  const rows = snippetList().filter((s) => matchSnippet(s, q, idToName));
 
   document.getElementById('snippet-count').textContent = formatNumber(rows.length);
   els.list.innerHTML = '';

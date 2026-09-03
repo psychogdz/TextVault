@@ -806,6 +806,23 @@ async function main() {
   check('editor transformation applies and autosaves', toolVal === 'HELLO WORLD', toolVal);
   await js(`window.__TV_TEST__.App.moveToTrash((window.__TV_TEST__.App.liveEntries().find((e) => e.title === 'tools e2e') || {}).id)`);
 
+  /* ---------- Phase 5: search performance at ~10k entries ---------- */
+  // Real measurement: seed 10,000 clipboard items through the validated
+  // storage layer, then run the production parsed-query scan repeatedly.
+  const seeded = await js(`window.__TV_TEST__.clipboard.seedPerf(10000)`);
+  check('perf dataset seeded (~10k entries)', seeded >= 10000, `${seeded}`);
+  const perfTerm = await js(`window.__TV_TEST__.clipboard.searchPerf('متن شماره 9999', 20)`);
+  check('term search over ~10k entries ≤100ms p95 target',
+    perfTerm.p95 <= 100, `p95=${perfTerm.p95.toFixed(1)}ms max=${perfTerm.max.toFixed(1)}ms hits=${perfTerm.hits}/${perfTerm.total}`);
+  const perfFiltered = await js(`window.__TV_TEST__.clipboard.searchPerf('type:url is:pinned', 20)`);
+  check('filter search (type: + is:pinned) over ~10k entries ≤100ms p95 target',
+    perfFiltered.p95 <= 100, `p95=${perfFiltered.p95.toFixed(1)}ms hits=${perfFiltered.hits}`);
+  console.log(`  📊 search perf: term p95=${perfTerm.p95.toFixed(1)}ms | filter p95=${perfFiltered.p95.toFixed(1)}ms (dataset=${perfTerm.total})`);
+  // cleanup: perf items are synthetic; restore the pre-perf state
+  await js(`window.__TV_TEST__.clipboard.clearAll()`);
+  const afterCleanup = await js(`window.__TV_TEST__.clipboard.count()`);
+  check('perf dataset cleaned up', afterCleanup === 0, `${afterCleanup}`);
+
   finish();
 }
 

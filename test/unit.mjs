@@ -22,6 +22,7 @@ const {
 } = await imp('shared/text-tools.mjs');
 const { detectContentType, actionsForType } = await imp('shared/detect.mjs');
 const { validateSnippetRecord, validateCollectionRecord } = await imp('shared/validation.mjs');
+const { parseQuery, matchClipboardItem, matchSnippet } = await imp('shared/query.mjs');
 const { buildTxt } = await imp('electron/exporters/txt.js');
 const { buildDocxBuffer } = await imp('electron/exporters/docx-builder.mjs');
 const { buildPdfHtml } = await imp('electron/exporters/pdf-html.mjs');
@@ -459,6 +460,55 @@ test('rejects malformed snippets/collections', () => {
   assert.equal(validateCollectionRecord({ id: '', name: 'X', createdAt: 1 }).ok, false);
   assert.equal(validateCollectionRecord({ id: 'c', name: '   ', createdAt: 1 }).ok, false);
   assert.equal(validateCollectionRecord({ id: 'c', name: 'x'.repeat(200), createdAt: 1 }).ok, false);
+});
+
+console.log('\nquery parsing + matching:');
+test('parses all operators', () => {
+  const q = parseQuery('hello tag:python type:url is:fav is:pinned collection:work');
+  assert.deepEqual(q.terms, ['hello']);
+  assert.deepEqual(q.tags, ['python']);
+  assert.deepEqual(q.types, ['url']);
+  assert.deepEqual(q.collections, ['work']);
+  assert.equal(q.favOnly, true);
+  assert.equal(q.pinnedOnly, true);
+  assert.equal(q.empty, false);
+});
+test('empty query is recognized', () => {
+  assert.equal(parseQuery('').empty, true);
+  assert.equal(parseQuery('   ').empty, true);
+});
+test('clipboard matching honors every operator', () => {
+  const idToName = new Map([['c1', 'Work'], ['c2', 'Dev']]);
+  const item = {
+    id: 'x', content: 'deploy script متن', tags: ['ops'], collections: ['c1'],
+    isPinned: true, isFavorite: false, contentType: 'text',
+  };
+  const q0 = parseQuery('');
+  assert.equal(matchClipboardItem(item, q0, idToName), true);
+  assert.equal(matchClipboardItem(item, parseQuery('deploy'), idToName), true);
+  assert.equal(matchClipboardItem(item, parseQuery('متن'), idToName), true);
+  assert.equal(matchClipboardItem(item, parseQuery('nomatch'), idToName), false);
+  assert.equal(matchClipboardItem(item, parseQuery('tag:ops'), idToName), true);
+  assert.equal(matchClipboardItem(item, parseQuery('tag:web'), idToName), false);
+  assert.equal(matchClipboardItem(item, parseQuery('is:pinned'), idToName), true);
+  assert.equal(matchClipboardItem(item, parseQuery('is:fav'), idToName), false);
+  assert.equal(matchClipboardItem(item, parseQuery('collection:wor'), idToName), true);
+  assert.equal(matchClipboardItem(item, parseQuery('collection:dev'), idToName), false);
+});
+test('clipboard type filter uses stored type or detection', () => {
+  const detect = () => 'url';
+  const item = { id: 'x', content: 'https://example.com', contentType: 'text', tags: [], collections: [], isPinned: false, isFavorite: false };
+  assert.equal(matchClipboardItem(item, parseQuery('type:url'), new Map(), detect), true);
+  assert.equal(matchClipboardItem(item, parseQuery('type:json'), new Map(), detect), false);
+});
+test('snippet matching covers title, content, tags, collections', () => {
+  const s = { id: 's1', title: 'Deploy', content: 'git push origin main', tags: ['git'], collections: ['c1'], isFavorite: false };
+  assert.equal(matchSnippet(s, parseQuery('push')), true);
+  assert.equal(matchSnippet(s, parseQuery('deploy')), true);
+  assert.equal(matchSnippet(s, parseQuery('tag:git')), true);
+  assert.equal(matchSnippet(s, parseQuery('collection:work'), new Map([['c1', 'Work']])), true);
+  assert.equal(matchSnippet(s, parseQuery('type:url')), false);
+  assert.equal(matchSnippet(s, parseQuery('is:pinned')), false);
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

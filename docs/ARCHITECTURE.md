@@ -2398,3 +2398,23 @@ Decisions and properties:
    type badge; URLs get an explicit "Open URL" action executed by
    `tv:open-external` — validated to http(s) only, user-initiated, never
    automatic (SECURITY.md §26/§31).
+
+## 77.8 Search & Organization (Phase 5, as-built)
+
+1. **One parser everywhere**: `shared/query.mjs` parses and matches queries
+   for all surfaces (dashboard texts, clipboard history, snippets).
+   Operators: `tag:…`, `is:fav`, `is:pinned`, `type:…` (clipboard), and
+   `collection:…` (matched against collection names). Free terms search
+   content (clipboard), title+content (snippets), and title+preview+tags
+   (texts). The dashboard additionally scores deep content matches
+   (existing chunked scan retained).
+2. **No separate index**: at measured scale a parsed scan is fast enough —
+   **measured 2026-09-03 (E2E, real run): 10,005 clipboard entries, full
+   term scan p95 = 14.9 ms, operator-filter scan p95 = 0.6 ms** (target
+   ≤100 ms per TESTING.md §62). A dedicated search index would be premature
+   complexity; revisit only with evidence (ARCHITECTURE.md §23/§24).
+3. **Filters compose**: operators combine (`type:url is:pinned`), and the
+   clipboard/snippet list views pin favorites above the rest while keeping
+   pinned items topmost.
+4. **Collection filtering** resolves ids to names at query time; renaming a
+   collection therefore never invalidates search behavior.

@@ -1,28 +1,14 @@
 // Search: query parsing + scoring + snippet extraction.
 // Title/tag matches are instant (in-memory metadata); content matches are
 // computed against cached content. The dashboard driver scans in chunks so
-// the UI stays responsive with 1000+ entries.
+// the UI stays responsive with 1000+ entries. Query parsing is shared with
+// the clipboard/snippets views (shared/query.mjs) so operators behave
+// identically everywhere.
 
 import { matchIndices, snippetAround } from '../../shared/snippets.mjs';
+import { parseQuery } from '../../../shared/query.mjs';
 
-/** Parse `tag:foo is:fav hello world` into structured parts. */
-export function parseQuery(raw = '') {
-  const terms = [];
-  const tags = [];
-  let favOnly = false;
-  for (const tok of String(raw).split(/\s+/).filter(Boolean)) {
-    const lower = tok.toLowerCase();
-    if (lower.startsWith('tag:')) {
-      const t = tok.slice(4).trim();
-      if (t) tags.push(t.toLowerCase());
-    } else if (lower === 'is:fav' || lower === 'is:favorite' || lower === 'fav:') {
-      favOnly = true;
-    } else {
-      terms.push(tok.toLowerCase());
-    }
-  }
-  return { terms, tags, favOnly, empty: terms.length === 0 && tags.length === 0 && !favOnly };
-}
+export { parseQuery };
 
 function textHas(text, term) {
   return text.toLowerCase().includes(term);
@@ -32,9 +18,10 @@ function entryHasTag(entry, tagLower) {
   return (entry.tags || []).some((t) => t.toLowerCase().includes(tagLower));
 }
 
-/** Fast metadata-only filter (title + tags + fav). */
+/** Fast metadata-only filter (title + tags + fav + pinned). */
 export function quickFilter(entry, q) {
   if (q.favOnly && !entry.favorite) return false;
+  if (q.pinnedOnly && !entry.isPinned) return false;
   for (const t of q.tags) if (!entryHasTag(entry, t)) return false;
   for (const term of q.terms) {
     if (!textHas(entry.title || '', term) && !textHas(entry.preview || '', term) && !entryHasTag(entry, term)) return false;

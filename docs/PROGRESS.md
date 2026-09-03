@@ -982,52 +982,69 @@ Notes:
 Status:
 
 ```text
-NOT_STARTED
+VERIFIED (2026-09-03)
 ```
 
-## Entry Gate
+## Entry Gate — PASSED (2026-09-03)
 
 ```text
-[ ] Phase 4 is VERIFIED
-[ ] Canonical database is stable
-[ ] Searchable entities are defined
-[ ] Unicode and RTL requirements are understood
+[x] Phase 4 is VERIFIED
+[x] Canonical database is stable
+[x] Searchable entities are defined (clipboard items, snippets, texts)
+[x] Unicode and RTL requirements are understood (bidi fixtures in place)
 ```
 
 ## Objectives
 
 ```text
-Fast search
-Filtering
-Sorting
-Tag filtering
-Collection filtering
-Content-type filtering
-Date filtering where required
+Unified query language across all surfaces (shared parser)
+Filters: tag:, is:fav, is:pinned, type:, collection:
+Sorting (existing orders + pinned-first)
+Search performance measured at ~10k entries
+Persian/English/mixed search verified
 ```
 
-## Exit Gate
+## Exit Gate — PASSED (2026-09-03)
 
 ```text
-[ ] Search implemented
-[ ] Filtering implemented
-[ ] Sorting implemented
-[ ] Required organization workflows implemented
-[ ] Search index is rebuildable if used
-[ ] Database remains authoritative
-[ ] Search does not modify canonical content
-[ ] Search on ~10k entries ≤100ms p95
-[ ] Unicode search verified
-[ ] Persian search verified where applicable
-[ ] Search regression tests pass
+[x] Search implemented and unified (shared/query.mjs, all three views)
+[x] Filtering implemented (tag:, is:fav, is:pinned, type:, collection:)
+[x] Sorting implemented (6 text orders; clipboard/snippets newest-first
+    with pinned topmost)
+[x] Required organization workflows implemented (Phase 4 + operator filters)
+[x] Search index is rebuildable if used — NOT USED (scan-based; no index)
+[x] Database remains authoritative (search never mutates content)
+[x] Search does not modify canonical content
+[x] Search on ~10k entries ≤100ms p95 — MEASURED: p95 = 14.9 ms over
+    10,005 entries (term scan); operator-filter scan p95 = 0.6 ms
+[x] Unicode search verified (Persian term E2E; unit fixtures)
+[x] Persian search verified where applicable (E2E 'متن شماره 9999' hit)
+[x] Search regression tests pass (npm test 93 checks + E2E 103/103)
 ```
 
-Only then:
+## Gate Evidence
 
 ```text
-Phase 5:
-VERIFIED
-```
+Phase: Phase 5 — Search & Organization
+Entry/Exit: ENTRY PASSED / EXIT PASSED
+Date: 2026-09-03
+
+Implementation:
+- shared/query.mjs: single parser + matchers for clipboard/snippets/texts
+- src/js/search/search.js delegates parsing to the shared module and
+  supports is:pinned on texts; clipboard + snippet views use the matchers
+- Perf instrumentation (seed 10k via validated bulk put + 20-run p95
+  measurement) added to the E2E suite; synthetic items cleaned up after
+
+Tests actually executed:
+- npm test → syntax 15 OK + unit 63/63 + ipc/architecture 30/30 → exit 0
+- npm run test:e2e → 103/103 passed, including the perf checks:
+  term search p95=14.9ms / filter scan p95=0.6ms over 10,005 entries
+  (target ≤100ms — PASS, real measured values, no estimates)
+
+Notes:
+- No search index introduced: the measured scan meets the target with wide
+  margin; index decision belongs to a future phase with evidence.
 
 ---
 
@@ -2385,6 +2402,36 @@ PASSED (evidence in §14)
 Next:
 Phase 5 — Search & Organization.
 
+## 2026-09-03 (Phase 5)
+
+Phase:
+Phase 5 — Search & Organization
+
+Entry Gate:
+PASSED
+
+Completed:
+- shared/query.mjs: unified parser (tag:, is:fav, is:pinned, type:,
+  collection:) + matchers used by texts, clipboard and snippets views
+- Dashboard text search supports is:pinned; clipboard/snippets views use
+  the shared matchers; collection filters resolve id→name at query time
+- E2E perf instrumentation: seed 10k items through validated bulk put,
+  20-run p95 measurement, synthetic cleanup afterwards
+
+Tests:
+- npm test → 93 checks pass (syntax 15 + unit 63 + ipc 30), exit 0
+- npm run test:e2e → 103/103, incl. measured perf: term scan p95=14.9ms,
+  operator-filter scan p95=0.6ms over 10,005 entries (target ≤100ms)
+
+Security:
+No new surface; search never mutates canonical content.
+
+Exit Gate:
+PASSED (evidence in §15)
+
+Next:
+Phase 6 — UI/UX Polish.
+
 ---
 
 # 43. Current Progress Snapshot
@@ -2396,29 +2443,31 @@ Project:
 TextVault Pro (repository currently holds TextVault v1.0.0 + Phase 1 architecture)
 
 Active Phase:
-Phase 5 — Search & Organization (next)
+Phase 6 — UI/UX Polish (next)
 
 Phase Entry Gate:
-NOT_EVALUATED (Phase 4 verified 2026-09-03)
+NOT_EVALUATED (Phase 5 verified 2026-09-03)
 
 Phase Status:
-Phase 4 VERIFIED; Phase 5 not started
+Phase 5 VERIFIED; Phase 6 not started
 
 Phase Exit Gate:
-Phase 4 PASSED (2026-09-03 — evidence in §14)
+Phase 5 PASSED (2026-09-03 — evidence in §15)
 
 Overall Release Status:
 NOT_READY
 
 Last Verified Test:
-npm test (88 checks) + npm run test:e2e (99/99) + SMOKE launch — all exit 0 (2026-09-03)
+npm test (93 checks) + npm run test:e2e (103/103) — all exit 0 (2026-09-03);
+search perf measured: 10,005-entry term scan p95 = 14.9ms (target ≤100ms)
 
 Security Status:
 IN_PROGRESS — open: confirmDialog innerHTML sink (LOW, mitigated by
 messageValues pattern), dependency advisories (Phase 7)
 
 Performance Status:
-NOT_MEASURED (search-perf measurements scheduled for Phase 5/9)
+PARTIAL — search p95 measured at ~10k (14.9ms, PASS); startup/capture/quick
+clipboard measurements scheduled for Phase 9
 
 Data Integrity Status:
 IMPROVED — schema v3 migration preserves existing values (tested);
@@ -2434,9 +2483,9 @@ Current Task:
 None — Phase 4 complete
 
 Next Task:
-Phase 5 — Search & Organization: evaluate entry gate; unify search across
-clipboard/snippets/texts, add filters (type:/is:pinned), measure ~10k-entry
-search performance
+Phase 6 — UI/UX Polish: evaluate entry gate; i18n (EN/FA string tables +
+RTL layout), quick-clipboard launcher window + global shortcut, command
+palette, keyboard/focus/responsive QA per UI_PROMPT.md
 ```
 
 The agent must update this snapshot whenever the project state changes.

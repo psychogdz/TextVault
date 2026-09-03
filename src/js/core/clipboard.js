@@ -5,7 +5,10 @@
 
 import { db } from './db.js';
 import { App } from '../state.js';
-import { duplicateAction, applyRetention } from '../../../shared/clipboard-policy.mjs';
+import { duplicateAction, applyRetention, buildClipboardItem } from '../../../shared/clipboard-policy.mjs';
+import { parseQuery, matchClipboardItem } from '../../../shared/query.mjs';
+import { detectContentType } from '../../../shared/detect.mjs';
+import { collectionList } from './snippets.js';
 
 const items = new Map();      // id -> clipboard item
 let ackQueue = [];
@@ -150,4 +153,46 @@ export async function setMonitorEnabled(enabled) {
   const res = await window.tv.clipboardSetEnabled(enabled);
   if (res && res.state) setMonitorState(res.state);
   return res;
+}
+
+/* ------------------ test/performance helpers (e2e only) ------------------ */
+
+/** Bulk-seed synthetic items in one transaction (E2E perf measurement). */
+export async function seedPerfItems(n = 10000) {
+  const now = Date.now();
+  const batch = [];
+  for (let i = 0; i < n; i++) {
+    batch.push(buildClipboardItem({
+      id: 'perf-' + i,
+      content: 'perf item ' + i + ' — متن شماره ' + i + ' https://example.com/' + i,
+      createdAt: now - i,
+      updatedAt: now - i,
+      isPinned: i % 500 === 0,
+      isFavorite: i % 750 === 0,
+    }));
+    batch[batch.length - 1].contentType = 'text';
+  }
+  await db.putClipboardItems(batch);
+  for (const it of batch) items.set(it.id, it);
+  emitChanged();
+  return items.size;
+}
+
+/** Measure a full parsed-query scan over the cache (E2E perf measurement). */
+export function searchPerf(query, runs = 20) {
+  const q = parseQuery(query);
+  const idToName = new Map(collectionList().map((c) => [c.id, c.name]));
+  const samples = [];
+  let hits = 0;
+  for (let i = 0; i < runs; i++) {
+    const t0 = performance.now();
+    hits = 0;
+    for (const it of items.values()) {
+      if (matchClipboardItem(it, q, idToName, detectContentType)) hits++;
+    }
+    samples.push(performance.now() - t0);
+  }
+  samples.sort((a, b) => a - b);
+  const p95 = samples[Math.min(samples.length - 1, Math.floor(samples.length * 0.95))];
+  return { p95, max: samples[samples.length - 1], avg: samples.reduce((a, b) => a + b, 0) / samples.length, hits, total: items.size };
 }
