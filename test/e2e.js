@@ -16,7 +16,22 @@ const OUT = path.join(ROOT, 'test-output');
 // event loop spins (app becomes ready on the first await) ----
 process.env.TEXTVAULT_TEST_DIR = OUT;
 process.env.TEXTVAULT_E2E = '1';
-fs.rmSync(OUT, { recursive: true, force: true });
+// On Windows a previous run's app (or an orphaned Electron left by an aborted
+// run) can transiently hold handles on files inside test-output — retry the
+// removal instead of failing the boot with ENOTEMPTY/EBUSY/EPERM.
+function cleanTestOutput() {
+  try {
+    fs.rmSync(OUT, { recursive: true, force: true, maxRetries: 20, retryDelay: 150 });
+  } catch (err) {
+    throw new Error(
+      `could not clean ${OUT} (${err.code || err.message}) — a leftover ` +
+      'process from an aborted run is likely still holding files inside it; ' +
+      'close it (taskkill /F /IM electron.exe) and rerun the E2E suite.',
+      { cause: err },
+    );
+  }
+}
+cleanTestOutput();
 fs.mkdirSync(OUT, { recursive: true });
 
 const { app, BrowserWindow } = require('electron');

@@ -2746,6 +2746,39 @@ Next:
 Remaining release blockers: ≥2h soak, installer verification (Inno
 Setup), Electron major upgrade, full screen-reader a11y audit.
 
+## 2026-09-04 (E2E harness — Windows output cleanup)
+
+Phase:
+Maintenance — test harness reliability (no phase gate affected)
+
+Completed:
+- Fixed a Windows-only E2E startup failure: `test/e2e.js` removed
+  `test-output/` with a bare `fs.rmSync(..., {recursive, force})`, so any
+  transient handle on files inside it (orphaned Electron left by an
+  externally aborted run, antivirus/indexer scanning fresh artifacts)
+  failed the boot with ENOTEMPTY before a single check could run
+- Cleanup now retries (maxRetries 20 × 150ms) and, if removal is still
+  impossible, fails with an explicit actionable message naming the likely
+  leftover-process cause instead of a bare rmdir stack
+- Root cause of the triggering incident: an Electron process tree
+  orphaned by an externally killed E2E run kept handles on
+  `test-output/` (the E2E app's export target). Confirmed live via
+  tasklist and cleared. The harness itself closes cleanly (all writes
+  synchronous; finish() → app.exit)
+
+Tests:
+- node test/syntax.cjs → 19/19 OK (exit 0)
+- npm test → unit 71/71 + ipc/architecture 32/32 (exit 0)
+- npm run test:e2e → boots and completes with test-output pre-populated
+  with nested leftovers; 131/132 passed. The single failing check
+  ("find counts Persian matches — 1 of 4") is pre-existing from the
+  Ctrl+F WIP commit 1242958 (counter now uses the i18n `ed.findCount`
+  format; the stale assertion expects the old `1/4` literal) and is
+  addressed by the in-progress Ctrl+F completion, not by this fix
+
+Next:
+Continue the in-editor Ctrl+F feature from the WIP checkpoint.
+
 ---
 
 # 43. Current Progress Snapshot
