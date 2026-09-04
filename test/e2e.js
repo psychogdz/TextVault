@@ -966,6 +966,38 @@ async function main() {
   await sleep(200);
   check('command palette closes with Escape', !(await js(`!!document.querySelector('.palette-backdrop')`)));
 
+  /* ---------- Help menu -> settings card jump (real menu IPC path) ---------- */
+  await js(`window.__TV_TEST__.App.setView('dashboard')`);
+  await win.webContents.send('menu', 'shortcuts');
+  await sleep(800);
+  const scJump = await js(`(() => {
+    const card = document.getElementById('set-card-shortcuts');
+    if (!card) return null;
+    const r = card.getBoundingClientRect();
+    return { heading: card.querySelector('h3').textContent, top: Math.round(r.top), inView: r.top >= -5 && r.top < 300 };
+  })()`);
+  check('Help menu "Keyboard Shortcuts" scrolls to the shortcuts card',
+    scJump && scJump.inView && scJump.heading === 'Keyboard Shortcuts', JSON.stringify(scJump));
+  await win.webContents.send('menu', 'about');
+  await sleep(800);
+  // About is the LAST card: block:'start' clamps at the container's maximum
+  // scroll, so the correct behavior is "scrolled fully down to About" — the
+  // old index bug stopped early at the Shortcuts card and left scroll unused
+  const abJump = await js(`(() => {
+    const card = document.getElementById('set-card-about');
+    if (!card) return null;
+    const sc = document.getElementById('view-settings');
+    const maxScroll = sc.scrollHeight - sc.clientHeight;
+    return {
+      heading: card.querySelector('h3').textContent,
+      top: Math.round(card.getBoundingClientRect().top),
+      atMax: Math.abs(sc.scrollTop - maxScroll) <= 2,
+    };
+  })()`);
+  check('Help menu "About" scrolls to the about card',
+    abJump && abJump.atMax && abJump.heading === 'About', JSON.stringify(abJump));
+  await js(`window.__TV_TEST__.App.setView('dashboard')`);
+
   /* ---------- Phase 6: language switch + RTL ---------- */
   await js(`(() => {
     const { App } = window.__TV_TEST__;

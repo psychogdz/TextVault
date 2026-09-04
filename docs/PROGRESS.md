@@ -2845,6 +2845,36 @@ Tests:
 Exit:
 COMPLETE (E2E-verified as above; not a release-blocker item)
 
+## 2026-09-04 (Help-menu settings-card jump fix)
+
+Phase:
+Maintenance — known non-blocker issue fixed separately (as planned when
+it was left outside release blocker #5)
+
+Completed:
+- Fixed the Help-menu "Keyboard Shortcuts"/"About" entries scrolling to
+  the wrong settings card: openSettingsHelp indexed cards positionally
+  (0 Appearance · 1 Editor · 2 Clipboard · 3 Library · 4 Shortcuts ·
+  5 About) and the Language card's insertion shifted every index after
+  it, so "shortcuts" landed on Your Library and "about" on Shortcuts
+- The two cards now carry stable ids (set-card-shortcuts,
+  set-card-about) and the lookup is by id — immune to future card
+  reordering. No other behavior changed
+
+Tests:
+- node test/syntax.cjs → 19/19 OK (exit 0)
+- npm test → unit 71/71 + ipc/architecture 32/32 (exit 0)
+- npm run test:e2e → 147/147 passed (exit 0), including 2 new checks
+  that drive the REAL menu IPC path (webContents.send('menu', …)):
+  "shortcuts" scrolls the Keyboard Shortcuts card to the top of the
+  view (top=169px); "about" scrolls the container to its maximum
+  (About is the last card, so block:'start' clamps — asserted at
+  max-scroll rather than a raw top, which the old bug would have
+  failed by stopping early)
+
+Exit:
+COMPLETE (E2E-verified)
+
 ---
 
 # 43. Current Progress Snapshot

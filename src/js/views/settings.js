@@ -187,14 +187,14 @@ export function initSettings() {
         </div>
       </div>
 
-      <div class="settings-card">
+      <div class="settings-card" id="set-card-shortcuts">
         <h3 data-i18n="set.shortcuts">Keyboard Shortcuts</h3>
         <div class="shortcut-grid">
           ${SHORTCUTS.map(([d, k]) => `<div class="sc-desc" data-i18n="${d}">${t(d)}</div><div class="sc-keys"><kbd>${k}</kbd></div>`).join('')}
         </div>
       </div>
 
-      <div class="settings-card">
+      <div class="settings-card" id="set-card-about">
         <h3 data-i18n="set.about">About</h3>
         <div class="settings-sub" data-i18n="set.aboutSub">TextVault — a quiet home for every text you copy.</div>
         <div class="setting-row">
@@ -465,11 +465,11 @@ export function render() {
 
 export function openSettingsHelp(kind) {
   // menu "about"/"shortcuts" -> jump to settings and scroll to card
+  // (anchored by id — positional indices drifted when the Language card
+  // was inserted and scrolled to the wrong cards)
   App.setView('settings');
   setTimeout(() => {
-    const cards = document.querySelectorAll('#view-settings .settings-card');
-    // 0 Appearance · 1 Editor · 2 Clipboard · 3 Library · 4 Shortcuts · 5 About
-    const target = kind === 'shortcuts' ? cards[4] : cards[5];
+    const target = document.getElementById(kind === 'shortcuts' ? 'set-card-shortcuts' : 'set-card-about');
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, 60);
 }
