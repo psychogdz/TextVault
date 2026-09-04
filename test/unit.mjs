@@ -556,5 +556,43 @@ test('unknown language falls back to English', () => {
   setLanguage('en');
 });
 
+console.log('\ni18n static coverage:');
+test('every data-i18n* reference in HTML/views exists in both tables', () => {
+  const files = ['src/index.html', 'src/quick.html', 'src/js/views/settings.js', 'src/js/views/snippets.js'];
+  const refs = new Set();
+  for (const f of files) {
+    const src = readFileSync(path.join(ROOT, f), 'utf8');
+    for (const m of src.matchAll(/data-i18n(?:-ph|-title|-aria)?="([^"$]+)"/g)) refs.add(m[1]);
+  }
+  assert.ok(refs.size >= 40, `expected static references, got ${refs.size}`);
+  for (const key of refs) {
+    assert.ok(STRINGS.en[key] !== undefined, 'missing EN key: ' + key);
+    assert.ok(STRINGS.fa[key] !== undefined, 'missing FA key: ' + key);
+  }
+});
+test('dynamic key families resolve: tools, colors, settings shortcuts', async () => {
+  const { TEXT_TOOLS } = await imp('shared/text-tools.mjs');
+  for (const id of TEXT_TOOLS) {
+    assert.ok(STRINGS.en['tool.' + id] !== undefined, 'missing tool.' + id);
+  }
+  for (const c of ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink']) {
+    assert.ok(STRINGS.en['color.' + c] !== undefined, 'missing color.' + c);
+  }
+  const settingsSrc = readFileSync(path.join(ROOT, 'src/js/views/settings.js'), 'utf8');
+  for (const m of settingsSrc.matchAll(/\['([a-z.]+)', '[^']+'\]/g)) {
+    assert.ok(STRINGS.en[m[1]] !== undefined, 'missing settings key: ' + m[1]);
+  }
+});
+test('exporters localize document labels with the lang option', async () => {
+  const { buildTxt } = await imp('electron/exporters/txt.js');
+  const fa = buildTxt([{ title: '', content: 'x', tags: ['a'], updatedAt: 1700000000000 }], { combined: true, lang: 'fa' });
+  assert.ok(fa.includes('بدون عنوان') && fa.includes('برچسب‌ها: a'), 'FA txt labels');
+  const en = buildTxt([{ title: '', content: 'x', tags: ['a'], updatedAt: 1700000000000 }], { combined: true, lang: 'en' });
+  assert.ok(en.includes('Untitled') && en.includes('Tags: a'), 'EN txt labels');
+  const { buildPdfHtml } = await imp('electron/exporters/pdf-html.mjs');
+  const html = buildPdfHtml([{ title: '', content: 'x' }], { fonts: { regular: 'QQ==', bold: 'QQ==' }, lang: 'fa' });
+  assert.ok(html.includes('بدون عنوان') && html.includes('خروجی TextVault'), 'FA pdf labels');
+});
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed ? 1 : 0);

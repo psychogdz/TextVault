@@ -41,9 +41,9 @@ async function loadFontsBase64() {
 }
 
 /** Render one or more entries to a PDF buffer via a hidden print window. */
-async function generatePdf(entries) {
+async function generatePdf(entries, lang) {
   const fonts = await loadFontsBase64();
-  const html = pdfHtmlModule.build(entries, { fonts });
+  const html = pdfHtmlModule.build(entries, { fonts, lang });
   const tmpPath = path.join(os.tmpdir(), `textvault-print-${Date.now()}.html`);
   await fsp.writeFile(tmpPath, html, 'utf8');
   const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true, nodeIntegration: false, contextIsolation: true } });
@@ -68,19 +68,19 @@ async function generatePdf(entries) {
  * Build the export bytes for a kind/mode.
  * mode 'separate' is handled by the caller (one build per entry).
  */
-async function buildExportBytes(kind, entries, { combined = false } = {}) {
+async function buildExportBytes(kind, entries, { combined = false, lang } = {}) {
   await ensureAsyncExporters();
-  if (kind === 'txt') return Buffer.from(exporters.txt.buildTxt(entries, { combined }), 'utf8');
-  if (kind === 'docx') return exporters.docx.buildDocxBuffer(entries, { combined });
-  return generatePdf(entries);
+  if (kind === 'txt') return Buffer.from(exporters.txt.buildTxt(entries, { combined, lang }), 'utf8');
+  if (kind === 'docx') return exporters.docx.buildDocxBuffer(entries, { combined, lang });
+  return generatePdf(entries, lang);
 }
 
 /** Build bytes for a single entry in 'separate' mode. */
-async function buildSingleExportBytes(kind, entry) {
+async function buildSingleExportBytes(kind, entry, lang) {
   await ensureAsyncExporters();
   if (kind === 'txt') return Buffer.from(entry.content, 'utf8');
-  if (kind === 'docx') return exporters.docx.buildDocxBuffer([entry], { combined: false });
-  return generatePdf([entry]);
+  if (kind === 'docx') return exporters.docx.buildDocxBuffer([entry], { combined: false, lang });
+  return generatePdf([entry], lang);
 }
 
 function isExporterKind(kind) {

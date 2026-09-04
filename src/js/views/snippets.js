@@ -90,7 +90,7 @@ function renderSnippetRow(s) {
   row.querySelector('[data-act="copy"]').addEventListener('click', async (e) => {
     e.stopPropagation();
     await copySnippet(s.id);
-    toast('Snippet copied to clipboard');
+    toast(t('sn.copied'));
   });
   row.querySelector('[data-act="fav"]').addEventListener('click', (e) => { e.stopPropagation(); toggleSnippetFavorite(s.id); });
   row.querySelector('[data-act="edit"]').addEventListener('click', (e) => { e.stopPropagation(); openSnippetEditor(s.id); });
@@ -98,15 +98,15 @@ function renderSnippetRow(s) {
   row.querySelector('[data-act="del"]').addEventListener('click', async (e) => {
     e.stopPropagation();
     const ok = await confirmDialog({
-      title: 'Delete this snippet?',
-      message: '“<b></b>” will be permanently removed. This cannot be undone.',
-      messageValues: [s.title || 'Untitled snippet'],
-      confirmText: 'Delete Snippet',
+      title: t('sn.del.title'),
+      message: t('sn.del.body'),
+      messageValues: [s.title || t('exp.untitled')],
+      confirmText: t('sn.del.confirm'),
       danger: true,
     });
     if (!ok) return;
     await deleteSnippet(s.id);
-    toast('Snippet deleted', { type: 'info' });
+    toast(t('sn.deleted'), { type: 'info' });
   });
 
   return row;
@@ -121,18 +121,18 @@ function openSnippetEditor(id) {
   backdrop.className = 'modal-backdrop';
   backdrop.innerHTML = `
     <div class="modal modal-wide" role="dialog" aria-modal="true">
-      <h3 class="modal-title">${existing ? 'Edit Snippet' : 'New Snippet'}</h3>
+      <h3 class="modal-title">${existing ? t('sn.edit') : t('sn.new')}</h3>
       <div class="modal-body snippet-form">
-        <input id="sn-title" placeholder="Title" autocomplete="off" spellcheck="false">
-        <textarea id="sn-content" rows="8" placeholder="Snippet content…" spellcheck="false"></textarea>
-        <input id="sn-desc" placeholder="Description (optional)" autocomplete="off" spellcheck="false">
-        <input id="sn-tags" placeholder="Tags, comma separated" autocomplete="off" spellcheck="false">
+        <input id="sn-title" placeholder="Title" data-i18n-ph="sn.titlePh" autocomplete="off" spellcheck="false">
+        <textarea id="sn-content" rows="8" placeholder="Snippet content…" data-i18n-ph="sn.contentPh" spellcheck="false"></textarea>
+        <input id="sn-desc" placeholder="Description (optional)" data-i18n-ph="sn.descPh" autocomplete="off" spellcheck="false">
+        <input id="sn-tags" placeholder="Tags, comma separated" data-i18n-ph="sn.tagsPh" autocomplete="off" spellcheck="false">
         <div class="sn-coll-label">Collections</div>
         <div class="sn-coll-list" id="sn-collections"></div>
       </div>
       <div class="modal-actions">
-        <button class="btn btn-ghost" data-act="cancel">Cancel</button>
-        <button class="btn btn-accent" data-act="save">${existing ? 'Save' : 'Create Snippet'}</button>
+        <button class="btn btn-ghost" data-act="cancel">${t('cancel')}</button>
+        <button class="btn btn-accent" data-act="save">${existing ? t('sn.save') : t('sn.create')}</button>
       </div>
     </div>`;
   const title = backdrop.querySelector('#sn-title');
@@ -163,7 +163,7 @@ function openSnippetEditor(id) {
     collWrap.appendChild(label);
   }
   if (!collectionList().length) {
-    collWrap.innerHTML = '<span class="ts-empty">No collections yet — create one in the Collections view.</span>';
+    collWrap.innerHTML = `<span class="ts-empty">${t('sn.noCollections')}</span>`;
   }
 
   const close = (save) => {
@@ -177,10 +177,10 @@ function openSnippetEditor(id) {
       tags: tags.value.split(',').map((t) => t.trim()).filter(Boolean),
       collections: [...selected],
     };
-    if (existing) updateSnippet(existing.id, payload).then(() => toast('Snippet saved'));
+    if (existing) updateSnippet(existing.id, payload).then(() => toast(t('sn.saved')));
     else if (payload.content.trim() || payload.title.trim()) {
-      createSnippet(payload).then(() => toast('Snippet created'));
-    } else toast('Nothing to save', { type: 'info' });
+      createSnippet(payload).then(() => toast(t('sn.created')));
+    } else toast(t('sn.nothingToSave'), { type: 'info' });
   };
   const onKey = (e) => {
     if (e.key === 'Escape') { e.stopPropagation(); close(false); }
@@ -207,11 +207,11 @@ function openCollectionPicker(store, record) {
   const selected = new Set(record.collections || []);
   backdrop.innerHTML = `
     <div class="modal" role="dialog" aria-modal="true">
-      <h3 class="modal-title">Collections</h3>
+      <h3 class="modal-title">${t('col.title')}</h3>
       <div class="modal-body"><div class="sn-coll-list"></div></div>
       <div class="modal-actions">
-        <button class="btn btn-ghost" data-act="cancel">Cancel</button>
-        <button class="btn btn-accent" data-act="save">Save</button>
+        <button class="btn btn-ghost" data-act="cancel">${t('cancel')}</button>
+        <button class="btn btn-accent" data-act="save">${t('sn.save')}</button>
       </div>
     </div>`;
   const listEl = backdrop.querySelector('.sn-coll-list');
@@ -229,12 +229,12 @@ function openCollectionPicker(store, record) {
     listEl.appendChild(label);
   }
   if (!collectionList().length) {
-    listEl.innerHTML = '<span class="ts-empty">No collections yet — create one in the Collections view.</span>';
+    listEl.innerHTML = `<span class="ts-empty">${t('sn.noCollections')}</span>`;
   }
   const close = (save) => {
     document.removeEventListener('keydown', onKey, true);
     backdrop.remove();
-    if (save) setItemCollections(store, record, [...selected]).then(() => toast('Collections updated'));
+    if (save) setItemCollections(store, record, [...selected]).then(() => toast(t('col.updated')));
   };
   const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(false); } };
   backdrop.querySelector('[data-act="cancel"]').addEventListener('click', () => close(false));
@@ -249,10 +249,10 @@ export function initCollectionsView() {
   els.collList = document.getElementById('collection-list');
   els.collEmpty = document.getElementById('collections-empty');
   document.getElementById('btn-new-collection').addEventListener('click', async () => {
-    const name = await promptText('New collection', 'Collection name');
+    const name = await promptText(t('col.new'), t('col.namePh'));
     if (!name || !name.trim()) return;
     await createCollection(name);
-    toast('Collection created');
+    toast(t('col.created'));
   });
 }
 
@@ -292,19 +292,19 @@ function renderCollectionRow(c) {
   row.querySelector('.collection-name').textContent = c.name;
 
   row.querySelector('[data-act="rename"]').addEventListener('click', async () => {
-    const name = await promptText('Rename collection', 'Collection name', c.name);
-    if (name && name.trim()) { await renameCollection(c.id, name); toast('Collection renamed'); }
+    const name = await promptText(t('col.rename'), t('col.namePh'), c.name);
+    if (name && name.trim()) { await renameCollection(c.id, name); toast(t('col.renamed')); }
   });
   row.querySelector('[data-act="del"]').addEventListener('click', async () => {
     const ok = await confirmDialog({
-      title: 'Delete this collection?',
-      message: 'Members stay in your library; only the group is removed.',
-      confirmText: 'Delete Collection',
+      title: t('col.del.title'),
+      message: t('col.del.body'),
+      confirmText: t('col.del.confirm'),
       danger: true,
     });
     if (!ok) return;
     await deleteCollection(c.id);
-    toast('Collection deleted', { type: 'info' });
+    toast(t('col.deleted'), { type: 'info' });
   });
 
   const members = row.querySelector('.collection-members');
@@ -328,24 +328,24 @@ function memberRow(store, record, previewText, url) {
     <div class="clip-actions">
       ${url ? `<button class="icon-btn icon-btn-sm" data-act="open" title="Open URL">${icon('arrow-left', 14)}</button>` : ''}
       <button class="icon-btn icon-btn-sm" data-act="copy" title="Copy">${icon('copy', 14)}</button>
-      <button class="icon-btn icon-btn-sm" data-act="remove" title="Remove from collection">${icon('x', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="remove" title="${t('col.removeFrom')}">${icon('x', 14)}</button>
     </div>`;
   row.querySelector('.clip-preview').textContent = previewText.slice(0, 160);
   const openBtn = row.querySelector('[data-act="open"]');
   if (openBtn) {
     openBtn.innerHTML = icon('external', 14);
-    openBtn.title = 'Open URL';
+    openBtn.title = t('open.url');
     openBtn.addEventListener('click', () => window.tv.openExternal(url).then((r) => {
       if (!r.ok) toastError(r.error || 'Could not open the URL.');
     }));
   }
   row.querySelector('[data-act="copy"]').addEventListener('click', async () => {
     await window.tv.clipboardWrite(record.content);
-    toast('Copied to clipboard');
+    toast(t('clip.copied'));
   });
   row.querySelector('[data-act="remove"]').addEventListener('click', async () => {
     await setItemCollections(store, record, (record.collections || []).filter((x) => x !== row.closest('.collection-block').dataset.id));
-    toast('Removed from collection', { type: 'info' });
+    toast(t('col.removedToast'), { type: 'info' });
   });
   return row;
 }

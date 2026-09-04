@@ -20,15 +20,11 @@ const { registerIpcHandlers, lifecycle } = require('./ipc/register');
 const clipboardService = require('./services/clipboard-service');
 const { createTray, refreshTray } = require('./services/tray');
 const quickWindow = require('./services/quick-window');
+const i18nMain = require('./services/i18n-main');
 
 // Current UI language for main-process surfaces (tray). The renderer syncs
 // this via tv:set-language; defaults to English until it boots.
-let mainLang = 'en';
-
-async function trayLabels() {
-  // main.js lives one level below the repo root → ../shared
-  const { setLanguage, t } = await import('../shared/i18n.mjs');
-  setLanguage(mainLang);
+function trayLabels() {
   return {
     open: t('tray.open'),
     settings: t('tray.settings'),
@@ -42,12 +38,13 @@ async function trayLabels() {
 }
 
 function setMainLanguage(lang) {
-  mainLang = lang === 'fa' ? 'fa' : 'en';
+  i18nMain.setLang(lang);
+  buildMenu(); // native menu follows the active UI language
   refreshTray(clipboardService.getState());
 }
 
 function currentLanguage() {
-  return mainLang;
+  return i18nMain.getLang();
 }
 
 // Test/verification hook: redirect userData (must run before app is ready).
@@ -69,7 +66,8 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', () => focusMainWindow());
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await i18nMain.init(); // load dictionaries before any user-facing main-process string
   registerAppProtocol();
   buildMenu();
   createWindow();

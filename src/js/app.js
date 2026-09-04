@@ -22,7 +22,7 @@ import {
   seedPerfItems, searchPerf, getLastPersistMs,
 } from './core/clipboard.js';
 import { initCommands, openCommandPalette } from './commands.js';
-import { setLanguage as setI18nLanguage, languageDirection, t as translate } from '../../shared/i18n.mjs';
+import { setLanguage as setI18nLanguage, languageDirection, t as translate, itemsKey } from '../../shared/i18n.mjs';
 
 /* ---------------- view switching ---------------- */
 
@@ -59,21 +59,21 @@ App.showExportMenu = (entries, anchorEl) => {
   const single = entries.length === 1;
   const items = single
     ? [
-        { headerLabel: 'Export this text' },
-        { label: 'TXT — exact original text', icon: 'file-text', onClick: () => runExport('txt', 'single', entries, App.titleOf(entries[0])) },
-        { label: 'Word document (.docx)', icon: 'edit', onClick: () => runExport('docx', 'single', entries, App.titleOf(entries[0])) },
-        { label: 'PDF document', icon: 'files', onClick: () => runExport('pdf', 'single', entries, App.titleOf(entries[0])) },
+        { headerLabel: translate('exp.menu.single') },
+        { label: translate('exp.menu.txtExact'), icon: 'file-text', onClick: () => runExport('txt', 'single', entries, App.titleOf(entries[0])) },
+        { label: translate('exp.menu.docx'), icon: 'edit', onClick: () => runExport('docx', 'single', entries, App.titleOf(entries[0])) },
+        { label: translate('exp.menu.pdf'), icon: 'files', onClick: () => runExport('pdf', 'single', entries, App.titleOf(entries[0])) },
       ]
     : [
-        { headerLabel: `One combined file (${formatNumber(entries.length)} texts)` },
-        { label: 'Combined TXT', icon: 'layers', onClick: () => runExport('txt', 'combined', entries) },
-        { label: 'Combined Word (.docx)', icon: 'edit', onClick: () => runExport('docx', 'combined', entries) },
-        { label: 'Combined PDF', icon: 'files', onClick: () => runExport('pdf', 'combined', entries) },
+        { headerLabel: translate('exp.menu.combined', { n: formatNumber(entries.length) }) },
+        { label: translate('exp.menu.combinedTxt'), icon: 'layers', onClick: () => runExport('txt', 'combined', entries) },
+        { label: translate('exp.menu.combinedDocx'), icon: 'edit', onClick: () => runExport('docx', 'combined', entries) },
+        { label: translate('exp.menu.combinedPdf'), icon: 'files', onClick: () => runExport('pdf', 'combined', entries) },
         { separator: true },
-        { headerLabel: 'Separate file for each text' },
-        { label: 'Separate TXT files…', icon: 'file-text', onClick: () => runExport('txt', 'separate', entries) },
-        { label: 'Separate Word files…', icon: 'edit', onClick: () => runExport('docx', 'separate', entries) },
-        { label: 'Separate PDF files…', icon: 'files', onClick: () => runExport('pdf', 'separate', entries) },
+        { headerLabel: translate('exp.menu.separateHeader') },
+        { label: translate('exp.menu.separateTxt'), icon: 'file-text', onClick: () => runExport('txt', 'separate', entries) },
+        { label: translate('exp.menu.separateDocx'), icon: 'edit', onClick: () => runExport('docx', 'separate', entries) },
+        { label: translate('exp.menu.separatePdf'), icon: 'files', onClick: () => runExport('pdf', 'separate', entries) },
       ];
 
   showDropdown(anchorEl || null, items);
@@ -97,12 +97,12 @@ async function runExport(kind, mode, entries, defaultName) {
       return;
     }
     if (mode === 'separate') {
-      toast(`Exported ${formatNumber(res.count)} files`);
+      toast(translate('exp.exportedFiles', { n: formatNumber(res.count) }));
     } else {
-      toast(`Exported as ${kind.toUpperCase()}`);
+      toast(translate('exp.exportedAs', { fmt: kind.toUpperCase() }));
     }
   } catch (err) {
-    toastError('Export failed: ' + (err.message || 'unknown error'));
+    toastError(translate('exp.exportFailed') + ': ' + (err.message || translate('settings.unknownError')));
   }
 }
 
@@ -198,6 +198,9 @@ App.applyLanguage = () => {
   document.querySelectorAll('[data-i18n-title]').forEach((el) => {
     el.title = translate(el.dataset.i18nTitle);
   });
+  document.querySelectorAll('[data-i18n-aria]').forEach((el) => {
+    el.setAttribute('aria-label', translate(el.dataset.i18nAria));
+  });
   window.tv.setLanguage(lang).catch(() => {});
   // re-render the active view so dynamic strings follow the language
   if (App.ready) App.setView(App.view);
@@ -213,7 +216,7 @@ function wireShortcuts() {
     if (mod && !e.shiftKey && e.key.toLowerCase() === 's') {
       e.preventDefault();
       if (editorActive()) {
-        saveNow().then(() => toast('Saved'));
+        saveNow().then(() => toast(translate('ed.saveState.saved')));
       }
       return;
     }
@@ -241,7 +244,7 @@ function wireShortcuts() {
       } else if (App.selection.size > 0) {
         App.showExportMenu([...App.selection].map((id) => App.get(id)).filter(Boolean), document.getElementById('sort-wrap'));
       } else {
-        toast('Select one or more texts first (card checkboxes), or open a text.', { type: 'info' });
+        toast(translate('dash.selectFirst'), { type: 'info' });
       }
       return;
     }
@@ -305,22 +308,22 @@ function isTypingTarget(target) {
 async function deleteSelection() {
   const ids = [...App.selection];
   const ok = await confirmDialog({
-    title: `Delete ${ids.length} ${ids.length === 1 ? 'text' : 'texts'}?`,
-    message: 'They will be moved to the Trash. You can restore them later.',
-    confirmText: 'Delete',
+    title: translate('del.many.title', { n: ids.length, items: translate(itemsKey(ids.length)) }),
+    message: translate('del.many.body'),
+    confirmText: translate('del.confirm'),
     danger: true,
   });
   if (!ok) return;
   for (const id of ids) await App.moveToTrash(id);
   App.selection.clear();
-  toast(`Moved ${ids.length} to Trash`, {
+  toast(translate('del.moved', { n: ids.length }), {
     type: 'info',
     duration: 6000,
     action: {
-      label: 'Undo',
+      label: translate('clip.undo'),
       onClick: async () => {
         for (const id of ids) await App.restoreEntry(id);
-        toast('Restored');
+        toast(translate('clip.restored'));
       },
     },
   });
@@ -434,7 +437,7 @@ async function boot() {
     await App.init();
   } catch (err) {
     console.error(err);
-    toastError('Failed to open the local database: ' + (err.message || err));
+    toastError(translate('db.openFailed') + ': ' + (err.message || err));
   }
 
   clearSkeletons();
@@ -548,7 +551,7 @@ async function boot() {
 
   // welcome for a fresh vault
   if (App.liveEntries().length === 0 && App.trashedEntries().length === 0) {
-    toast('Welcome to TextVault — paste a text above to save it.', { type: 'info', duration: 5000 });
+    toast(translate('toast.welcome'), { type: 'info', duration: 5000 });
   }
 
   // page-boot time (navigation start → interactive), used by perf checks

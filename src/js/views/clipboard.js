@@ -147,7 +147,7 @@ function renderRow(item) {
       <button class="icon-btn icon-btn-sm" data-act="copy" title="Copy">${icon('copy', 14)}</button>
       <button class="icon-btn icon-btn-sm ${item.isPinned ? 'active' : ''}" data-act="pin" title="${item.isPinned ? t('unpin') : t('pin')}">${icon('pin', 14)}</button>
       <button class="icon-btn icon-btn-sm ${item.isFavorite ? 'fav-on' : ''}" data-act="fav" title="${item.isFavorite ? t('unfavorite') : t('favorite')}">${icon(item.isFavorite ? 'star-filled' : 'star', 14)}</button>
-      <button class="icon-btn icon-btn-sm" data-act="coll" title="Collections">${icon('layers', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="coll" title="${t('collections.btn')}">${icon('layers', 14)}</button>
       <button class="icon-btn icon-btn-sm" data-act="del" title="${t('delete')}">${icon('trash', 14)}</button>
     </div>`;
 

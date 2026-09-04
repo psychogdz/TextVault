@@ -9,19 +9,23 @@ const fs = require('node:fs');
 const { dialog } = require('electron');
 
 const TEST_DIR = process.env.TEXTVAULT_TEST_DIR || null;
+const i18nMain = require('./i18n-main');
 
-const EXT_FILTERS = {
-  txt: [{ name: 'Text File', extensions: ['txt'] }],
-  docx: [{ name: 'Word Document', extensions: ['docx'] }],
-  pdf: [{ name: 'PDF Document', extensions: ['pdf'] }],
-  json: [{ name: 'TextVault Backup', extensions: ['json'] }],
-};
+// Filter names are user-facing (native dialogs) — localized per active language.
+function extFilters() {
+  return {
+    txt: [{ name: i18nMain.t('dlg.filter.txt'), extensions: ['txt'] }],
+    docx: [{ name: i18nMain.t('dlg.filter.docx'), extensions: ['docx'] }],
+    pdf: [{ name: i18nMain.t('dlg.filter.pdf'), extensions: ['pdf'] }],
+    json: [{ name: i18nMain.t('dlg.filter.json'), extensions: ['json'] }],
+  };
+}
 
 /** Pick a destination through a save dialog (skipped in test mode). */
 async function pickSavePath(mainWindow, defaultName, extLabel, filters, multi = false) {
   if (TEST_DIR) return path.join(TEST_DIR, defaultName);
   const opts = {
-    title: `Export as ${extLabel}`,
+    title: i18nMain.t('dlg.exportAs', { fmt: extLabel }),
     defaultPath: defaultName,
     filters,
     properties: ['createDirectory', 'dontAddToRecent'],
@@ -63,7 +67,7 @@ function describeError(err) {
 
 module.exports = {
   TEST_DIR,
-  EXT_FILTERS,
+  extFilters,
   pickSavePath,
   pickOpenPath,
   writeFileAtomic,

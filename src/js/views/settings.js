@@ -16,19 +16,20 @@ const ACCENTS = [
   { id: 'amber', color: '#fbbf24' },
 ];
 
+// Shortcut description keys + accelerator strings (accelerators stay LTR).
 const SHORTCUTS = [
-  ['New text', 'Ctrl + N'],
-  ['Save now', 'Ctrl + S'],
-  ['Search / Find', 'Ctrl + F'],
-  ['Find & Replace', 'Ctrl + H'],
-  ['Export menu', 'Ctrl + E'],
-  ['Copy all text', 'Ctrl + Shift + C'],
-  ['Toggle selection mode', 'Ctrl + M'],
-  ['Undo / Redo', 'Ctrl + Z / Ctrl + Shift + Z'],
-  ['Toggle theme', 'Ctrl + Alt + T'],
-  ['Quick capture save', 'Ctrl + Enter'],
-  ['Delete selected card', 'Delete'],
-  ['Back / close panel', 'Esc'],
+  ['sc.newText', 'Ctrl + N'],
+  ['sc.save', 'Ctrl + S'],
+  ['sc.search', 'Ctrl + F'],
+  ['sc.replace', 'Ctrl + H'],
+  ['sc.export', 'Ctrl + E'],
+  ['ed.copyAllLabel', 'Ctrl + Shift + C'],
+  ['sc.selMode', 'Ctrl + M'],
+  ['sc.undo', 'Ctrl + Z / Ctrl + Shift + Z'],
+  ['menu.theme', 'Ctrl + Alt + T'],
+  ['sc.qcSave', 'Ctrl + Enter'],
+  ['sc.deleteCard', 'Delete'],
+  ['sc.esc', 'Esc'],
 ];
 
 let els = null;
@@ -38,18 +39,18 @@ export function initSettings() {
   view.innerHTML = `
     <div class="settings-wrap">
       <div class="settings-card">
-        <h3>Appearance</h3>
-        <div class="settings-sub">Theme and accent color.</div>
+        <h3 data-i18n="set.appearance">Appearance</h3>
+        <div class="settings-sub" data-i18n="set.appearance.sub">Theme and accent color.</div>
         <div class="setting-row">
-          <div><div class="sr-label">Theme</div></div>
+          <div><div class="sr-label" data-i18n="set.theme">Theme</div></div>
           <div class="theme-picker" id="set-theme">
-            <button class="theme-btn" data-theme-opt="light">${icon('sun', 14)} Light</button>
-            <button class="theme-btn" data-theme-opt="dark">${icon('moon', 14)} Dark</button>
-            <button class="theme-btn" data-theme-opt="system">${icon('monitor', 14)} System</button>
+            <button class="theme-btn" data-theme-opt="light">${icon('sun', 14)} <span data-i18n="set.theme.light">Light</span></button>
+            <button class="theme-btn" data-theme-opt="dark">${icon('moon', 14)} <span data-i18n="set.theme.dark">Dark</span></button>
+            <button class="theme-btn" data-theme-opt="system">${icon('monitor', 14)} <span data-i18n="set.theme.system">System</span></button>
           </div>
         </div>
         <div class="setting-row">
-          <div><div class="sr-label">Accent color</div></div>
+          <div><div class="sr-label" data-i18n="set.accent">Accent color</div></div>
           <div class="accent-swatches" id="set-accent"></div>
         </div>
       </div>
@@ -70,29 +71,29 @@ export function initSettings() {
         <h3 data-i18n="set.editor">Editor</h3>
         <div class="settings-sub">Defaults used when writing and viewing texts.</div>
         <div class="setting-row">
-          <div><div class="sr-label">Font size</div><div class="sr-desc">Editor text size</div></div>
+          <div><div class="sr-label" data-i18n="set.fontsize">Font size</div><div class="sr-desc" data-i18n="set.fontsize.d">Editor text size</div></div>
           <div class="range-wrap">
             <input type="range" id="set-fontsize" min="12" max="22" step="0.5">
             <span class="range-val" id="set-fontsize-val"></span>
           </div>
         </div>
         <div class="setting-row">
-          <div><div class="sr-label">Font family</div><div class="sr-desc">Sans for prose, mono for code</div></div>
+          <div><div class="sr-label" data-i18n="set.fontFamily">Font family</div><div class="sr-desc" data-i18n="set.fontFamily.d">Sans for prose, mono for code</div></div>
           <div class="theme-picker">
             <button class="theme-btn" data-font-opt="sans">Sans</button>
             <button class="theme-btn" data-font-opt="mono">Mono</button>
           </div>
         </div>
         <div class="setting-row">
-          <div><div class="sr-label">Word wrap</div><div class="sr-desc">Wrap long lines instead of scrolling sideways</div></div>
+          <div><div class="sr-label" data-i18n="set.wrap">Word wrap</div><div class="sr-desc" data-i18n="set.wrap.d">Wrap long lines instead of scrolling sideways</div></div>
           <div class="switch" id="set-wrap" role="switch"></div>
         </div>
         <div class="setting-row">
-          <div><div class="sr-label">Auto-save</div><div class="sr-desc">Save automatically while you type</div></div>
+          <div><div class="sr-label" data-i18n="set.autosave">Auto-save</div><div class="sr-desc" data-i18n="set.autosave.d">Save automatically while you type</div></div>
           <div class="switch" id="set-autosave" role="switch"></div>
         </div>
         <div class="setting-row">
-          <div><div class="sr-label">Auto-save delay</div><div class="sr-desc">How long to wait after you stop typing</div></div>
+          <div><div class="sr-label" data-i18n="set.asDelay">Auto-save delay</div><div class="sr-desc" data-i18n="set.asDelay.d">How long to wait after you stop typing</div></div>
           <div class="range-wrap">
             <input type="range" id="set-asdelay" min="300" max="3000" step="100">
             <span class="range-val" id="set-asdelay-val"></span>
@@ -101,8 +102,8 @@ export function initSettings() {
       </div>
 
       <div class="settings-card">
-        <h3>Clipboard</h3>
-        <div class="settings-sub">History capture and privacy basics.</div>
+        <h3 data-i18n="set.clipboard">Clipboard</h3>
+        <div class="settings-sub" data-i18n="set.clipboard.sub">History capture and privacy basics.</div>
         <div class="setting-row">
           <div><div class="sr-label">Clipboard monitoring</div><div class="sr-desc">Save a copy of everything you copy</div></div>
           <div class="switch" id="set-clip-monitor" role="switch"></div>
@@ -128,7 +129,7 @@ export function initSettings() {
           </div>
         </div>
         <div class="setting-row">
-          <div><div class="sr-label">Time retention</div><div class="sr-desc">Delete clipboard items older than this</div></div>
+          <div><div class="sr-label" data-i18n="set.clip.retention">Time retention</div><div class="sr-desc" data-i18n="set.clip.retention.d">Delete clipboard items older than this</div></div>
           <div class="select-wrap">
             <select id="set-clip-retention" aria-label="Time retention">
               <option value="0">Keep forever</option>
@@ -139,11 +140,11 @@ export function initSettings() {
           </div>
         </div>
         <div class="setting-row">
-          <div><div class="sr-label">Skip sensitive captures</div><div class="sr-desc">Never save clipboard content that looks like a password, key or token</div></div>
+          <div><div class="sr-label" data-i18n="set.clip.skipSens">Skip sensitive captures</div><div class="sr-desc" data-i18n="set.clip.skipSens.d">Never save clipboard content that looks like a password, key or token</div></div>
           <div class="switch" id="set-clip-skip-sens" role="switch"></div>
         </div>
         <div class="setting-row">
-          <div><div class="sr-label">Private mode (this session)</div><div class="sr-desc">Temporarily discard everything you copy — nothing is saved while on</div></div>
+          <div><div class="sr-label" data-i18n="set.clip.private">Private mode (this session)</div><div class="sr-desc" data-i18n="set.clip.private.d">Temporarily discard everything you copy — nothing is saved while on</div></div>
           <div class="switch" id="set-clip-private" role="switch"></div>
         </div>
         <div class="setting-row">
@@ -166,43 +167,43 @@ export function initSettings() {
       </div>
 
       <div class="settings-card">
-        <h3>Your Library</h3>
-        <div class="settings-sub">Local data, backup and restore.</div>
+        <h3 data-i18n="set.library">Your Library</h3>
+        <div class="settings-sub" data-i18n="set.library.sub">Local data, backup and restore.</div>
         <div class="settings-stats" id="set-stats"></div>
         <div class="setting-row" style="margin-top:10px">
-          <div><div class="sr-label">Data location</div><div class="sr-desc">Stored locally in an IndexedDB database inside this folder</div></div>
+          <div><div class="sr-label" data-i18n="set.dataLocation">Data location</div><div class="sr-desc" data-i18n="set.dataLocation.d">Stored locally in an IndexedDB database inside this folder</div></div>
         </div>
         <div class="setting-row">
           <div class="path-box" id="set-datapath">…</div>
-          <button class="btn btn-ghost btn-sm" id="set-openpath">${icon('folder', 14)} Open Folder</button>
+          <button class="btn btn-ghost btn-sm" id="set-openpath">${icon('folder', 14)} <span data-i18n="set.openFolder">Open Folder</span></button>
         </div>
         <div class="setting-row">
-          <div><div class="sr-label">Backup</div><div class="sr-desc">Export texts, clipboard history, snippets and collections as JSON</div></div>
+          <div><div class="sr-label" data-i18n="set.backupTitle">Backup</div><div class="sr-desc" data-i18n="set.backupDesc">Export texts, clipboard history, snippets and collections as JSON</div></div>
           <button class="btn btn-accent btn-sm" id="set-backup">${icon('upload', 14)} Export Library</button>
         </div>
         <div class="setting-row">
-          <div><div class="sr-label">Restore</div><div class="sr-desc">Import a TextVault backup (merge or replace) — v1 and v2</div></div>
+          <div><div class="sr-label" data-i18n="set.restoreTitle">Restore</div><div class="sr-desc" data-i18n="set.restoreDesc">Import a TextVault backup (merge or replace) — v1 and v2</div></div>
           <button class="btn btn-ghost btn-sm" id="set-import">${icon('download', 14)} Import Library</button>
         </div>
       </div>
 
       <div class="settings-card">
-        <h3>Keyboard Shortcuts</h3>
+        <h3 data-i18n="set.shortcuts">Keyboard Shortcuts</h3>
         <div class="shortcut-grid">
-          ${SHORTCUTS.map(([d, k]) => `<div class="sc-desc">${d}</div><div class="sc-keys"><kbd>${k}</kbd></div>`).join('')}
+          ${SHORTCUTS.map(([d, k]) => `<div class="sc-desc" data-i18n="${d}">${t(d)}</div><div class="sc-keys"><kbd>${k}</kbd></div>`).join('')}
         </div>
       </div>
 
       <div class="settings-card">
-        <h3>About</h3>
-        <div class="settings-sub">TextVault — a quiet home for every text you copy.</div>
+        <h3 data-i18n="set.about">About</h3>
+        <div class="settings-sub" data-i18n="set.aboutSub">TextVault — a quiet home for every text you copy.</div>
         <div class="setting-row">
-          <div class="sr-label">Version</div>
+          <div class="sr-label" data-i18n="set.version">Version</div>
           <div class="sr-label" id="set-version">1.0.0</div>
         </div>
         <div class="setting-row">
           <div class="sr-label">Persian + English</div>
-          <div class="sr-desc" style="text-align:right">Full bidirectional text support<br>Made with ❤️</div>
+          <div class="sr-desc" style="text-align:right"><span data-i18n="set.bidiSupport">Full bidirectional text support</span><br><span data-i18n="set.madeWith">Made with ❤️</span></div>
         </div>
       </div>
     </div>`;
@@ -331,12 +332,12 @@ export function initSettings() {
     const res = await window.tv.setShortcut(accel);
     if (!res.ok) { toastError(res.error || 'Invalid shortcut.'); return; }
     if (!res.registered) {
-      toastError('Shortcut could not be registered — it may be in use by another app.');
+      toastError(t('settings.shortcutInUse'));
       return;
     }
     App.settings.clipboard.quickShortcut = accel;
     App.persistSettings();
-    toast('Shortcut updated');
+    toast(t('settings.shortcutSaved'));
   });
 
   document.getElementById('set-openpath').addEventListener('click', () => {
@@ -366,12 +367,12 @@ async function exportLibrary() {
   try {
     const res = await exportBackup();
     if (!res.ok) {
-      if (!res.canceled) toastError('Backup failed: ' + (res.error || 'unknown error'));
+      if (!res.canceled) toastError(t('settings.backupFailed') + ': ' + (res.error || t('settings.unknownError')));
       return;
     }
     toast(`Backed up ${formatNumber(res.count)} items (v${res.version})`);
   } catch (err) {
-    toastError('Backup failed: ' + (err.message || 'unknown error'));
+    toastError(t('settings.backupFailed') + ': ' + (err.message || t('settings.unknownError')));
   }
 }
 
@@ -379,7 +380,7 @@ async function importLibrary() {
   try {
     const res = await window.tv.backupImport({});
     if (!res.ok) {
-      if (!res.canceled) toastError('Import failed: ' + (res.error || 'the file could not be read'));
+      if (!res.canceled) toastError(t('settings.importFailed') + ': ' + (res.error || t('settings.noFile')));
       return;
     }
     const count = res.count;
@@ -388,9 +389,9 @@ async function importLibrary() {
     // Staged import: the whole validated backup is applied through the
     // transactional storage layer (texts, clipboard, snippets, collections).
     const out = await importBackup(res, { mode });
-    toast(`Imported ${formatNumber(out.imported)} items${mode === 'replace' ? ' (library replaced)' : ''}`);
+    toast(t('set.importedToast', { n: formatNumber(out.imported) }) + (mode === 'replace' ? t('set.replacedSuffix') : ''));
   } catch (err) {
-    toastError('Import failed: ' + (err.message || 'unknown error'));
+    toastError(t('settings.importFailed') + ': ' + (err.message || t('settings.unknownError')));
   }
 }
 
@@ -401,14 +402,14 @@ function chooseImportMode(count) {
     backdrop.className = 'modal-backdrop';
     backdrop.innerHTML = `
       <div class="modal" role="dialog" aria-modal="true">
-        <h3 class="modal-title">Import ${formatNumber(count)} texts</h3>
-        <div class="modal-body">How should the backup be merged with your current library?<br><br>
-          <b>Merge</b> — keep your current texts and add the backup (exact duplicates skipped).<br>
-          <b>Replace</b> — delete everything current and restore the backup.</div>
+        <h3 class="modal-title">${t('set.importCount', { n: formatNumber(count) })}</h3>
+        <div class="modal-body">${t('set.importBody')}<br><br>
+          <b>${t('set.importMergeBtn')}</b> — ${t('set.importMerge')}<br>
+          <b>${t('set.importReplaceBtn')}</b> — ${t('set.importReplace')}</div>
         <div class="modal-actions">
-          <button class="btn btn-ghost" data-act="cancel">Cancel</button>
-          <button class="btn btn-ghost-danger" data-act="replace">Replace</button>
-          <button class="btn btn-accent" data-act="merge">Merge</button>
+          <button class="btn btn-ghost" data-act="cancel">${t('cancel')}</button>
+          <button class="btn btn-ghost-danger" data-act="replace">${t('set.importReplaceBtn')}</button>
+          <button class="btn btn-accent" data-act="merge">${t('set.importMergeBtn')}</button>
         </div>
       </div>`;
     const close = (v) => { backdrop.remove(); document.removeEventListener('keydown', onKey, true); resolve(v); };

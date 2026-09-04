@@ -20,3 +20,9 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Environment / secrets (defense in depth)
+.env
+.env.*
+*.pem
+*.key

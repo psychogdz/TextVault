@@ -9,14 +9,15 @@ import {
   Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak,
 } from 'docx';
 import { detectBaseDir, containsRtl } from '../../shared/bidi.mjs';
+import { t, setLanguage } from '../../shared/i18n.mjs';
 
 const FONT = { ascii: 'Calibri', hAnsi: 'Calibri', cs: 'Tahoma' };
 
 function metaLine(entry) {
   const parts = [];
-  if (entry.tags && entry.tags.length) parts.push(`Tags: ${entry.tags.join(', ')}`);
-  if (entry.stats && entry.stats.chars != null) parts.push(`${entry.stats.chars.toLocaleString('en-US')} characters`);
-  if (entry.updatedAt) parts.push(`Modified ${new Date(entry.updatedAt).toLocaleString('en-US')}`);
+  if (entry.tags && entry.tags.length) parts.push(t('exp.tags', { tags: entry.tags.join(', ') }));
+  if (entry.stats && entry.stats.chars != null) parts.push(t('exp.characters', { n: entry.stats.chars.toLocaleString('en-US') }));
+  if (entry.updatedAt) parts.push(t('exp.modifiedShort', { date: new Date(entry.updatedAt).toLocaleString('en-US') }));
   return parts.join('  •  ');
 }
 
@@ -47,7 +48,7 @@ function titleParagraph(title, rtl) {
     spacing: { before: 0, after: 120 },
     children: [
       new TextRun({
-        text: title || 'Untitled',
+        text: title || t('exp.untitled'),
         bold: true,
         rightToLeft: rtl,
         font: FONT,
@@ -58,10 +59,11 @@ function titleParagraph(title, rtl) {
   });
 }
 
-export function buildDocx(entries, { combined = false } = {}) {
+export function buildDocx(entries, { combined = false, lang } = {}) {
+  setLanguage(lang || 'en');
   const children = [];
   entries.forEach((entry, i) => {
-    const title = entry.title || 'Untitled';
+    const title = entry.title || t('exp.untitled');
     const titleRtl = containsRtl(title) && detectBaseDir(title) === 'rtl';
     if (i > 0) children.push(new Paragraph({ children: [new PageBreak()] }));
     children.push(titleParagraph(title, titleRtl));
@@ -77,8 +79,8 @@ export function buildDocx(entries, { combined = false } = {}) {
 
   return new Document({
     creator: 'TextVault',
-    title: entries.length === 1 ? (entries[0].title || 'Untitled') : 'TextVault Export',
-    description: 'Exported from TextVault',
+    title: entries.length === 1 ? (entries[0].title || t('exp.untitled')) : t('exp.docTitle'),
+    description: t('exp.exportedFrom'),
     styles: {
       default: {
         document: { run: { font: FONT, size: 22 } },

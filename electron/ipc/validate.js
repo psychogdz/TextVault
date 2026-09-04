@@ -32,37 +32,37 @@ function validString(v, max) {
 function validateExportPayload(payload) {
   if (!isPlainObject(payload)) return { ok: false, error: 'Invalid export request.' };
   const { kind, mode, entries, defaultName } = payload;
-  if (!EXPORT_KINDS.includes(kind)) return { ok: false, error: 'Invalid export request.' };
-  if (!EXPORT_MODES.includes(mode)) return { ok: false, error: 'Invalid export request.' };
+  if (!EXPORT_KINDS.includes(kind)) return { ok: false, error: 'err.invalidExport' };
+  if (!EXPORT_MODES.includes(mode)) return { ok: false, error: 'err.invalidExport' };
   if (!Array.isArray(entries) || entries.length === 0 || entries.length > MAX_EXPORT_ENTRIES) {
-    return { ok: false, error: 'Invalid export request.' };
+    return { ok: false, error: 'err.invalidExport' };
   }
   let total = 0;
   for (const e of entries) {
-    if (!isPlainObject(e)) return { ok: false, error: 'Invalid export request.' };
-    if (typeof e.content !== 'string') return { ok: false, error: 'Invalid export request.' };
+    if (!isPlainObject(e)) return { ok: false, error: 'err.invalidExport' };
+    if (typeof e.content !== 'string') return { ok: false, error: 'err.invalidExport' };
     total += e.content.length;
-    if (e.content.length > MAX_EXPORT_CONTENT) return { ok: false, error: 'Text is too large to export.' };
-    if (e.title !== undefined && typeof e.title !== 'string') return { ok: false, error: 'Invalid export request.' };
+    if (e.content.length > MAX_EXPORT_CONTENT) return { ok: false, error: 'err.textTooLargeExport' };
+    if (e.title !== undefined && typeof e.title !== 'string') return { ok: false, error: 'err.invalidExport' };
     if (typeof e.title === 'string' && e.title.length > MAX_EXPORT_TITLE) {
-      return { ok: false, error: 'Text title is too long to export.' };
+      return { ok: false, error: 'err.titleTooLong' };
     }
     if (e.tags !== undefined) {
       if (!Array.isArray(e.tags) || e.tags.some((t) => typeof t !== 'string')) {
-        return { ok: false, error: 'Invalid export request.' };
+        return { ok: false, error: 'err.invalidExport' };
       }
     }
     if (e.updatedAt !== undefined && !Number.isFinite(e.updatedAt)) {
-      return { ok: false, error: 'Invalid export request.' };
+      return { ok: false, error: 'err.invalidExport' };
     }
     if (e.stats !== undefined && !isPlainObject(e.stats)) {
-      return { ok: false, error: 'Invalid export request.' };
+      return { ok: false, error: 'err.invalidExport' };
     }
   }
-  if (total > MAX_BACKUP_TOTAL) return { ok: false, error: 'Export is too large.' };
+  if (total > MAX_BACKUP_TOTAL) return { ok: false, error: 'err.exportTooLarge' };
   if (defaultName !== undefined && defaultName !== null
       && (typeof defaultName !== 'string' || defaultName.length > MAX_DEFAULT_NAME)) {
-    return { ok: false, error: 'Invalid export request.' };
+    return { ok: false, error: 'err.invalidExport' };
   }
   return { ok: true };
 }
@@ -75,16 +75,16 @@ function validateExportPayload(payload) {
  */
 function validateBackupImportOpts(opts, { testDir = null } = {}) {
   if (opts === undefined || opts === null) return { ok: true, filePath: null };
-  if (!isPlainObject(opts)) return { ok: false, error: 'Invalid import request.' };
+  if (!isPlainObject(opts)) return { ok: false, error: 'err.invalidImport' };
   const override = opts.pathOverride;
   if (override === undefined || override === null) return { ok: true, filePath: null };
   if (typeof override !== 'string' || !testDir) {
-    return { ok: false, error: 'Invalid import request.' };
+    return { ok: false, error: 'err.invalidImport' };
   }
   const resolved = path.resolve(override);
   const root = path.resolve(testDir);
   if (resolved !== root && !resolved.startsWith(root + path.sep)) {
-    return { ok: false, error: 'Invalid import request.' };
+    return { ok: false, error: 'err.invalidImport' };
   }
   return { ok: true, filePath: resolved };
 }
@@ -106,8 +106,8 @@ function isPathAllowed(p, allowedDirs) {
 /** Validate tv:clipboard-write. Returns { ok, value, error? }. */
 function validateClipboardWrite(text) {
   if (text === undefined || text === null) return { ok: true, value: '' };
-  if (typeof text !== 'string') return { ok: false, error: 'Invalid clipboard request.' };
-  if (text.length > MAX_CLIPBOARD_WRITE) return { ok: false, error: 'Text is too large for the clipboard.' };
+  if (typeof text !== 'string') return { ok: false, error: 'err.invalidClipboard' };
+  if (text.length > MAX_CLIPBOARD_WRITE) return { ok: false, error: 'err.clipboardTooLarge' };
   return { ok: true, value: text };
 }
 
@@ -123,16 +123,16 @@ function validateNoPayload(payload) {
  */
 function validateExternalUrl(url) {
   if (typeof url !== 'string' || url.length === 0 || url.length > 2048) {
-    return { ok: false, error: 'Invalid URL.' };
+    return { ok: false, error: 'err.invalidUrl' };
   }
   let parsed;
   try {
     parsed = new URL(url);
   } catch {
-    return { ok: false, error: 'Invalid URL.' };
+    return { ok: false, error: 'err.invalidUrl' };
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    return { ok: false, error: 'Only http(s) URLs can be opened.' };
+    return { ok: false, error: 'err.httpsOnly' };
   }
   return { ok: true, value: parsed.href };
 }

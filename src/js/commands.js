@@ -58,12 +58,12 @@ export function initCommands({ toggleTheme }) {
     },
   });
   registerCommand({
-    id: 'clip.private', label: () => (getMonitorState().private ? 'Private mode: off' : 'Private mode: on'),
+    id: 'clip.private', label: () => (getMonitorState().private ? t('cmd.privateOff') : t('cmd.privateOn')),
     icon: 'info', category: 'privacy',
     run: async () => {
       const st = getMonitorState();
       await setPrivateMode(!st.private);
-      toast(!st.private ? 'Private mode on — copies are not saved' : 'Private mode off', { type: 'info' });
+      toast(getMonitorState().private ? t('cmd.privateOn') : t('cmd.privateOff'), { type: 'info' });
     },
   });
   registerCommand({
@@ -108,7 +108,7 @@ export function openCommandPalette() {
     if (cmd) {
       Promise.resolve(cmd.run()).catch((err) => {
         console.error('Command failed:', err && err.message);
-        toast('Command failed', { type: 'error' });
+        toast(t('toast.commandFailed'), { type: 'error' });
       });
     }
   };

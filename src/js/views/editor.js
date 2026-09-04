@@ -6,6 +6,7 @@ import { icon } from '../ui/icons.js';
 import { toast, toastError, confirmDialog, showDropdown, formatNumber } from '../ui/components.js';
 import { applyEdits, createEntry, CARD_COLORS } from '../core/entry.js';
 import { applyTextTool, TEXT_TOOLS } from '../../../shared/text-tools.mjs';
+import { t } from '../../../shared/i18n.mjs';
 import { detectBaseDir } from '../../../shared/bidi.mjs';
 
 const els = {};
@@ -134,10 +135,10 @@ export function initEditor() {
   els.btnColor.addEventListener('click', () => {
     if (!current) return;
     const items = [
-      { headerLabel: 'Card color' },
-      { label: 'No color', swatch: 'none', onClick: () => setColor(null) },
+      { headerLabel: t('ed.cardColor') },
+      { label: t('ed.colorNone'), swatch: 'none', onClick: () => setColor(null) },
       ...CARD_COLORS.map((c) => ({
-        label: c[0].toUpperCase() + c.slice(1),
+        label: t('color.' + c),
         swatch: c,
         onClick: () => setColor(c),
       })),
@@ -174,25 +175,25 @@ export function initEditor() {
     if (!current) return;
     const pinned = !!(App.get(current.entry.id)?.isPinned);
     showDropdown(els.btnMore, [
-      { headerLabel: 'Text' },
-      { label: 'Copy all text', icon: 'copy', onClick: copyAll },
-      { label: 'Text tools…', icon: 'type', onClick: () => showTextTools(els.btnMore) },
+      { headerLabel: t('ed.headerText') },
+      { label: t('ed.copyAllLabel'), icon: 'copy', onClick: copyAll },
+      { label: t('ed.textTools'), icon: 'type', onClick: () => showTextTools(els.btnMore) },
       {
-        label: pinned ? 'Unpin text' : 'Pin text', icon: 'pin', onClick: togglePin,
+        label: pinned ? t('unpin') : t('pin'), icon: 'pin', onClick: togglePin,
       },
       {
         label: 'Delete text…', icon: 'trash', danger: true, onClick: async () => {
           const ok = await confirmDialog({
-            title: 'Delete this text?',
-            message: '“<b></b>” will be moved to the Trash. You can restore it later from there.',
+            title: t('del.card.title'),
+            message: t('del.card.body'),
             messageValues: [App.titleOf(current.entry)],
-            confirmText: 'Delete',
+            confirmText: t('del.confirm'),
             danger: true,
           });
           if (!ok) return;
           discardDraft();
           await App.moveToTrash(current.entry.id);
-          toast('Moved to Trash', { type: 'info' });
+          toast(t('del.movedOne'), { type: 'info' });
           closeEditor(true);
         },
       },
@@ -236,32 +237,18 @@ export function initEditor() {
   });
 }
 
-const TOOL_LABELS = {
-  'uppercase': 'UPPERCASE',
-  'lowercase': 'lowercase',
-  'title-case': 'Title Case',
-  'sentence-case': 'Sentence case',
-  'trim-lines': 'Trim lines',
-  'normalize-whitespace': 'Normalize whitespace',
-  'sort-lines': 'Sort lines A → Z',
-  'sort-lines-desc': 'Sort lines Z → A',
-  'unique-lines': 'Remove duplicate lines',
-  'reverse-lines': 'Reverse line order',
-  'json-pretty': 'JSON — format',
-  'json-minify': 'JSON — minify',
-  'base64-encode': 'Base64 — encode',
-  'base64-decode': 'Base64 — decode',
-  'url-encode': 'URL — encode',
-  'url-decode': 'URL — decode',
-};
+function toolLabel(id) {
+  // Translation keys mirror the tool ids (shared/text-tools.mjs TEXT_TOOLS).
+  return t('tool.' + id);
+}
 
 /** Open the text-tools menu anchored to the editor toolbar. */
 export function showTextTools(anchorEl) {
   if (!current) return;
   showDropdown(anchorEl, [
-    { headerLabel: 'Transform text (whole text)' },
+    { headerLabel: t('ed.toolHeader') },
     ...TEXT_TOOLS.map((id) => ({
-      label: TOOL_LABELS[id] || id,
+      label: toolLabel(id),
       onClick: () => applyToolToEditor(id),
     })),
   ]);
@@ -271,10 +258,10 @@ export function showTextTools(anchorEl) {
 function applyToolToEditor(toolId) {
   if (!current) return;
   const source = els.textarea.value;
-  if (!source) { toast('Nothing to transform', { type: 'info' }); return; }
+  if (!source) { toast(t('ed.nothingToTransform'), { type: 'info' }); return; }
   const res = applyTextTool(toolId, source);
   if (!res.ok) { toastError(res.error); return; }
-  if (res.result === source) { toast('No change', { type: 'info' }); return; }
+  if (res.result === source) { toast(t('ed.noChange'), { type: 'info' }); return; }
   els.textarea.focus();
   els.textarea.setSelectionRange(0, source.length);
   // insertText keeps the transformation on the native undo stack (Ctrl+Z)
@@ -282,7 +269,7 @@ function applyToolToEditor(toolId) {
   markDirty();
   updateStats();
   autoDirection();
-  toast('Transformed — Ctrl+Z to undo');
+  toast(t('ed.transformed'));
 }
 
 async function togglePin() {
@@ -291,7 +278,7 @@ async function togglePin() {
   if (!entry) return;
   entry.isPinned = !entry.isPinned;
   await App.saveEntry(entry);
-  toast(entry.isPinned ? 'Pinned — always easy to find' : 'Unpinned');
+  toast(entry.isPinned ? t('ed.pinToast') : t('ed.unpinToast'));
 }
 
 /* ================= open / close ================= */
@@ -323,14 +310,14 @@ export async function openEditor(entryId) {
     entry.tags = Array.isArray(draft.tags) ? draft.tags : entry.tags;
     entry.dir = draft.dir || entry.dir;
     current.dirty = true;
-    setTimeout(() => toast('Restored unsaved changes from your last session', { type: 'info', duration: 3600 }), 400);
+    setTimeout(() => toast(t('ed.restoredSession'), { type: 'info', duration: 3600 }), 400);
   }
   if (isNew && draft && draft.ts > 0 && draft.content) {
     // A brand-new text was being written before a crash — bring it back.
     entry.content = draft.content;
     entry.title = draft.title || '';
     current.dirty = true;
-    setTimeout(() => toast('Recovered an unsaved new text from your last session', { type: 'info', duration: 3600 }), 400);
+    setTimeout(() => toast(t('ed.recoveredNew'), { type: 'info', duration: 3600 }), 400);
   }
 
   // fill UI
@@ -406,13 +393,13 @@ export async function saveNow() {
   } catch (err) {
     console.error(err);
     setSaveState('error');
-    toastError('Auto-save failed — your text is kept in a crash-safe draft. ' + (err.message || ''));
+    toastError(t('ed.autosaveFailed') + ' ' + (err.message || ''));
   }
 }
 
 function setSaveState(state) {
   els.saveState.className = 'editor-save-state' + (state === 'saving' ? ' saving' : state === 'unsaved' ? ' unsaved' : '');
-  els.saveStateTxt.textContent = state === 'saving' ? 'Saving…' : state === 'unsaved' ? 'Unsaved' : state === 'error' ? 'Save failed' : 'Saved';
+  els.saveStateTxt.textContent = state === 'saving' ? t('ed.saveState.saving') : state === 'unsaved' ? t('ed.saveState.unsaved') : state === 'error' ? t('ed.saveState.error') : t('ed.saveState.saved');
 }
 
 /* ---- drafts (crash safety) ---- */
@@ -495,7 +482,7 @@ function renderTagSuggest() {
     .slice(0, 40);
   els.tagSuggest.innerHTML = '';
   if (!candidates.length) {
-    els.tagSuggest.innerHTML = '<span class="ts-empty">No other tags yet — type a new one and press Enter.</span>';
+    els.tagSuggest.innerHTML = `<span class="ts-empty">${t('ed.noOtherTags')}</span>`;
   } else {
     for (const [tag, count] of candidates) {
       const chip = document.createElement('button');
@@ -567,7 +554,7 @@ function applyDirection() {
   if (effective === 'auto') effective = detectBaseDir(els.textarea.value || current.entry.content);
   els.textarea.dir = effective;
   els.title.dir = 'auto';
-  els.statDir.textContent = current.entry.dir === 'auto' ? `Auto (${effective.toUpperCase()})` : current.entry.dir.toUpperCase();
+  els.statDir.textContent = current.entry.dir === 'auto' ? `${t('ed.dirAuto')} (${effective.toUpperCase()})` : effective.toUpperCase();
 }
 
 function autoDirection() {
@@ -581,8 +568,8 @@ export function applyEditorPrefs() {
   els.textarea.style.fontSize = App.settings.editorFontSize + 'px';
   els.textarea.classList.toggle('mono', App.settings.editorFont === 'mono');
   els.textarea.classList.toggle('nowrap', !App.settings.editorWrap);
-  els.toggleWrap.textContent = 'Wrap: ' + (App.settings.editorWrap ? 'On' : 'Off');
-  els.toggleFont.textContent = App.settings.editorFont === 'mono' ? 'Mono' : 'Sans';
+  els.toggleWrap.textContent = App.settings.editorWrap ? t('ed.wrapOn') : t('ed.wrapOff');
+  els.toggleFont.textContent = App.settings.editorFont === 'mono' ? t('ed.mono') : t('ed.sans');
 }
 
 /* ================= stats ================= */
@@ -601,7 +588,7 @@ function updateCaretPos() {
   const pos = els.textarea.selectionStart;
   const upto = els.textarea.value.slice(0, pos);
   const lines = upto.split('\n');
-  els.statPos.textContent = `Ln ${lines.length}, Col ${lines[lines.length - 1].length + 1}`;
+  els.statPos.textContent = `${t('ed.ln', { n: lines.length })}, ${t('ed.col', { n: lines[lines.length - 1].length + 1 })}`;
 }
 
 /* ================= copy ================= */
@@ -609,12 +596,12 @@ function updateCaretPos() {
 async function copyAll() {
   if (!current) return;
   const text = els.textarea.value;
-  if (!text) { toast('Nothing to copy yet', { type: 'info' }); return; }
+  if (!text) { toast(t('ed.nothingToCopy'), { type: 'info' }); return; }
   try {
     await window.tv.clipboardWrite(text);
-    toast('Copied to clipboard');
+    toast(t('clip.copied'));
   } catch {
-    toastError('Copy failed.');
+    toastError(t('ed.copyFailed'));
   }
 }
 

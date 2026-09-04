@@ -4,10 +4,12 @@
 // renders the app UI. Each paragraph uses `unicode-bidi: plaintext` so its
 // base direction is auto-detected per paragraph (correct mixed Persian/English).
 import { escapeHtml } from '../../shared/snippets.mjs';
+import { t, setLanguage } from '../../shared/i18n.mjs';
 
-export function buildPdfHtml(entries, { fonts }) {
+export function buildPdfHtml(entries, { fonts, lang } = {}) {
+  setLanguage(lang || 'en');
   const sections = entries.map((entry, i) => {
-    const title = escapeHtml(entry.title || 'Untitled');
+    const title = escapeHtml(entry.title || t('exp.untitled'));
     const metaBits = [];
     if (entry.tags && entry.tags.length) metaBits.push(escapeHtml(entry.tags.join(' · ')));
     if (entry.stats && entry.stats.chars != null) metaBits.push(`${Number(entry.stats.chars).toLocaleString('en-US')} characters`);
@@ -30,7 +32,7 @@ export function buildPdfHtml(entries, { fonts }) {
 <html>
 <head>
 <meta charset="utf-8">
-<title>TextVault Export</title>
+<title>${t('exp.docTitle')}</title>
   <style>
   @page {
     size: A4;
@@ -89,7 +91,7 @@ export function buildPdfHtml(entries, { fonts }) {
 </head>
 <body>
 ${sections}
-<footer>Exported from TextVault</footer>
+<footer>${t('exp.exportedFrom')}</footer>
 </body>
 </html>`;
 }

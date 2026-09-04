@@ -855,6 +855,23 @@ async function main() {
   check('Persian language switches direction to RTL',
     langState.dir === 'rtl' && langState.lang === 'fa', JSON.stringify(langState));
   check('Persian chrome is translated', langState.navLabel === 'کلیپ‌بورد', langState.navLabel);
+  // deep-sweep: dynamic strings + accessibility labels follow the language
+  await js(`window.__TV_TEST__.App.setView('clipboard')`);
+  await sleep(300);
+  const faDyn = await js(`({
+    pause: document.getElementById('clip-pause').textContent,
+    ariaTheme: document.getElementById('theme-quick-toggle').getAttribute('aria-label'),
+  })`);
+  check('Persian dynamic strings (toolbar button + aria label)',
+    faDyn.pause === 'توقف' && faDyn.ariaTheme === 'تغییر پوسته', JSON.stringify(faDyn));
+  const faSave = await js(`document.querySelector('#save-state .txt').textContent`);
+  check('Persian editor save-state (hidden view translated)', faSave === 'ذخیره شد', faSave);
+  const faRawKey = await js(`(() => {
+    const text = document.body.innerText;
+    return /\\b(nav|clip|set|ed|sn|col|del|exp|dlg|err|qc|trash|dash|tool|color|time|cmd|sc|aria|quick|menu|toast|stat|db|settings)\\.[a-z][a-zA-Z]+/.test(text);
+  })()`);
+  check('no raw translation keys rendered in Persian UI', faRawKey === false);
+  await js(`window.__TV_TEST__.App.setView('dashboard')`);
   // restore English LTR for the remainder of the run
   await js(`(() => {
     const { App } = window.__TV_TEST__;
@@ -866,6 +883,11 @@ async function main() {
   check('language restores to English LTR',
     (await js(`document.documentElement.dir`)) === 'ltr'
     && (await js(`document.querySelector('[data-nav="clipboard"] .nav-label').textContent`)) === 'Clipboard');
+  const enRawKey = await js(`(() => {
+    const text = document.body.innerText;
+    return /\\b(nav|clip|set|ed|sn|col|del|exp|dlg|err|qc|trash|dash|tool|color|time|cmd|sc|aria|quick|menu|toast|stat|db|settings)\\.[a-z][a-zA-Z]+/.test(text);
+  })()`);
+  check('no raw translation keys rendered in English UI', enRawKey === false);
 
   /* ---------- Phase 6: quick clipboard launcher ---------- */
   // History was cleared after the perf run — give the quick window something

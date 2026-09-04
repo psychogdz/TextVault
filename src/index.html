@@ -22,7 +22,7 @@
         <span class="brand-name">TextVault</span>
         <span class="brand-sub" id="brand-version">v1.0</span>
       </div>
-      <button class="icon-btn" id="theme-quick-toggle" title="Toggle theme (Ctrl+Alt+T)" aria-label="Toggle theme"></button>
+      <button class="icon-btn" id="theme-quick-toggle" title="Toggle theme (Ctrl+Alt+T)" data-i18n-title="aria.themeTitle" aria-label="Toggle theme" data-i18n-aria="aria.theme"></button>
     </div>
 
     <button class="btn btn-accent btn-block btn-new" id="btn-new-text">
@@ -92,13 +92,13 @@
         <span class="search-icon" data-icon="search"></span>
         <input id="search-input" type="text" placeholder="Search titles, content, tags…" data-i18n-ph="search.placeholder" autocomplete="off" spellcheck="false">
         <kbd class="kbd">Ctrl F</kbd>
-        <button class="icon-btn icon-btn-sm search-clear hidden" id="search-clear" title="Clear" data-icon-x></button>
+        <button class="icon-btn icon-btn-sm search-clear hidden" id="search-clear" title="Clear" data-i18n-title="aria.clear" data-icon-x></button>
       </div>
       <div class="topbar-right">
-        <button class="icon-btn" id="btn-select-mode" title="Selection mode — click cards to select them"></button>
-        <div class="select-wrap" id="sort-wrap" title="Sort">
+        <button class="icon-btn" id="btn-select-mode" title="Selection mode — click cards to select them" data-i18n-title="select.mode"></button>
+        <div class="select-wrap" id="sort-wrap" title="Sort" data-i18n-title="sort.label">
           <span class="select-icon" data-icon="sort"></span>
-          <select id="sort-select" aria-label="Sort by">
+          <select id="sort-select" aria-label="Sort by" data-i18n-aria="aria.sortBy">
             <option value="modified-desc" data-i18n="sort.modified">Recently Modified</option>
             <option value="created-desc" data-i18n="sort.createdDesc">Newest Created</option>
             <option value="created-asc" data-i18n="sort.createdAsc">Oldest Created</option>
@@ -124,12 +124,12 @@
 
       <div class="selection-toolbar hidden" id="selection-toolbar">
         <span class="sel-mode-badge" data-icon="check"></span>
-        <span class="sel-mode-label">Selection Mode</span>
+        <span class="sel-mode-label" data-i18n="selection.mode">Selection Mode</span>
         <span class="sel-count" id="sel-count">0 selected</span>
         <span class="spacer"></span>
-        <button class="btn btn-ghost btn-sm" id="sel-all">Select All</button>
-        <button class="btn btn-ghost btn-sm" id="sel-clear">Clear Selection</button>
-        <button class="btn btn-ghost btn-sm" id="sel-cancel">Cancel</button>
+        <button class="btn btn-ghost btn-sm" id="sel-all" data-i18n="select.all">Select All</button>
+        <button class="btn btn-ghost btn-sm" id="sel-clear" data-i18n="select.clear">Clear Selection</button>
+        <button class="btn btn-ghost btn-sm" id="sel-cancel" data-i18n="select.cancel">Cancel</button>
       </div>
 
       <div class="dashboard-body">
@@ -193,27 +193,27 @@
     <!-- View: Editor -->
     <section class="view view-editor hidden" id="view-editor">
       <div class="editor-top">
-        <button class="icon-btn" id="editor-back" title="Back (Esc)" data-icon="arrow-left"></button>
+        <button class="icon-btn" id="editor-back" title="Back (Esc)" data-i18n-title="ed.back" data-icon="arrow-left"></button>
         <div class="editor-titlewrap">
-          <input id="editor-title" class="editor-title" placeholder="Untitled" autocomplete="off" spellcheck="false">
-          <div class="editor-save-state" id="save-state"><span class="dot"></span><span class="txt">Saved</span></div>
+          <input id="editor-title" class="editor-title" placeholder="Untitled" data-i18n-ph="exp.untitled" autocomplete="off" spellcheck="false">
+          <div class="editor-save-state" id="save-state"><span class="dot"></span><span class="txt" data-i18n="ed.saveState.saved">Saved</span></div>
         </div>
         <div class="editor-actions">
-          <div class="seg" id="dir-seg" title="Text direction">
+          <div class="seg" id="dir-seg" title="Text direction" data-i18n-title="ed.dir">
             <button data-dir="auto" class="active">Auto</button>
             <button data-dir="rtl">RTL</button>
             <button data-dir="ltr">LTR</button>
           </div>
-          <button class="icon-btn" id="btn-color" title="Card color label"></button>
-          <button class="icon-btn" id="btn-find-toggle" title="Find & Replace (Ctrl+F)"></button>
-          <button class="icon-btn" id="btn-copy-all" title="Copy all (Ctrl+Shift+C)"></button>
-          <button class="icon-btn" id="btn-fav" title="Favorite"></button>
+          <button class="icon-btn" id="btn-color" title="Card color label" data-i18n-title="ed.color"></button>
+          <button class="icon-btn" id="btn-find-toggle" title="Find & Replace (Ctrl+F)" data-i18n-title="ed.findReplace"></button>
+          <button class="icon-btn" id="btn-copy-all" title="Copy all (Ctrl+Shift+C)" data-i18n-title="ed.copyAllTitle"></button>
+          <button class="icon-btn" id="btn-fav" title="Favorite" data-i18n-title="favorite"></button>
           <div class="menu-wrap">
-            <button class="icon-btn" id="btn-export" title="Export (Ctrl+E)"></button>
+            <button class="icon-btn" id="btn-export" title="Export (Ctrl+E)" data-i18n-title="ed.exportTitle"></button>
             <div class="dropdown hidden" id="export-menu"></div>
           </div>
           <div class="menu-wrap">
-            <button class="icon-btn" id="btn-more" title="More"></button>
+            <button class="icon-btn" id="btn-more" title="More" data-i18n-title="ed.more"></button>
             <div class="dropdown hidden" id="more-menu"></div>
           </div>
         </div>
@@ -222,30 +222,30 @@
       <div class="findbar hidden" id="findbar">
         <div class="findbar-row">
           <div class="find-field">
-            <input id="find-input" placeholder="Find" autocomplete="off" spellcheck="false">
+            <input id="find-input" placeholder="Find" data-i18n-ph="ed.findPh" autocomplete="off" spellcheck="false">
             <span class="find-count" id="find-count">0/0</span>
-            <button class="icon-btn icon-btn-sm" id="find-prev" title="Previous (Shift+Enter)"></button>
-            <button class="icon-btn icon-btn-sm" id="find-next" title="Next (Enter)"></button>
-            <button class="toggle-btn" id="find-case" title="Match case">Aa</button>
+            <button class="icon-btn icon-btn-sm" id="find-prev" title="Previous (Shift+Enter)" data-i18n-title="ed.findPrev"></button>
+            <button class="icon-btn icon-btn-sm" id="find-next" title="Next (Enter)" data-i18n-title="ed.findNext"></button>
+            <button class="toggle-btn" id="find-case" title="Match case" data-i18n-title="ed.matchCase">Aa</button>
           </div>
           <div class="find-field">
-            <input id="replace-input" placeholder="Replace with" autocomplete="off" spellcheck="false">
+            <input id="replace-input" placeholder="Replace with" data-i18n-ph="ed.replacePh" autocomplete="off" spellcheck="false">
             <button class="btn btn-ghost btn-sm" id="replace-one">Replace</button>
             <button class="btn btn-ghost btn-sm" id="replace-all">All</button>
           </div>
-          <button class="icon-btn" id="findbar-close" title="Close (Esc)"></button>
+          <button class="icon-btn" id="findbar-close" title="Close (Esc)" data-i18n-title="ed.closeEsc"></button>
         </div>
       </div>
 
       <div class="editor-tags-row">
         <div class="chips" id="editor-tags"></div>
-        <input id="tag-input" class="tag-input" placeholder="Add tag…" autocomplete="off" spellcheck="false">
-        <button class="icon-btn icon-btn-sm" id="btn-tag-suggest" title="Pick from existing tags"></button>
+        <input id="tag-input" class="tag-input" placeholder="Add tag…" data-i18n-ph="tag.add" autocomplete="off" spellcheck="false">
+        <button class="icon-btn icon-btn-sm" id="btn-tag-suggest" title="Pick from existing tags" data-i18n-title="ed.tagSuggest"></button>
         <div class="tag-suggest hidden" id="tag-suggest"></div>
       </div>
 
       <div class="editor-area">
-        <textarea id="editor-textarea" class="editor-textarea" spellcheck="false" placeholder="Paste or type your text here…" wrap="soft"></textarea>
+        <textarea id="editor-textarea" class="editor-textarea" spellcheck="false" placeholder="Paste or type your text here…" data-i18n-ph="ed.textPh" wrap="soft"></textarea>
         <div class="dup-banner hidden" id="dup-banner"></div>
       </div>
 
@@ -258,9 +258,9 @@
         <span class="sep"></span>
         <span id="stat-pos">Ln 1, Col 1</span>
         <span class="spacer"></span>
-        <button class="status-toggle" id="toggle-wrap" title="Toggle word wrap">Wrap: On</button>
-        <button class="status-toggle" id="toggle-font" title="Toggle font">Sans</button>
-        <span id="stat-dir" class="stat-dir">Auto</span>
+        <button class="status-toggle" id="toggle-wrap" title="Toggle word wrap" data-i18n-title="set.wrap"><span data-i18n="ed.wrapOn">Wrap: On</span></button>
+        <button class="status-toggle" id="toggle-font" title="Toggle font" data-i18n-title="set.fontFamily"><span data-i18n="ed.sans">Sans</span></button>
+        <span id="stat-dir" class="stat-dir" data-i18n="ed.dirAuto">Auto</span>
       </div>
     </section>
 

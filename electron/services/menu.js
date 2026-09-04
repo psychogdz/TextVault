@@ -5,35 +5,37 @@
 const { Menu } = require('electron');
 const { EMITTED } = require('../ipc/channels');
 const { sendToMain } = require('./window');
+const i18nMain = require('./i18n-main');
 
 function buildMenu() {
   const isMac = process.platform === 'darwin';
+  const t = i18nMain.t;
   const relay = (cmd) => () => sendToMain(EMITTED.MENU, cmd);
   const template = [
     ...(isMac ? [{ role: 'appMenu' }] : []),
     {
-      label: '&File',
+      label: t('menu.file'),
       submenu: [
-        { label: 'New Text', accelerator: 'CmdOrCtrl+N', click: relay('new') },
+        { label: t('new.text'), accelerator: 'CmdOrCtrl+N', click: relay('new') },
         { type: 'separator' },
-        { label: 'Export Library…', click: relay('backup-export') },
-        { label: 'Import Library…', click: relay('backup-import') },
+        { label: t('menu.exportLib'), click: relay('backup-export') },
+        { label: t('menu.importLib'), click: relay('backup-import') },
         { type: 'separator' },
         { role: isMac ? 'close' : 'quit' },
       ],
     },
     {
-      label: '&Edit',
+      label: t('menu.edit'),
       submenu: [
-        { role: 'undo' }, { role: 'redo' }, { type: 'separator' },
-        { role: 'cut' }, { role: 'copy' }, { role: 'paste' },
-        { role: 'selectAll' },
+        { role: 'undo', label: t('menu.undo') }, { role: 'redo', label: t('menu.redo') }, { type: 'separator' },
+        { role: 'cut', label: t('menu.cut') }, { role: 'copy', label: t('menu.copy') }, { role: 'paste', label: t('menu.paste') },
+        { role: 'selectAll', label: t('select.all') },
       ],
     },
     {
-      label: '&View',
+      label: t('menu.view'),
       submenu: [
-        { label: 'Toggle Theme', accelerator: 'CmdOrCtrl+Alt+T', click: relay('theme') },
+        { label: t('menu.theme'), accelerator: 'CmdOrCtrl+Alt+T', click: relay('theme') },
         { type: 'separator' },
         { role: 'reload' }, { role: 'forceReload' },
         { role: 'toggleDevTools' },
@@ -43,10 +45,10 @@ function buildMenu() {
       ],
     },
     {
-      label: '&Help',
+      label: t('menu.help'),
       submenu: [
-        { label: 'Keyboard Shortcuts', click: relay('shortcuts') },
-        { label: 'About TextVault', click: relay('about') },
+        { label: t('set.shortcuts'), click: relay('shortcuts') },
+        { label: t('menu.about'), click: relay('about') },
       ],
     },
   ];

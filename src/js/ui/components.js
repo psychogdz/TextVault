@@ -1,5 +1,6 @@
 // UI primitives: toasts, modals/confirm dialogs, dropdown menus.
 import { icon } from './icons.js';
+import { t, getLanguage } from '../../../shared/i18n.mjs';
 
 /* ---------------- Toasts ---------------- */
 
@@ -40,7 +41,7 @@ export const toastInfo = (msg, opts) => toast(msg, { ...opts, type: 'info' });
 /* ---------------- Modal / confirm ---------------- */
 
 export function confirmDialog({
-  title = 'Are you sure?',
+  title = null,
   message = '',
   messageValues = [],
   confirmText = 'Confirm',
@@ -60,7 +61,7 @@ export function confirmDialog({
           <button class="btn ${danger ? 'btn-danger' : 'btn-accent'}" data-act="ok"></button>
         </div>
       </div>`;
-    backdrop.querySelector('.modal-title').textContent = title;
+    backdrop.querySelector('.modal-title').textContent = title || t('confirm.default');
     const body = backdrop.querySelector('.modal-body');
     // Limited inline HTML (<b></b> placeholders) for emphasis; user text is
     // ONLY ever inserted via textContent — never interpolated into HTML.
@@ -157,17 +158,19 @@ export function showDropdown(anchorEl, items, { align = 'right' } = {}) {
 
 /* ---------------- Formatting helpers ---------------- */
 
-const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+function rtf() {
+  return new Intl.RelativeTimeFormat(getLanguage() === 'fa' ? 'fa' : 'en', { numeric: 'auto' });
+}
 
 export function timeAgo(ts) {
   if (!ts) return '—';
   const diff = ts - Date.now();
   const min = 60_000, hour = 3_600_000, day = 86_400_000;
-  if (Math.abs(diff) < min) return 'just now';
-  if (Math.abs(diff) < hour) return rtf.format(Math.round(diff / min), 'minute');
-  if (Math.abs(diff) < day) return rtf.format(Math.round(diff / hour), 'hour');
-  if (Math.abs(diff) < 30 * day) return rtf.format(Math.round(diff / day), 'day');
-  return new Date(ts).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  if (Math.abs(diff) < min) return t('time.justNow');
+  if (Math.abs(diff) < hour) return rtf().format(Math.round(diff / min), 'minute');
+  if (Math.abs(diff) < day) return rtf().format(Math.round(diff / hour), 'hour');
+  if (Math.abs(diff) < 30 * day) return rtf().format(Math.round(diff / day), 'day');
+  return new Date(ts).toLocaleDateString(getLanguage() === 'fa' ? 'fa-IR' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 export function formatNumber(n) {

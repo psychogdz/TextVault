@@ -21,15 +21,15 @@ function isObj(v) { return v !== null && typeof v === 'object' && !Array.isArray
  * (absent arrays normalize to []).
  */
 export function validateBackupFile(data) {
-  if (!isObj(data)) return { ok: false, error: 'This file is not a TextVault backup.' };
+  if (!isObj(data)) return { ok: false, error: 'err.notBackup' };
   if (data.format !== 'textvault-backup') {
-    return { ok: false, error: 'This file is not a TextVault backup (unexpected format).' };
+    return { ok: false, error: 'err.notBackup' };
   }
   if (typeof data.version !== 'number' || ![1, 2].includes(data.version)) {
-    return { ok: false, error: 'This backup version is not supported.' };
+    return { ok: false, error: 'err.unsupportedVersion' };
   }
   if (!Array.isArray(data.entries)) {
-    return { ok: false, error: 'Backup is missing its text entries.' };
+    return { ok: false, error: 'err.backupMissingEntries' };
   }
   const out = { entries: data.entries, clipboard: [], snippets: [], collections: [] };
   if (data.version >= 2) {
@@ -40,21 +40,21 @@ export function validateBackupFile(data) {
   for (const kind of ['entries', 'clipboard', 'snippets', 'collections']) {
     const { max, content } = BOUNDS[kind];
     if (out[kind].length > max) {
-      return { ok: false, error: `Backup ${kind} exceed the supported count (${max}).` };
+      return { ok: false, error: 'err.backupTooMany' };
     }
     if (content) {
       for (const rec of out[kind]) {
         if (!isObj(rec) || typeof rec.content !== 'string') {
-          return { ok: false, error: `Backup ${kind} contain an invalid record.` };
+          return { ok: false, error: kind === 'collections' ? 'err.backupCollectionsInvalid' : 'err.backupEntriesInvalid' };
         }
         if (rec.content.length > content) {
-          return { ok: false, error: `Backup ${kind} contain an oversized record.` };
+          return { ok: false, error: 'err.backupOversized' };
         }
       }
     } else {
       for (const rec of out[kind]) {
         if (!isObj(rec) || typeof rec.name !== 'string') {
-          return { ok: false, error: 'Backup collections contain an invalid record.' };
+          return { ok: false, error: 'err.backupCollectionsInvalid' };
         }
       }
     }
@@ -64,7 +64,7 @@ export function validateBackupFile(data) {
 
 /** Validate an export request payload (bounds only; deep checks in storage). */
 export function validateBackupExportPayload(payload) {
-  if (!isObj(payload)) return { ok: false, error: 'Invalid backup request.' };
+  if (!isObj(payload)) return { ok: false, error: 'err.invalidBackupReq' };
   const arrays = {
     entries: payload.entries, clipboard: payload.clipboard,
     snippets: payload.snippets, collections: payload.collections,
@@ -72,18 +72,18 @@ export function validateBackupExportPayload(payload) {
   for (const kind of Object.keys(arrays)) {
     const arr = arrays[kind];
     if (arr === undefined) continue;
-    if (!Array.isArray(arr)) return { ok: false, error: 'Invalid backup request.' };
+    if (!Array.isArray(arr)) return { ok: false, error: 'err.invalidBackupReq' };
     const { max, content } = BOUNDS[kind];
-    if (arr.length > max) return { ok: false, error: 'Library is too large to back up.' };
+    if (arr.length > max) return { ok: false, error: 'err.libTooLargeExport' };
     if (content) {
       for (const rec of arr) {
         if (!isObj(rec) || typeof rec.content !== 'string' || rec.content.length > content) {
-          return { ok: false, error: 'A record is too large to back up.' };
+          return { ok: false, error: 'err.recordTooLarge' };
         }
       }
     }
   }
-  if (!Array.isArray(payload.entries)) return { ok: false, error: 'Invalid backup request.' };
+  if (!Array.isArray(payload.entries)) return { ok: false, error: 'err.invalidBackupReq' };
   return { ok: true };
 }
 

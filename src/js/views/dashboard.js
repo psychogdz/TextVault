@@ -5,6 +5,7 @@ import { icon, emptyArt } from '../ui/icons.js';
 import { toast, toastError, confirmDialog, showDropdown, timeAgo, formatNumber } from '../ui/components.js';
 import { parseQuery, quickFilter, searchEntry } from '../search/search.js';
 import { escapeHtml } from '../../../shared/snippets.mjs';
+import { t, itemsKey } from '../../../shared/i18n.mjs';
 
 const els = {};
 let grid = null;
@@ -80,12 +81,12 @@ export function initDashboard() {
   els.qcPaste.addEventListener('click', async () => {
     try {
       const text = await window.tv.clipboardRead();
-      if (!text) { toast('Clipboard is empty', { type: 'info' }); return; }
+      if (!text) { toast(t('qc.clipboardEmpty'), { type: 'info' }); return; }
       els.qcInput.value = text;
       autoGrowQc();
       els.qcInput.focus();
     } catch {
-      toastError('Could not read the clipboard.');
+      toastError(t('qc.clipboardError'));
     }
   });
 
@@ -116,21 +117,21 @@ function autoGrowQc() {
 async function saveQuickCapture() {
   const content = els.qcInput.value;
   if (!content.trim()) {
-    toast('Nothing to save yet — paste some text first.', { type: 'info' });
+    toast(t('qc.empty'), { type: 'info' });
     return;
   }
   try {
     const entry = await App.createNew({ content });
     els.qcInput.value = '';
     autoGrowQc();
-    toast('Saved to your library', {
+    toast(t('qc.saved'), {
       type: 'ok',
       duration: 3200,
-      action: { label: 'Open', onClick: () => App.openEditor(entry.id) },
+      action: { label: t('qc.open'), onClick: () => App.openEditor(entry.id) },
     });
   } catch (err) {
     console.error(err);
-    toastError('Failed to save: ' + (err.message || 'unknown error'));
+    toastError(t('dash.saveFailed') + ': ' + (err.message || t('settings.unknownError')));
   }
 }
 
@@ -254,9 +255,9 @@ function paint(token) {
   // count label
   const total = App.liveEntries().length;
   if (App.query) {
-    els.count.textContent = `${formatNumber(currentRows.length)} of ${formatNumber(total)} texts`;
+    els.count.textContent = t('dash.ofTotal', { a: formatNumber(currentRows.length), b: formatNumber(total) });
   } else {
-    els.count.textContent = `${formatNumber(total)} ${total === 1 ? 'text' : 'texts'}`;
+    els.count.textContent = `${formatNumber(total)} ${t(total === 1 ? 'text' : 'texts')}`;
   }
 
   // empty state
@@ -275,15 +276,15 @@ function showEmpty() {
   const q = App.query;
   els.empty.innerHTML = `
     <div class="empty-art">${emptyArt(q ? 'search' : 'inbox')}</div>
-    <h3>${q ? 'No results' : (App.nav === 'favorites' ? 'No favorites yet' : 'Your vault is empty')}</h3>
+    <h3>${q ? t('empty.results') : (App.nav === 'favorites' ? t('empty.favorites') : t('empty.vault'))}</h3>
     <p>${q
-      ? 'Nothing matches your search. Try different keywords, or clear the search.'
+      ? t('empty.results.body')
       : (App.nav === 'favorites'
-        ? 'Star important texts and they will be pinned here at the top.'
-        : 'Save your first text: paste anything into the bar above, or create a new text.')}</p>
+        ? t('empty.favorites.body')
+        : t('empty.vault.body'))}</p>
     <div class="empty-actions">
-      ${q ? '<button class="btn btn-ghost" data-empty="clear">Clear search</button>' : ''}
-      <button class="btn btn-accent" data-empty="new">${icon('plus', 15)} New Text</button>
+      ${q ? `<button class="btn btn-ghost" data-empty="clear">${t('empty.clearSearch')}</button>` : ''}
+      <button class="btn btn-accent" data-empty="new">${icon('plus', 15)} ${t('new.text')}</button>
     </div>`;
   els.empty.classList.remove('hidden');
   els.empty.querySelectorAll('[data-empty]').forEach((btn) => {
@@ -318,22 +319,22 @@ function renderCard(el, entry) {
   if (entry.color) el.dataset.color = entry.color;
   else el.removeAttribute('data-color');
   el.innerHTML = `
-    <button class="card-check" title="Select" aria-label="Select"></button>
+    <button class="card-check" title="${t('aria.selectCard')}" aria-label="${t('aria.selectCard')}"></button>
     <div class="card-actions">
-      <button class="card-star ${entry.favorite ? 'fav-on' : ''}" title="${entry.favorite ? 'Remove from favorites' : 'Add to favorites'}">${icon(entry.favorite ? 'star-filled' : 'star', 15)}</button>
-      <button class="card-trash" title="Move to Trash">${icon('trash', 15)}</button>
+      <button class="card-star ${entry.favorite ? 'fav-on' : ''}" title="${entry.favorite ? t('unfavorite') : t('favorite')}">${icon(entry.favorite ? 'star-filled' : 'star', 15)}</button>
+      <button class="card-trash" title="${t('dash.moveToTrash')}">${icon('trash', 15)}</button>
     </div>
     <div class="card-top">
       <div class="card-title"><span class="t"></span></div>
-      ${entry.isPinned ? `<span class="card-pin" title="Pinned">${icon('pin', 13)}</span>` : ''}
+      ${entry.isPinned ? `<span class="card-pin" title="${t('pin')}">${icon('pin', 13)}</span>` : ''}
     </div>
     <div class="card-preview"></div>
     <div class="card-meta">
       <span class="m-date">${timeAgo(entry.updatedAt)}</span>
       <span class="meta-dot"></span>
-      <span>${formatNumber(entry.stats?.chars ?? 0)} chars</span>
+      <span>${formatNumber(entry.stats?.chars ?? 0)} ${t('chars')}</span>
       <span class="meta-dot"></span>
-      <span>${formatNumber(entry.stats?.lines ?? 0)} lines</span>
+      <span>${formatNumber(entry.stats?.lines ?? 0)} ${t('lines')}</span>
       <span class="card-tags"></span>
     </div>`;
   el.querySelector('.card-title .t').textContent = title;
@@ -363,19 +364,19 @@ function renderCard(el, entry) {
   el.querySelector('.card-trash').addEventListener('click', async (e) => {
     e.stopPropagation();
     const ok = await confirmDialog({
-      title: 'Delete this text?',
-      message: '“<b></b>” will be moved to the Trash. You can restore it later from there.',
+      title: t('del.card.title'),
+      message: t('del.card.body'),
       messageValues: [title],
-      confirmText: 'Move to Trash',
-      cancelText: 'Cancel',
+      confirmText: t('dash.moveToTrash'),
+      cancelText: t('cancel'),
       danger: true,
     });
     if (!ok) return;
     await App.moveToTrash(entry.id);
-    toast('Moved to Trash', {
+    toast(t('del.movedOne'), {
       type: 'info',
       duration: 4000,
-      action: { label: 'Undo', onClick: () => App.restoreEntry(entry.id).then(() => toast('Restored')) },
+      action: { label: t('clip.undo'), onClick: () => App.restoreEntry(entry.id).then(() => toast(t('clip.restored'))) },
     });
   });
   // legacy checkbox: enters selection mode and toggles this card
@@ -385,7 +386,7 @@ function renderCard(el, entry) {
     toggleCardSelection(entry.id);
     // refresh this card's visual state
     el.classList.toggle('selected', App.selection.has(entry.id));
-    els.selCount.textContent = `${App.selection.size} selected`;
+    els.selCount.textContent = `${App.selection.size} ${t('selected')}`;
   });
   // card click: select in selection mode, open otherwise.
   // Uses onclick (not addEventListener) because the virtual grid recycles
@@ -394,7 +395,7 @@ function renderCard(el, entry) {
     if (App.selectionMode) {
       toggleCardSelection(entry.id);
       el.classList.toggle('selected', App.selection.has(entry.id));
-      els.selCount.textContent = `${App.selection.size} selected`;
+      els.selCount.textContent = `${App.selection.size} ${t('selected')}`;
     } else {
       App.openEditor(entry.id);
     }
@@ -407,13 +408,13 @@ function refreshBulkbar() {
   const n = App.selection.size;
   const show = n > 0 || App.selectionMode;
   els.bulkbar.classList.toggle('hidden', !show);
-  els.selCount.textContent = `${n} selected`;
+  els.selCount.textContent = `${n} ${t('selected')}`;
   if (!show) return;
   els.bulkbar.innerHTML = `
-    <span class="bulk-count">${n} selected</span>
-    <button class="btn btn-ghost btn-sm" data-bulk="export" ${n ? '' : 'disabled'}>${icon('download', 14)} Export</button>
-    <button class="btn btn-ghost btn-sm" data-bulk="fav" ${n ? '' : 'disabled'}>${icon('star', 14)} Favorite</button>
-    <button class="btn btn-ghost-danger btn-sm" data-bulk="delete" ${n ? '' : 'disabled'}>${icon('trash', 14)} Delete</button>
+    <span class="bulk-count">${n} ${t('selected')}</span>
+    <button class="btn btn-ghost btn-sm" data-bulk="export" ${n ? '' : 'disabled'}>${icon('download', 14)} ${t('dash.exportBulk')}</button>
+    <button class="btn btn-ghost btn-sm" data-bulk="fav" ${n ? '' : 'disabled'}>${icon('star', 14)} ${t('favorite')}</button>
+    <button class="btn btn-ghost-danger btn-sm" data-bulk="delete" ${n ? '' : 'disabled'}>${icon('trash', 14)} ${t('delete')}</button>
     <button class="icon-btn icon-btn-sm" data-bulk="clear" title="Clear selection">${icon('x', 14)}</button>`;
 }
 
@@ -430,28 +431,28 @@ async function handleBulk(act, anchorBtn) {
       const e = App.get(id);
       if (e && !e.favorite) await App.toggleFavorite(id);
     }
-    toast(`Added ${ids.length} to favorites`);
+    toast(t('dash.addedFavs', { n: ids.length }));
     return;
   }
   if (act === 'delete') {
     const ok = await confirmDialog({
-      title: `Delete ${ids.length} ${ids.length === 1 ? 'text' : 'texts'}?`,
-      message: 'They will be moved to the Trash. You can restore them later.',
-      confirmText: 'Delete',
+      title: t('del.many.title', { n: ids.length, items: t(itemsKey(ids.length)) }),
+      message: t('del.many.body'),
+      confirmText: t('del.confirm'),
       danger: true,
     });
     if (!ok) return;
     for (const id of ids) await App.moveToTrash(id);
     App.selection.clear();
     refresh();
-    toast(`Moved ${ids.length} to Trash`, {
+    toast(t('del.moved', { n: ids.length }), {
       type: 'info',
       duration: 6000,
       action: {
-        label: 'Undo',
+        label: t('clip.undo'),
         onClick: async () => {
           for (const id of ids) await App.restoreEntry(id);
-          toast('Restored');
+          toast(t('clip.restored'));
         },
       },
     });

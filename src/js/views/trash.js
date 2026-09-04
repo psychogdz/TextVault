@@ -53,14 +53,14 @@ export function refresh() {
         <div class="trash-title"></div>
         <div class="trash-sub"></div>
       </div>
-      <span class="trash-deleted">deleted ${timeAgo(entry.deletedAt)}</span>
+      <span class="trash-deleted">${t('trash.deletedAgo', { time: timeAgo(entry.deletedAt) })}</span>
       <div class="trash-actions">
         <button class="btn btn-ghost btn-sm" data-act="restore">${icon('restore', 14)} ${t('trash.restore')}</button>
         <button class="btn btn-ghost-danger btn-sm" data-act="purge">${icon('trash', 14)} ${t('trash.deleteForever')}</button>
       </div>`;
     row.querySelector('.trash-title').textContent = App.titleOf(entry);
     row.querySelector('.trash-sub').textContent =
-      `${formatNumber(entry.stats?.chars ?? 0)} chars • ${formatNumber(entry.stats?.lines ?? 0)} lines • modified ${timeAgo(entry.updatedAt)}`;
+      `${formatNumber(entry.stats?.chars ?? 0)} ${t('chars')} • ${formatNumber(entry.stats?.lines ?? 0)} ${t('lines')} • ${t('trash.metaModified', { time: timeAgo(entry.updatedAt) })}`;
     row.querySelector('[data-act="restore"]').addEventListener('click', async () => {
       await App.restoreEntry(entry.id);
       toast(t('trash.restoreOne'), {
@@ -69,14 +69,14 @@ export function refresh() {
     });
     row.querySelector('[data-act="purge"]').addEventListener('click', async () => {
       const ok = await confirmDialog({
-        title: 'Delete forever?',
-        message: 'This text will be permanently deleted. This cannot be undone.',
-        confirmText: 'Delete Forever',
+        title: t('trash.delForeverTitle'),
+        message: t('trash.delForeverBody'),
+        confirmText: t('trash.deleteForever'),
         danger: true,
       });
       if (!ok) return;
       await App.purgeEntry(entry.id);
-      toast('Deleted permanently', { type: 'info' });
+      toast(t('trash.purgeToast'), { type: 'info' });
     });
     els.list.appendChild(row);
   }

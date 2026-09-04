@@ -7,7 +7,7 @@ import { db } from './core/db.js';
 import { parseQuery, matchClipboardItem } from '../../shared/query.mjs';
 import { detectContentType } from '../../shared/detect.mjs';
 import { escapeHtml } from '../../shared/snippets.mjs';
-import { t, setLanguage, languageDirection } from '../../shared/i18n.mjs';
+import { t, setLanguage, getLanguage as getLang, languageDirection } from '../../shared/i18n.mjs';
 import { hydrateIcons, icon } from './ui/icons.js';
 
 const els = {};
@@ -31,6 +31,20 @@ async function boot() {
   document.documentElement.lang = lang;
   applyI18nDom();
 
+  // Re-apply the persisted language when the launcher is re-shown.
+  window.addEventListener('focus', async () => {
+    try {
+      const s2 = await db.getSetting('settings', {});
+      const l2 = s2 && s2.language === 'fa' ? 'fa' : 'en';
+      if (l2 !== getLanguageSafe()) {
+        setLanguage(l2);
+        document.documentElement.dir = languageDirection();
+        document.documentElement.lang = l2;
+        applyI18nDom();
+      }
+    } catch { /* settings unavailable */ }
+  });
+
   const stored = await db.listClipboard().catch(() => []);
   items = stored.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
@@ -41,7 +55,7 @@ async function boot() {
 }
 
 function getLanguageSafe() {
-  return document.documentElement.getAttribute('lang') || 'en';
+  return getLang();
 }
 void getLanguageSafe;
 
