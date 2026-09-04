@@ -332,6 +332,7 @@
   color: var(--text);
 }
 .find-count { font-size: 11px; color: var(--text-3); font-weight: 600; white-space: nowrap; }
+.find-count.none { color: var(--danger); }
 
 .toggle-btn {
   height: 24px;
@@ -457,6 +458,29 @@
 }
 .editor-textarea.mono { font-family: var(--font-mono); font-size: 13.5px; line-height: 1.7; }
 .editor-textarea.nowrap { white-space: pre; overflow-x: auto; }
+
+/* find highlight overlay (Ctrl+F) — sits above the textarea and paints ONLY
+   translucent <mark> backgrounds (its glyphs are transparent), so search
+   highlighting can never touch the real text, caret, or selection below */
+.editor-mirror {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+  visibility: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  color: transparent;
+}
+.editor-area.find-active .editor-mirror { visibility: visible; }
+.editor-mirror mark { background: var(--mark-bg); border-radius: 2px; }
+.editor-mirror mark.cur {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  outline: 1.5px solid var(--accent);
+  outline-offset: -1.5px;
+}
 
 .dup-banner {
   position: absolute;

@@ -83,8 +83,17 @@ export function initEditor() {
       if (!els.area.classList.contains('find-active')) return;
       syncMirrorGeometry();
       renderFindMarks();
-      if (findState) scrollCurrentIntoView(false);
+      if (findState) scrollCurrentIntoView();
     }).observe(els.textarea);
+  }
+  // Webfonts landing after boot change text metrics — re-align an active search.
+  if (document.fonts?.ready) {
+    document.fonts.ready.then(() => {
+      if (!els.area.classList.contains('find-active')) return;
+      syncMirrorGeometry();
+      renderFindMarks();
+      if (findState) scrollCurrentIntoView();
+    });
   }
   els.textarea.addEventListener('keyup', updateCaretPos);
   els.textarea.addEventListener('click', updateCaretPos);
@@ -339,6 +348,10 @@ export async function openEditor(entryId) {
   // fill UI
   els.title.value = entry.title || '';
   els.textarea.value = entry.content;
+  // the value setter moves the caret to the END of the content — put it back
+  // at the start so a document opens at its top, not scrolled to the bottom
+  els.textarea.setSelectionRange(0, 0);
+  els.textarea.scrollTop = 0;
   renderTags();
   syncDirButtons();
   applyDirection();
@@ -629,13 +642,15 @@ async function copyAll() {
 
 /* ================= find & replace ================= */
 //
-// Architecture: the textarea keeps the real content (search never mutates it).
-// While a search is active, a mirror layer (`.editor-mirror`) behind the
-// textarea renders the same text with <mark> highlights, and the textarea's
-// own glyphs are made transparent — so highlighting cannot corrupt content,
-// dirty state, or undo history. The current match is additionally selected
-// via setSelectionRange (real selection, usable by replace), and the view
-// scrolls to it using the mirror's geometry.
+// Architecture: the textarea keeps the real content — search never mutates
+// it, marks the document dirty, or touches undo history. While a search is
+// active, an overlay layer (.editor-mirror) paints the same text with
+// translucent <mark> highlights ABOVE the textarea; the overlay's own glyphs
+// are transparent (CSS), so only highlight backgrounds draw and the real
+// text/caret stay fully visible underneath. The current match is additionally
+// selected via setSelectionRange — a real selection that replace operates on
+// and that survives closing the findbar — and the view scrolls to it using
+// the overlay's geometry.
 
 const MIRROR_TEXT_STYLES = [
   'fontFamily', 'fontKerning', 'fontSize', 'fontStyle', 'fontWeight',
@@ -652,17 +667,22 @@ function findActive() {
 function setFindActive(on) {
   const active = els.area.classList.toggle('find-active', on);
   if (active) syncMirrorGeometry();
-  else els.mirror.innerHTML = '';
+  else { els.mirror.innerHTML = ''; renderedIndices = null; }
 }
 
 /** Copy the textarea's text metrics onto the mirror so both wrap identically.
- *  The textarea owns the scrollbars, so the mirror's padding absorbs their
- *  width (border-less textarea: offset-client = scrollbar size). */
+ *  The textarea owns the scrollbars, so the mirror absorbs the vertical
+ *  scrollbar's width into the padding of the side it occupies (left in RTL). */
 function syncMirrorGeometry() {
   const cs = getComputedStyle(els.textarea);
   for (const prop of MIRROR_TEXT_STYLES) els.mirror.style[prop] = cs[prop];
+  els.mirror.style.paddingLeft = cs.paddingLeft;
+  els.mirror.style.paddingRight = cs.paddingRight;
   const sbV = els.textarea.offsetWidth - els.textarea.clientWidth;
-  els.mirror.style.paddingRight = `${parseFloat(cs.paddingRight) + sbV}px`;
+  if (sbV > 0) {
+    const padSide = cs.direction === 'rtl' ? 'paddingLeft' : 'paddingRight';
+    els.mirror.style[padSide] = `${parseFloat(cs[padSide]) + sbV}px`;
+  }
   syncMirrorScroll();
 }
 
@@ -672,10 +692,14 @@ function syncMirrorScroll() {
   els.mirror.scrollLeft = els.textarea.scrollLeft;
 }
 
+/** The mirror reflects exactly this indices array (navigation only moves the
+ *  active mark, so the class is shifted instead of rebuilding the layer). */
+let renderedIndices = null;
+
 /** Re-render the highlight layer. Text is always escaped; matches become
  *  <mark>, the active one <mark class="cur">. */
 function renderFindMarks() {
-  if (!findActive()) { els.mirror.innerHTML = ''; return; }
+  if (!findActive()) { els.mirror.innerHTML = ''; renderedIndices = null; return; }
   const value = els.textarea.value;
   const len = Math.max(els.findInput.value.length, 1);
   const indices = findState ? findState.indices : [];
@@ -689,7 +713,17 @@ function renderFindMarks() {
   }
   if (pos < value.length) html += escapeHtml(value.slice(pos));
   els.mirror.innerHTML = html + '\n';
+  renderedIndices = findState ? findState.indices : null;
   syncMirrorScroll();
+}
+
+/** Switch the active mark after a navigation without a full re-render. */
+function syncCurrentMark() {
+  if (!findState || renderedIndices !== findState.indices) { renderFindMarks(); return; }
+  const prev = els.mirror.querySelector('mark.cur');
+  if (prev) prev.classList.remove('cur');
+  const cur = els.mirror.querySelectorAll('mark')[findState.idx];
+  if (cur) cur.classList.add('cur');
 }
 
 /** Editor text changed while a search is live: recompute quietly — no
@@ -745,6 +779,7 @@ function findMatches() {
 }
 
 function runFind(keepCurrent = false) {
+  if (els.findbar.classList.contains('hidden')) return; // never activate from a hidden bar
   if (!els.findInput.value) {
     findState = null;
     setFindActive(false);
@@ -774,7 +809,7 @@ function highlightCurrent(scroll = true) {
   const start = findState.indices[findState.idx];
   const len = els.findInput.value.length;
   els.textarea.setSelectionRange(start, start + len);
-  renderFindMarks();
+  syncCurrentMark();
   updateFindCount();
   if (scroll) scrollCurrentIntoView();
 }
@@ -795,6 +830,7 @@ function scrollCurrentIntoView() {
 function gotoMatch(delta) {
   if (!findState) { runFind(); if (!findState) return; }
   const n = findState.indices.length;
+  if (!n) return; // zero matches — modulo would corrupt idx with NaN
   findState.idx = (findState.idx + delta + n) % n;
   highlightCurrent();
 }

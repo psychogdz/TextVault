@@ -222,14 +222,14 @@
       <div class="findbar hidden" id="findbar" role="search" aria-label="Find & Replace" data-i18n-aria="ed.findReplace">
         <div class="findbar-row">
           <div class="find-field">
-            <input id="find-input" placeholder="Find" data-i18n-ph="ed.findPh" autocomplete="off" spellcheck="false">
-            <span class="find-count" id="find-count">0/0</span>
+            <input id="find-input" placeholder="Find" aria-label="Find" data-i18n-ph="ed.findPh" data-i18n-aria="ed.findPh" autocomplete="off" spellcheck="false">
+            <span class="find-count" id="find-count" aria-live="polite">0/0</span>
             <button class="icon-btn icon-btn-sm" id="find-prev" title="Previous (Shift+Enter)" data-i18n-title="ed.findPrev"></button>
             <button class="icon-btn icon-btn-sm" id="find-next" title="Next (Enter)" data-i18n-title="ed.findNext"></button>
             <button class="toggle-btn" id="find-case" title="Match case" data-i18n-title="ed.matchCase">Aa</button>
           </div>
           <div class="find-field">
-            <input id="replace-input" placeholder="Replace with" data-i18n-ph="ed.replacePh" autocomplete="off" spellcheck="false">
+            <input id="replace-input" placeholder="Replace with" aria-label="Replace with" data-i18n-ph="ed.replacePh" data-i18n-aria="ed.replacePh" autocomplete="off" spellcheck="false">
             <button class="btn btn-ghost btn-sm" id="replace-one" data-i18n="ed.replaceBtn">Replace</button>
             <button class="btn btn-ghost btn-sm" id="replace-all" data-i18n="ed.allBtn">All</button>
           </div>

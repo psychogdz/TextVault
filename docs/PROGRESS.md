@@ -2779,6 +2779,72 @@ Tests:
 Next:
 Continue the in-editor Ctrl+F feature from the WIP checkpoint.
 
+## 2026-09-04 (in-editor Ctrl+F find — completed)
+
+Phase:
+Post-Phase-10 feature completion (resumes WIP commit 1242958; no phase
+gate affected)
+
+Completed:
+- Completed the WIP in-editor Find (Ctrl+F / Cmd+F; Ctrl+H opens the same
+  bar focused on Replace) on the WIP's overlay architecture: the textarea
+  keeps the real content — search never mutates text, dirty state, or
+  undo history — while a pointer-transparent `.editor-mirror` overlay
+  paints escaped text with translucent `<mark>` highlights above it
+  (overlay glyphs are transparent via CSS; the WIP comment described a
+  see-through-textarea design that was never implemented)
+- The current match is additionally a real textarea selection
+  (setSelectionRange), so Replace operates on it and the location
+  survives closing the bar; navigation = Enter/ArrowDown/Next button
+  forward, Shift+Enter/ArrowUp/Previous button backward, with wrap-around
+  in both directions; the view auto-scrolls (centers) the active match
+  using the overlay's geometry
+- WIP gaps closed: the mirror had NO CSS (it rendered as a flow block that
+  would break the editor layout once find activated) — overlay styles,
+  subtle/strong mark styling and the no-match counter state added to
+  views.css; gotoMatch no longer computes a NaN index on zero matches;
+  syncMirrorGeometry now absorbs the vertical scrollbar's width on the
+  correct side for RTL and resets both paddings (direction flips stay
+  aligned); re-align hooks added for font-load (document.fonts.ready)
+  alongside the WIP's ResizeObserver; runFind refuses to activate from a
+  hidden bar; counter uses i18n ed.findCount ({a} of {b} / {a} از {b})
+  with the existing formatNumber convention
+- FIXED (found by the new auto-scroll E2E check, pre-existing bug): the
+  HTML textarea value setter moves the caret to the END of the content,
+  so opening a long document landed scrolled to the bottom with the caret
+  at the end; openEditor now resets the caret to the start and scrollTop
+  to 0 so documents open at their top
+- Accessibility: findbar keeps role=search + localized aria-label; find /
+  replace inputs got localized aria-labels (data-i18n-aria); the match
+  counter is aria-live=polite; all controls remain native buttons/inputs
+- No new i18n keys were needed beyond the WIP's four (ed.findCount,
+  match, matches, ed.replacedCount — EN+FA parity enforced by unit tests)
+
+Tests:
+- node test/syntax.cjs → 19/19 OK (exit 0)
+- npm test → unit 71/71 + ipc/architecture 32/32 (exit 0)
+- npm run test:e2e → 145/145 passed (exit 0; was 131/132 at the baseline
+  after the harness fix). New focused find coverage (13 checks): Ctrl+F
+  opens + focuses the input; live search with localized counter '1 of 4'
+  for 'را' (stale '1/4' expectation updated — the i18n format is the
+  product format); 4 subtle marks + 1 stronger current mark; current
+  match is a real textarea selection; Enter/Shift+Enter/ArrowUp/
+  ArrowDown/Next/Prev with wrap in both directions; text byte-identical
+  after navigation; distant sentinel (line 401 of a 400-line doc)
+  auto-scrolls into view (scrollTop 0 → 9900, mark visible); no-match
+  shows an explicit '0 of 0' danger-styled counter with no highlights
+  and navigation is a safe no-op; Escape closes, preserves the caret
+  location and refocuses the editor; search/navigate/close never marks
+  the document dirty; Persian UI: counter '1 از 3'/'2 از 3', localized
+  placeholder + aria, RTL findbar direction
+- NOT performed: manual GUI spot-check and screen-reader audit of the
+  find bar (the project's remaining a11y release blocker covers the
+  audit); no dirty-state regression was observed in E2E, which asserts
+  the save-state stays 'Saved' through the whole find flow
+
+Exit:
+COMPLETE (E2E-verified as above; not a release-blocker item)
+
 ---
 
 # 43. Current Progress Snapshot
@@ -2807,7 +2873,8 @@ i18n deep sweep RESOLVED 2026-09-04)
 
 Last Verified Test:
 node test/syntax.cjs 19/19 + npm test (unit 71/71 + ipc 32/32) +
-npm run test:e2e (132/132) + SMOKE (boot=541ms) — all exit 0 (2026-09-04)
+npm run test:e2e (145/145, incl. the full Ctrl+F find matrix) — all
+exit 0 (2026-09-04)
 
 Security Status:
 STRONG — SECURITY.md §53 checklist executed (§63); findings resolved or
@@ -2831,8 +2898,8 @@ CURRENT through Phase 10 (ARCHITECTURE.md §77 as-built; SECURITY.md §62-63;
 TESTING.md §59; ROADMAP.md reconciled; README refreshed)
 
 Current Task:
-None — release blocker #5 (i18n deep-string sweep) completed and VERIFIED
-2026-09-04 (see §42)
+None — in-editor Ctrl+F find completed and E2E-verified 2026-09-04
+(WIP 1242958 finished; see the 2026-09-04 Ctrl+F entry)
 
 Next Task:
 Owner review of the CONDITIONALLY_READY release status; decide on the

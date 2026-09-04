@@ -365,11 +365,123 @@ async function main() {
   check('autosave fires (state transitions)', stateSaving === 'Unsaved' && stateSaved === 'Saved', `${stateSaving} → ${stateSaved}`);
   check('autosave persisted appended line', persisted.includes('APPENDED LINE — خط اضافه‌شده'));
 
-  // find & replace ('را' occurs 4× as a substring, incl. inside 'برای')
+  // find (Ctrl+F) — 'را' occurs 4× as a substring, incl. inside 'برای'
   await js(`window.__TV_TEST__.editor.open('${mixedId}')`);
   await sleep(300);
+  await js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true, cancelable: true }))`);
+  await sleep(200);
+  const findOpen = await js(`({
+    open: !document.getElementById('findbar').classList.contains('hidden'),
+    focused: document.activeElement === document.getElementById('find-input'),
+  })`);
+  check('Ctrl+F opens editor findbar and focuses the input', findOpen.open && findOpen.focused, JSON.stringify(findOpen));
+
   const findCount = await js(`window.__TV_TEST__.editor.find('را')`);
-  check('find counts Persian matches', findCount === '1/4', findCount);
+  check('find counts Persian matches (localized counter)', findCount === '1 of 4', findCount);
+  const findMarks = await js(`({
+    marks: document.querySelectorAll('#editor-mirror mark').length,
+    cur: document.querySelectorAll('#editor-mirror mark.cur').length,
+    overlayVisible: getComputedStyle(document.getElementById('editor-mirror')).visibility === 'visible',
+  })`);
+  check('find highlights all matches subtly + stronger current match',
+    findMarks.marks === 4 && findMarks.cur === 1 && findMarks.overlayVisible, JSON.stringify(findMarks));
+  const sel1 = await js(`(() => {
+    const t = document.getElementById('editor-textarea');
+    return { s: t.selectionStart, e: t.selectionEnd, len: t.value.length };
+  })()`);
+  check('current match is a real selection in the textarea', sel1.e - sel1.s === 2, JSON.stringify(sel1));
+
+  const nav = await js(`(() => {
+    const input = document.getElementById('find-input');
+    const count = () => document.getElementById('find-count').textContent;
+    const key = (k, opts) => input.dispatchEvent(new KeyboardEvent('keydown', Object.assign({ key: k, bubbles: true, cancelable: true }, opts)));
+    const out = {};
+    key('Enter'); out.enterNext = count();
+    key('ArrowDown'); out.arrowDown = count();
+    key('ArrowUp'); out.arrowUp = count();
+    key('Enter', { shiftKey: true }); out.shiftEnter = count();
+    key('ArrowUp'); out.wrapPrev = count();
+    key('Enter'); out.wrapNext = count();
+    document.getElementById('find-next').click(); out.nextBtn = count();
+    document.getElementById('find-prev').click(); out.prevBtn = count();
+    return out;
+  })()`);
+  check('find navigation: Enter/Shift+Enter/Arrows/buttons with wrap-around',
+    nav.enterNext === '2 of 4' && nav.arrowDown === '3 of 4' && nav.arrowUp === '2 of 4'
+    && nav.shiftEnter === '1 of 4' && nav.wrapPrev === '4 of 4' && nav.wrapNext === '1 of 4'
+    && nav.nextBtn === '2 of 4' && nav.prevBtn === '1 of 4', JSON.stringify(nav));
+  check('navigating matches leaves the text intact',
+    (await js(`window.__TV_TEST__.editor.get()`)) === (await js(`window.__TV_TEST__.App.get('${mixedId}').content`)));
+
+  // distant match: a sentinel on the last line of a 400-line document must
+  // scroll into view (entry purged below so entry counts stay at 256)
+  const scrollId = await js(`(async () => {
+    const lines = [];
+    for (let i = 0; i < 400; i++) lines.push('filler line ' + i + ' متن پرکننده شماره ' + i);
+    lines.push('TVFINDTARGET-X1 sentinel line at the very bottom');
+    return (await window.__TV_TEST__.App.createNew({ title: 'find-scroll', content: lines.join('\\n') })).id;
+  })()`);
+  await js(`window.__TV_TEST__.editor.open('${scrollId}')`);
+  await sleep(300);
+  const scrollTopBefore = await js(`document.getElementById('editor-textarea').scrollTop`);
+  await js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true, cancelable: true }))`);
+  await sleep(150);
+  const farCount = await js(`window.__TV_TEST__.editor.find('TVFINDTARGET-X1')`);
+  const farState = await js(`(() => {
+    const t = document.getElementById('editor-textarea');
+    const mark = document.querySelector('#editor-mirror mark.cur');
+    const top = mark ? mark.offsetTop : -1;
+    return {
+      scrollTop: t.scrollTop,
+      markTop: top,
+      visible: !!mark && top >= t.scrollTop - 1 && top + mark.offsetHeight <= t.scrollTop + t.clientHeight + 1,
+    };
+  })()`);
+  check('distant match auto-scrolls into view', farCount === '1 of 1' && farState.visible && farState.scrollTop > scrollTopBefore + 5000,
+    'scrollTop ' + scrollTopBefore + ' → ' + farState.scrollTop + ', markTop=' + farState.markTop);
+
+  // no-match: explicit zero state, no stray highlights, navigation is a safe no-op
+  const noMatch = await js(`window.__TV_TEST__.editor.find('ZzQxNoMatch')`);
+  const noMatchState = await js(`({
+    count: document.getElementById('find-count').textContent,
+    marks: document.querySelectorAll('#editor-mirror mark').length,
+    noneClass: document.getElementById('find-count').classList.contains('none'),
+  })`);
+  check('no-match state: explicit counter, no highlights, danger styling',
+    noMatch === '0 of 0' && noMatchState.marks === 0 && noMatchState.noneClass, JSON.stringify(noMatchState));
+  await js(`document.getElementById('find-input').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))`);
+  const noMatchAfterEnter = await js(`document.getElementById('find-count').textContent`);
+  check('navigation on zero matches is a safe no-op', noMatchAfterEnter === '0 of 0', noMatchAfterEnter);
+
+  // Escape closes the findbar, preserves the caret location, refocuses the editor
+  const escState = await js(`(() => {
+    const t = document.getElementById('editor-textarea');
+    const input = document.getElementById('find-input');
+    const selBefore = t.selectionStart;
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    return {
+      open: !document.getElementById('findbar').classList.contains('hidden'),
+      selBefore,
+      selAfter: t.selectionStart,
+      focused: document.activeElement === t,
+    };
+  })()`);
+  check('Escape closes find, preserves location, refocuses editor',
+    escState.open === false && escState.selAfter === escState.selBefore && escState.focused, JSON.stringify(escState));
+  const cleanFind = await js(`({
+    state: window.__TV_TEST__.editor.saveState(),
+    content: window.__TV_TEST__.editor.get(),
+  })`);
+  check('search/navigate/close never marks the document dirty', cleanFind.state === 'Saved', cleanFind.state);
+  check('find leaves the document content untouched',
+    cleanFind.content.endsWith('TVFINDTARGET-X1 sentinel line at the very bottom'));
+  await js(`document.getElementById('editor-back').click()`);
+  await sleep(200);
+  await js(`(async () => {
+    const { App } = window.__TV_TEST__;
+    await App.moveToTrash('${scrollId}');
+    await App.purgeEntry('${scrollId}');
+  })()`);
 
   /* ---------- restart persistence ---------- */
   await win.webContents.reload();
@@ -886,6 +998,38 @@ async function main() {
     return /\\b(nav|clip|set|ed|sn|col|del|exp|dlg|err|qc|trash|dash|tool|color|time|cmd|sc|aria|quick|menu|toast|stat|db|settings)\\.[a-z][a-zA-Z]+/.test(text);
   })()`);
   check('no raw translation keys rendered in Persian UI', faRawKey === false);
+
+  // Persian find: localized counter + labels, RTL findbar (entry purged after)
+  const faFindId = await js(`(async () => (await window.__TV_TEST__.App.createNew({ title: 'fa-find', content: 'این متن آزمایشی است\\nجستجوی متن فارسی\\nمتن دوم همین‌جا\\nپایان' })).id)()`);
+  await js(`window.__TV_TEST__.editor.open('${faFindId}')`);
+  await sleep(300);
+  await js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, bubbles: true, cancelable: true }))`);
+  await sleep(150);
+  const faFind = await js(`({
+    count: window.__TV_TEST__.editor.find('متن'),
+    ph: document.getElementById('find-input').placeholder,
+    aria: document.getElementById('findbar').getAttribute('aria-label'),
+    dir: getComputedStyle(document.getElementById('findbar')).direction,
+    countDir: getComputedStyle(document.getElementById('find-count')).direction,
+  })`);
+  check('Persian find: localized counter + labels + RTL findbar',
+    faFind.count === '1 از 3' && faFind.ph === 'یافتن' && faFind.aria === 'جستجو و جایگزینی (Ctrl+F)' && faFind.dir === 'rtl',
+    JSON.stringify(faFind));
+  const faNav = await js(`(() => {
+    const input = document.getElementById('find-input');
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    return document.getElementById('find-count').textContent;
+  })()`);
+  check('Persian find navigation updates the localized counter', faNav === '2 از 3', faNav);
+  await js(`document.getElementById('find-input').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))`);
+  await sleep(100);
+  await js(`document.getElementById('editor-back').click()`);
+  await sleep(200);
+  await js(`(async () => {
+    const { App } = window.__TV_TEST__;
+    await App.moveToTrash('${faFindId}');
+    await App.purgeEntry('${faFindId}');
+  })()`);
   await js(`window.__TV_TEST__.App.setView('dashboard')`);
   // restore English LTR for the remainder of the run
   await js(`(() => {
