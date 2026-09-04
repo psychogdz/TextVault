@@ -126,11 +126,11 @@ test('escapeHtml escapes angle brackets and quotes', () => {
 
 console.log('\ntxt exporter:');
 test('single TXT preserves content byte-for-byte', async () => {
-  const out = buildTxt([{ title: 't', content: MIXED_PROMPT }]);
+  const out = await buildTxt([{ title: 't', content: MIXED_PROMPT }]);
   assert.equal(out, MIXED_PROMPT);
 });
-test('combined TXT has separators + titles + unicode intact', () => {
-  const out = buildTxt([
+test('combined TXT has separators + titles + unicode intact', async () => {
+  const out = await buildTxt([
     { title: 'عنوان فارسی', content: 'متن', tags: ['a'] },
     { title: 'English', content: 'text' },
   ], { combined: true });
@@ -585,9 +585,9 @@ test('dynamic key families resolve: tools, colors, settings shortcuts', async ()
 });
 test('exporters localize document labels with the lang option', async () => {
   const { buildTxt } = await imp('electron/exporters/txt.js');
-  const fa = buildTxt([{ title: '', content: 'x', tags: ['a'], updatedAt: 1700000000000 }], { combined: true, lang: 'fa' });
+  const fa = await buildTxt([{ title: '', content: 'x', tags: ['a'], updatedAt: 1700000000000 }], { combined: true, lang: 'fa' });
   assert.ok(fa.includes('بدون عنوان') && fa.includes('برچسب‌ها: a'), 'FA txt labels');
-  const en = buildTxt([{ title: '', content: 'x', tags: ['a'], updatedAt: 1700000000000 }], { combined: true, lang: 'en' });
+  const en = await buildTxt([{ title: '', content: 'x', tags: ['a'], updatedAt: 1700000000000 }], { combined: true, lang: 'en' });
   assert.ok(en.includes('Untitled') && en.includes('Tags: a'), 'EN txt labels');
   const { buildPdfHtml } = await imp('electron/exporters/pdf-html.mjs');
   const html = buildPdfHtml([{ title: '', content: 'x' }], { fonts: { regular: 'QQ==', bold: 'QQ==' }, lang: 'fa' });

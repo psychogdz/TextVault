@@ -65,7 +65,7 @@ async function handleExport(_ev, payload) {
       } else {
         const { dialog } = require('electron');
         const dirRes = await dialog.showOpenDialog(win, {
-          title: 'Choose a folder for the exported files',
+          title: i18nMain.t('dlg.chooseFolder'),
           properties: ['openDirectory', 'createDirectory', 'dontAddToRecent'],
         });
         if (dirRes.canceled || !dirRes.filePaths[0]) return { ok: false, canceled: true };

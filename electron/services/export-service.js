@@ -70,7 +70,7 @@ async function generatePdf(entries, lang) {
  */
 async function buildExportBytes(kind, entries, { combined = false, lang } = {}) {
   await ensureAsyncExporters();
-  if (kind === 'txt') return Buffer.from(exporters.txt.buildTxt(entries, { combined, lang }), 'utf8');
+  if (kind === 'txt') return Buffer.from(await exporters.txt.buildTxt(entries, { combined, lang }), 'utf8');
   if (kind === 'docx') return exporters.docx.buildDocxBuffer(entries, { combined, lang });
   return generatePdf(entries, lang);
 }

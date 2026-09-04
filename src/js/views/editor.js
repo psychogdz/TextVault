@@ -182,7 +182,7 @@ export function initEditor() {
         label: pinned ? t('unpin') : t('pin'), icon: 'pin', onClick: togglePin,
       },
       {
-        label: 'Delete text…', icon: 'trash', danger: true, onClick: async () => {
+        label: t('ed.deleteText'), icon: 'trash', danger: true, onClick: async () => {
           const ok = await confirmDialog({
             title: t('del.card.title'),
             message: t('del.card.body'),
@@ -438,8 +438,8 @@ function checkDuplicate(target) {
 function showDupBanner(dup) {
   els.dupBanner.innerHTML = `
     ${icon('alert', 15)}
-    <span>Same text already saved as “<b></b>”</span>
-    <button class="btn btn-ghost btn-sm" data-act="open">Open it</button>
+    <span>${t('ed.dupBanner')}</span>
+    <button class="btn btn-ghost btn-sm" data-act="open">${t('ed.dupOpen')}</button>
     <button class="icon-btn icon-btn-sm db-close" data-act="close">${icon('x', 13)}</button>`;
   els.dupBanner.querySelector('b').textContent = App.titleOf(dup);
   els.dupBanner.querySelector('[data-act="open"]').addEventListener('click', () => {
@@ -491,7 +491,7 @@ function renderTagSuggest() {
       chip.innerHTML = `<span></span><span class="ts-count"></span>`;
       chip.firstChild.textContent = tag;
       chip.querySelector('.ts-count').textContent = String(count);
-      chip.title = `Add “${tag}”`;
+      chip.title = t('ed.tagAddTip', { tag });
       els.tagSuggest.appendChild(chip);
     }
   }
@@ -513,7 +513,7 @@ function syncColorButton() {
   els.btnColor.innerHTML = icon('droplet', 17) + (c ? '<span class="color-dot"></span>' : '');
   els.btnColor.classList.toggle('color-on', !!c);
   els.btnColor.style.setProperty('--card-accent', c ? `var(--card-${c})` : '');
-  els.btnColor.title = c ? `Card color: ${c}` : 'Card color label';
+  els.btnColor.title = c ? t('ed.colorFor', { color: t('color.' + c) }) : t('ed.color');
 }
 
 function renderTags() {
@@ -522,7 +522,7 @@ function renderTags() {
   for (const tag of current.entry.tags) {
     const chip = document.createElement('span');
     chip.className = 'chip';
-    chip.innerHTML = `<span class="chip-text"></span><button class="chip-x" title="Remove tag">${icon('x', 11)}</button>`;
+    chip.innerHTML = `<span class="chip-text"></span><button class="chip-x" title="${t('ed.removeTag')}">${icon('x', 11)}</button>`;
     chip.querySelector('.chip-text').textContent = tag;
     chip.querySelector('.chip-x').addEventListener('click', () => {
       current.entry.tags = current.entry.tags.filter((t) => t !== tag);
@@ -579,9 +579,9 @@ function updateStats() {
   const chars = [...value].length;
   const words = (value.match(/[\p{L}\p{N}\p{P}\p{S}]+/gu) || []).length;
   const lines = value === '' ? 0 : value.replace(/\r\n?/g, '\n').split('\n').length;
-  els.statChars.textContent = `${formatNumber(chars)} chars`;
-  els.statWords.textContent = `${formatNumber(words)} words`;
-  els.statLines.textContent = `${formatNumber(lines)} lines`;
+  els.statChars.textContent = `${formatNumber(chars)} ${t('chars')}`;
+  els.statWords.textContent = `${formatNumber(words)} ${t('ed.words')}`;
+  els.statLines.textContent = `${formatNumber(lines)} ${t('lines')}`;
 }
 
 function updateCaretPos() {

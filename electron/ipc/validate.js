@@ -30,7 +30,7 @@ function validString(v, max) {
 
 /** Validate a tv:export payload. Returns { ok, error? } (payload used as-is when ok). */
 function validateExportPayload(payload) {
-  if (!isPlainObject(payload)) return { ok: false, error: 'Invalid export request.' };
+  if (!isPlainObject(payload)) return { ok: false, error: 'err.invalidExport' };
   const { kind, mode, entries, defaultName } = payload;
   if (!EXPORT_KINDS.includes(kind)) return { ok: false, error: 'err.invalidExport' };
   if (!EXPORT_MODES.includes(mode)) return { ok: false, error: 'err.invalidExport' };

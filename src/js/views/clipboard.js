@@ -131,20 +131,20 @@ function renderRow(item) {
 
   row.innerHTML = `
     <div class="clip-flags">
-      ${item.isPinned ? `<span class="clip-flag" title="Pinned">${icon('pin', 13)}</span>` : ''}
-      ${item.isFavorite ? `<span class="clip-flag fav" title="Favorite">${icon('star-filled', 13)}</span>` : ''}
-      ${item.isSensitive ? `<span class="clip-flag sens" title="Looks like a password, key or token">${icon('alert', 13)}</span>` : ''}
+      ${item.isPinned ? `<span class="clip-flag" title="${t('clip.flagPinned')}">${icon('pin', 13)}</span>` : ''}
+      ${item.isFavorite ? `<span class="clip-flag fav" title="${t('favorite')}">${icon('star-filled', 13)}</span>` : ''}
+      ${item.isSensitive ? `<span class="clip-flag sens" title="${t('clip.sensitiveTip')}">${icon('alert', 13)}</span>` : ''}
     </div>
     <div class="clip-preview"></div>
     <div class="clip-meta">
       <span>${timeAgo(item.updatedAt)}</span>
       <span class="meta-dot"></span>
-      <span>${formatNumber(item.content.length)} chars</span>
+      <span>${formatNumber(item.content.length)} ${t('chars')}</span>
       ${type !== 'text' ? `<span class="meta-dot"></span><span class="clip-type">${type}</span>` : ''}
     </div>
     <div class="clip-actions">
       ${type === 'url' ? `<button class="icon-btn icon-btn-sm" data-act="open" title="${t('open.url')}">${icon('external', 14)}</button>` : ''}
-      <button class="icon-btn icon-btn-sm" data-act="copy" title="Copy">${icon('copy', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="copy" title="${t('copy')}">${icon('copy', 14)}</button>
       <button class="icon-btn icon-btn-sm ${item.isPinned ? 'active' : ''}" data-act="pin" title="${item.isPinned ? t('unpin') : t('pin')}">${icon('pin', 14)}</button>
       <button class="icon-btn icon-btn-sm ${item.isFavorite ? 'fav-on' : ''}" data-act="fav" title="${item.isFavorite ? t('unfavorite') : t('favorite')}">${icon(item.isFavorite ? 'star-filled' : 'star', 14)}</button>
       <button class="icon-btn icon-btn-sm" data-act="coll" title="${t('collections.btn')}">${icon('layers', 14)}</button>
@@ -156,7 +156,7 @@ function renderRow(item) {
     openBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       window.tv.openExternal(item.content.trim()).then((r) => {
-        if (!r.ok) toastError(r.error || 'Could not open the URL.');
+        if (!r.ok) toastError(r.error || t('err.openUrlFailed'));
       });
     });
   }

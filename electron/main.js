@@ -25,6 +25,7 @@ const i18nMain = require('./services/i18n-main');
 // Current UI language for main-process surfaces (tray). The renderer syncs
 // this via tv:set-language; defaults to English until it boots.
 function trayLabels() {
+  const t = i18nMain.t;
   return {
     open: t('tray.open'),
     settings: t('tray.settings'),

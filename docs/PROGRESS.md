@@ -1421,7 +1421,10 @@ Items blocking READY (all documented, none hidden):
 3. Electron runtime advisories (fix = major Electron upgrade; requires a
    dedicated, separately-verified migration)
 4. Full screen-reader accessibility audit
-5. Remaining i18n deep-string sweep (editor internals, export dialogs)
+5. ~~Remaining i18n deep-string sweep (editor internals, export dialogs)~~
+   RESOLVED 2026-09-04 — sweep completed and verified (evidence in §42,
+   2026-09-04 entry: EN/FA E2E 132/132 incl. dynamic-string and
+   no-raw-key checks; unit 71/71 incl. static key coverage)
 ```
 
 ## Gate Evidence
@@ -2674,6 +2677,75 @@ Next:
 Owner decision on the CONDITIONALLY_READY blockers (environment-bound
 soak/installer; Electron upgrade planning).
 
+## 2026-09-04
+
+Phase:
+Release Blocker #5 — i18n Deep-string Sweep (post-Phase-10 release work)
+
+Entry Gate:
+PASSED (Phase 10 VERIFIED; blocker list in §20)
+
+Completed:
+- Resumed the interrupted deep-string sweep commit (386-key EN/FA
+  dictionaries, renderer + main-process + exporter localization) and
+  completed what it left unfinished
+- FIXED CRASH 1 (main process): electron/main.js trayLabels() called an
+  undefined t() — startup crash when the tray was created; now uses
+  i18nMain.t
+- FIXED CRASH 2 (main process): electron/exporters/txt.js (CJS) required
+  the ESM shared/i18n.mjs at top level → ERR_REQUIRE_ESM in the Electron
+  main process (plain Node 22 tolerated it, masking the unit suite);
+  buildTxt is now async with a cached dynamic import() — the same pattern
+  as the docx/pdf exporters — and its callers were adapted (export-service
+  awaits; unit tests await)
+- FIXED CRASH 3 (renderer): src/js/views/snippets.js used t() 40× without
+  importing it (ReferenceError on first snippets/collections render);
+  import added
+- Renderer sweep completed: settings (editor sub, clipboard monitor/dup/
+  max/retention/close rows + options + aria labels, Sans/Mono buttons,
+  Export/Import Library buttons, stats tiles, accent tooltips, backup
+  toast, shortcut fallback), editor (delete-text menu item, dup banner,
+  card-color tooltip, tag chip tooltips, remove-tag tooltip, stats
+  chars/words/lines), snippets (empty states, all row tooltips, snippet
+  editor + collection picker + prompt buttons, collections empty state,
+  member rows), clipboard view (flag tooltips, chars unit, copy tooltip,
+  open-URL failure fallback), dashboard (select-mode title, searching
+  indicator, bulkbar clear tooltip), trash (Open toast action), app.js
+  close-to-tray dialog, confirmDialog Confirm/Cancel defaults,
+  index.html (searching indicator, monitoring status, dir-seg Auto,
+  Replace/All buttons, paste tooltip)
+- New EN/FA keys added (32) incl. accent color names, retention options,
+  editor sub, import/export library buttons, backed-up toast; ed.dupBanner
+  moved to the safe <b></b> placeholder pattern
+- Electron sweep completed: remaining 'Invalid export request.' in
+  validate.js → err.invalidExport key; separate-export folder dialog title
+  → dlg.chooseFolder (localized)
+- Kept intentionally untranslated: product/window titles, file-extension
+  labels, RTL/LTR segment buttons, technical units (JSON/TXT/DOCX/PDF/
+  Base64/URL tool labels), debug logs
+
+Tests:
+- node test/syntax.cjs → 19/19 OK (exit 0)
+- npm test → unit 71/71 + ipc/architecture 32/32 (exit 0), incl. static
+  data-i18n key-coverage tests for both tables
+- npm run test:e2e → 132/132 passed (exit 0), incl. TXT byte-exact
+  round-trip after the async buildTxt change, DOCX/PDF single/combined/
+  separate exports, Persian RTL switch, translated chrome, dynamic
+  strings + aria label, editor save-state, and no-raw-key checks for
+  BOTH languages
+- TEXTVAULT_SMOKE=1 isolated launch → SMOKE OK boot=541ms (exit 0)
+
+Security:
+No new IPC surface; validators now return translation keys translated at
+the single registration boundary. No behavior change beyond localization.
+
+Exit Gate:
+PASSED (all §20 item-5 acceptance criteria met; blockers 1–4 unchanged)
+
+Next:
+Remaining release blockers: ≥2h soak, installer verification (Inno
+Setup), Electron major upgrade, full screen-reader a11y audit.
+
 ---
 
 # 43. Current Progress Snapshot
@@ -2685,23 +2757,24 @@ Project:
 TextVault Pro (repository currently holds TextVault v1.0.0 + Phase 1 architecture)
 
 Active Phase:
-Phase 10 — Testing & Release (next)
+Phase 10 — Testing & Release
 
 Phase Entry Gate:
-NOT_EVALUATED (Phase 9 verified 2026-09-03)
+PASSED (2026-09-03)
 
 Phase Status:
-Phase 9 VERIFIED (soak NOT RUN — documented); Phase 10 not started
+Phase 10 VERIFIED (2026-09-03); release-blocker follow-ups tracked in §20
 
 Phase Exit Gate:
-Phase 9 PASSED (2026-09-03 — evidence in §19)
+Phase 10 PASSED (2026-09-03 — evidence in §20)
 
 Overall Release Status:
-CONDITIONALLY_READY (see §20 for the explicit blocker list)
+CONDITIONALLY_READY (see §20 for the explicit blocker list; blocker #5
+i18n deep sweep RESOLVED 2026-09-04)
 
 Last Verified Test:
-npm test (100 checks) + npm run test:e2e (128/128) + SMOKE (boot=568ms) — all exit 0 (2026-09-03);
-search perf measured: 10,005-entry term scan p95 = 14.9ms (target ≤100ms)
+node test/syntax.cjs 19/19 + npm test (unit 71/71 + ipc 32/32) +
+npm run test:e2e (132/132) + SMOKE (boot=541ms) — all exit 0 (2026-09-04)
 
 Security Status:
 STRONG — SECURITY.md §53 checklist executed (§63); findings resolved or
@@ -2725,12 +2798,13 @@ CURRENT through Phase 10 (ARCHITECTURE.md §77 as-built; SECURITY.md §62-63;
 TESTING.md §59; ROADMAP.md reconciled; README refreshed)
 
 Current Task:
-None — all 10 official phases executed and VERIFIED
+None — release blocker #5 (i18n deep-string sweep) completed and VERIFIED
+2026-09-04 (see §42)
 
 Next Task:
 Owner review of the CONDITIONALLY_READY release status; decide on the
-documented blockers (2h soak, installer via Inno Setup, Electron major
-upgrade, full a11y audit, i18n deep sweep)
+remaining documented blockers (2h soak, installer via Inno Setup,
+Electron major upgrade, full a11y audit)
 ```
 
 The agent must update this snapshot whenever the project state changes.

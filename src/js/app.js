@@ -380,14 +380,13 @@ function askCloseBehavior() {
     backdrop.className = 'modal-backdrop';
     backdrop.innerHTML = `
       <div class="modal" role="dialog" aria-modal="true">
-        <h3 class="modal-title">Close TextVault?</h3>
-        <div class="modal-body">Clipboard monitoring keeps running in the background
-          when the window is closed to the tray.<br><br>
-          <label class="remember-row"><input type="checkbox" id="close-remember"> Remember my choice</label></div>
+        <h3 class="modal-title">${translate('close.title')}</h3>
+        <div class="modal-body">${translate('close.body')}<br><br>
+          <label class="remember-row"><input type="checkbox" id="close-remember"> ${translate('close.remember')}</label></div>
         <div class="modal-actions">
-          <button class="btn btn-ghost" data-act="cancel">Cancel</button>
-          <button class="btn btn-ghost-danger" data-act="quit">Quit TextVault</button>
-          <button class="btn btn-accent" data-act="tray">Close to Tray</button>
+          <button class="btn btn-ghost" data-act="cancel">${translate('cancel')}</button>
+          <button class="btn btn-ghost-danger" data-act="quit">${translate('close.quit')}</button>
+          <button class="btn btn-accent" data-act="tray">${translate('close.toTray')}</button>
         </div>
       </div>`;
     const close = (v) => {

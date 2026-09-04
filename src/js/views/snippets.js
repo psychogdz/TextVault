@@ -13,6 +13,7 @@ import { icon, emptyArt } from '../ui/icons.js';
 import { toast, confirmDialog, timeAgo, formatNumber } from '../ui/components.js';
 import { detectContentType } from '../../../shared/detect.mjs';
 import { parseQuery, matchSnippet } from '../../../shared/query.mjs';
+import { t } from '../../../shared/i18n.mjs';
 
 const els = {};
 let snippetQuery = '';
@@ -44,8 +45,8 @@ export function refreshSnippets() {
     els.list.style.display = 'none';
     els.empty.innerHTML = `
       <div class="empty-art">${emptyArt(q ? 'search' : 'clipboard')}</div>
-      <h3>${q ? 'No matches' : 'No snippets yet'}</h3>
-      <p>${q ? 'Try a different search.' : 'Snippets are reusable texts you save on purpose — commands, templates, replies.'}</p>`;
+      <h3>${q ? t('clip.noMatches') : t('sn.empty')}</h3>
+      <p>${q ? t('sn.tryDifferent') : t('sn.empty.body')}</p>`;
     els.empty.classList.remove('hidden');
     return;
   }
@@ -60,8 +61,8 @@ function renderSnippetRow(s) {
   row.dataset.id = s.id;
   row.innerHTML = `
     <div class="clip-flags">
-      ${s.isFavorite ? `<span class="clip-flag fav" title="Favorite">${icon('star-filled', 13)}</span>` : ''}
-      ${(s.collections || []).length ? `<span class="clip-flag" title="In ${s.collections.length} collection(s)">${icon('layers', 13)}</span>` : ''}
+      ${s.isFavorite ? `<span class="clip-flag fav" title="${t('favorite')}">${icon('star-filled', 13)}</span>` : ''}
+      ${(s.collections || []).length ? `<span class="clip-flag" title="${t('sn.inCollections', { n: s.collections.length })}">${icon('layers', 13)}</span>` : ''}
     </div>
     <div class="snippet-title"></div>
     <div class="clip-preview"></div>
@@ -71,13 +72,13 @@ function renderSnippetRow(s) {
       <span class="snippet-tags"></span>
     </div>
     <div class="clip-actions">
-      <button class="icon-btn icon-btn-sm" data-act="copy" title="Copy snippet">${icon('copy', 14)}</button>
-      <button class="icon-btn icon-btn-sm ${s.isFavorite ? 'fav-on' : ''}" data-act="fav" title="${s.isFavorite ? 'Remove from favorites' : 'Favorite'}">${icon(s.isFavorite ? 'star-filled' : 'star', 14)}</button>
-      <button class="icon-btn icon-btn-sm" data-act="edit" title="Edit">${icon('edit', 14)}</button>
-      <button class="icon-btn icon-btn-sm" data-act="coll" title="Collections">${icon('layers', 14)}</button>
-      <button class="icon-btn icon-btn-sm" data-act="del" title="Delete">${icon('trash', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="copy" title="${t('sn.copyTip')}">${icon('copy', 14)}</button>
+      <button class="icon-btn icon-btn-sm ${s.isFavorite ? 'fav-on' : ''}" data-act="fav" title="${s.isFavorite ? t('unfavorite') : t('favorite')}">${icon(s.isFavorite ? 'star-filled' : 'star', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="edit" title="${t('edit')}">${icon('edit', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="coll" title="${t('collections.btn')}">${icon('layers', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="del" title="${t('delete')}">${icon('trash', 14)}</button>
     </div>`;
-  row.querySelector('.snippet-title').textContent = s.title || 'Untitled snippet';
+  row.querySelector('.snippet-title').textContent = s.title || t('exp.untitled');
   row.querySelector('.clip-preview').textContent = s.content.length > 200 ? s.content.slice(0, 200) + '…' : s.content;
   const tagsEl = row.querySelector('.snippet-tags');
   (s.tags || []).slice(0, 4).forEach((t) => {
@@ -127,7 +128,7 @@ function openSnippetEditor(id) {
         <textarea id="sn-content" rows="8" placeholder="Snippet content…" data-i18n-ph="sn.contentPh" spellcheck="false"></textarea>
         <input id="sn-desc" placeholder="Description (optional)" data-i18n-ph="sn.descPh" autocomplete="off" spellcheck="false">
         <input id="sn-tags" placeholder="Tags, comma separated" data-i18n-ph="sn.tagsPh" autocomplete="off" spellcheck="false">
-        <div class="sn-coll-label">Collections</div>
+        <div class="sn-coll-label">${t('collections.btn')}</div>
         <div class="sn-coll-list" id="sn-collections"></div>
       </div>
       <div class="modal-actions">
@@ -264,8 +265,8 @@ export function refreshCollections() {
     els.collList.style.display = 'none';
     els.collEmpty.innerHTML = `
       <div class="empty-art">${emptyArt('inbox')}</div>
-      <h3>No collections yet</h3>
-      <p>Group related clipboard items and snippets — Development, Work, Email…</p>`;
+      <h3>${t('col.empty')}</h3>
+      <p>${t('col.empty.body')}</p>`;
     els.collEmpty.classList.remove('hidden');
     return;
   }
@@ -283,10 +284,10 @@ function renderCollectionRow(c) {
     <div class="collection-head">
       <span class="collection-icon">${icon('layers', 16)}</span>
       <span class="collection-name"></span>
-      <span class="clip-meta">${formatNumber(clip.length + snips.length)} items</span>
+      <span class="clip-meta">${formatNumber(clip.length + snips.length)} ${t('items')}</span>
       <span class="spacer"></span>
-      <button class="icon-btn icon-btn-sm" data-act="rename" title="Rename">${icon('edit', 14)}</button>
-      <button class="icon-btn icon-btn-sm" data-act="del" title="Delete collection">${icon('trash', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="rename" title="${t('col.rename')}">${icon('edit', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="del" title="${t('col.del.confirm')}">${icon('trash', 14)}</button>
     </div>
     <div class="collection-members"></div>`;
   row.querySelector('.collection-name').textContent = c.name;
@@ -326,8 +327,8 @@ function memberRow(store, record, previewText, url) {
   row.innerHTML = `
     <div class="clip-preview"></div>
     <div class="clip-actions">
-      ${url ? `<button class="icon-btn icon-btn-sm" data-act="open" title="Open URL">${icon('arrow-left', 14)}</button>` : ''}
-      <button class="icon-btn icon-btn-sm" data-act="copy" title="Copy">${icon('copy', 14)}</button>
+      ${url ? `<button class="icon-btn icon-btn-sm" data-act="open" title="${t('open.url')}">${icon('arrow-left', 14)}</button>` : ''}
+      <button class="icon-btn icon-btn-sm" data-act="copy" title="${t('copy')}">${icon('copy', 14)}</button>
       <button class="icon-btn icon-btn-sm" data-act="remove" title="${t('col.removeFrom')}">${icon('x', 14)}</button>
     </div>`;
   row.querySelector('.clip-preview').textContent = previewText.slice(0, 160);
@@ -336,7 +337,7 @@ function memberRow(store, record, previewText, url) {
     openBtn.innerHTML = icon('external', 14);
     openBtn.title = t('open.url');
     openBtn.addEventListener('click', () => window.tv.openExternal(url).then((r) => {
-      if (!r.ok) toastError(r.error || 'Could not open the URL.');
+      if (!r.ok) toastError(r.error || t('err.openUrlFailed'));
     }));
   }
   row.querySelector('[data-act="copy"]').addEventListener('click', async () => {
@@ -362,8 +363,8 @@ function promptText(title, placeholder, value = '') {
         <h3 class="modal-title"></h3>
         <div class="modal-body"><input class="prompt-input" placeholder=""></div>
         <div class="modal-actions">
-          <button class="btn btn-ghost" data-act="cancel">Cancel</button>
-          <button class="btn btn-accent" data-act="ok">Save</button>
+          <button class="btn btn-ghost" data-act="cancel">${t('cancel')}</button>
+          <button class="btn btn-accent" data-act="ok">${t('sn.save')}</button>
         </div>
       </div>`;
     backdrop.querySelector('.modal-title').textContent = title;

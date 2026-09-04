@@ -44,8 +44,8 @@ export function confirmDialog({
   title = null,
   message = '',
   messageValues = [],
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
+  confirmText = t('confirm.ok'),
+  cancelText = t('cancel'),
   danger = false,
 }) {
   return new Promise((resolve) => {

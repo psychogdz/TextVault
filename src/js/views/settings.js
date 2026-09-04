@@ -69,7 +69,7 @@ export function initSettings() {
 
       <div class="settings-card">
         <h3 data-i18n="set.editor">Editor</h3>
-        <div class="settings-sub">Defaults used when writing and viewing texts.</div>
+        <div class="settings-sub" data-i18n="set.editor.sub">Defaults used when writing and viewing texts.</div>
         <div class="setting-row">
           <div><div class="sr-label" data-i18n="set.fontsize">Font size</div><div class="sr-desc" data-i18n="set.fontsize.d">Editor text size</div></div>
           <div class="range-wrap">
@@ -80,8 +80,8 @@ export function initSettings() {
         <div class="setting-row">
           <div><div class="sr-label" data-i18n="set.fontFamily">Font family</div><div class="sr-desc" data-i18n="set.fontFamily.d">Sans for prose, mono for code</div></div>
           <div class="theme-picker">
-            <button class="theme-btn" data-font-opt="sans">Sans</button>
-            <button class="theme-btn" data-font-opt="mono">Mono</button>
+            <button class="theme-btn" data-font-opt="sans"><span data-i18n="ed.sans">Sans</span></button>
+            <button class="theme-btn" data-font-opt="mono"><span data-i18n="ed.mono">Mono</span></button>
           </div>
         </div>
         <div class="setting-row">
@@ -105,37 +105,37 @@ export function initSettings() {
         <h3 data-i18n="set.clipboard">Clipboard</h3>
         <div class="settings-sub" data-i18n="set.clipboard.sub">History capture and privacy basics.</div>
         <div class="setting-row">
-          <div><div class="sr-label">Clipboard monitoring</div><div class="sr-desc">Save a copy of everything you copy</div></div>
+          <div><div class="sr-label" data-i18n="set.clip.monitor">Clipboard monitoring</div><div class="sr-desc" data-i18n="set.clip.monitor.d">Save a copy of everything you copy</div></div>
           <div class="switch" id="set-clip-monitor" role="switch"></div>
         </div>
         <div class="setting-row">
-          <div><div class="sr-label">Duplicate copies</div><div class="sr-desc">Re-copying an item moves it to the top</div></div>
+          <div><div class="sr-label" data-i18n="set.clip.dup">Duplicate copies</div><div class="sr-desc" data-i18n="set.clip.dup.d">Re-copying an item moves it to the top</div></div>
           <div class="select-wrap">
-            <select id="set-clip-dup" aria-label="Duplicate policy">
-              <option value="top">Move to top (recommended)</option>
-              <option value="new">Keep duplicates</option>
+            <select id="set-clip-dup" data-i18n-aria="set.clip.dup" aria-label="Duplicate copies">
+              <option value="top" data-i18n="set.clip.dup.top">Move to top (recommended)</option>
+              <option value="new" data-i18n="set.clip.dup.new">Keep duplicates</option>
             </select>
           </div>
         </div>
         <div class="setting-row">
           <div><div class="sr-label" data-i18n="set.clip.max">History size</div><div class="sr-desc" data-i18n="set.clip.max.d">Pinned and favorite items are never removed</div></div>
           <div class="select-wrap">
-            <select id="set-clip-max" aria-label="History size">
-              <option value="100">100 items</option>
-              <option value="500">500 items</option>
-              <option value="1000">1,000 items</option>
-              <option value="5000">5,000 items</option>
+            <select id="set-clip-max" data-i18n-aria="set.clip.max" aria-label="History size">
+              <option value="100">100 ${t('items')}</option>
+              <option value="500">500 ${t('items')}</option>
+              <option value="1000">1,000 ${t('items')}</option>
+              <option value="5000">5,000 ${t('items')}</option>
             </select>
           </div>
         </div>
         <div class="setting-row">
           <div><div class="sr-label" data-i18n="set.clip.retention">Time retention</div><div class="sr-desc" data-i18n="set.clip.retention.d">Delete clipboard items older than this</div></div>
           <div class="select-wrap">
-            <select id="set-clip-retention" aria-label="Time retention">
-              <option value="0">Keep forever</option>
-              <option value="7">7 days</option>
-              <option value="30">30 days</option>
-              <option value="90">90 days</option>
+            <select id="set-clip-retention" data-i18n-aria="set.clip.retention" aria-label="Time retention">
+              <option value="0" data-i18n="set.clip.retention.forever">Keep forever</option>
+              <option value="7">${t('set.clip.retention.days', { n: 7 })}</option>
+              <option value="30">${t('set.clip.retention.days', { n: 30 })}</option>
+              <option value="90">${t('set.clip.retention.days', { n: 90 })}</option>
             </select>
           </div>
         </div>
@@ -151,16 +151,16 @@ export function initSettings() {
           <div><div class="sr-label" data-i18n="set.clip.shortcut">Quick Clipboard shortcut</div><div class="sr-desc" data-i18n="set.clip.shortcut.d">Global shortcut to open quick clipboard</div></div>
           <div class="shortcut-set">
             <input class="prompt-input" id="set-clip-shortcut" style="width:180px" autocomplete="off" spellcheck="false">
-            <button class="btn btn-ghost btn-sm" id="set-clip-shortcut-save">Save</button>
+            <button class="btn btn-ghost btn-sm" id="set-clip-shortcut-save" data-i18n="qc.save">Save</button>
           </div>
         </div>
         <div class="setting-row">
           <div><div class="sr-label" data-i18n="set.close">Closing the window</div><div class="sr-desc" data-i18n="set.close.d">What happens when you close the main window</div></div>
           <div class="select-wrap">
-            <select id="set-close-behavior" aria-label="Close behavior">
-              <option value="ask">Ask every time</option>
-              <option value="tray">Close to tray (keeps monitoring)</option>
-              <option value="quit">Quit TextVault</option>
+            <select id="set-close-behavior" data-i18n-aria="set.close.aria" aria-label="Close behavior">
+              <option value="ask" data-i18n="set.close.ask">Ask every time</option>
+              <option value="tray" data-i18n="set.close.tray">Close to tray (keeps monitoring)</option>
+              <option value="quit" data-i18n="set.close.quit">Quit TextVault</option>
             </select>
           </div>
         </div>
@@ -179,11 +179,11 @@ export function initSettings() {
         </div>
         <div class="setting-row">
           <div><div class="sr-label" data-i18n="set.backupTitle">Backup</div><div class="sr-desc" data-i18n="set.backupDesc">Export texts, clipboard history, snippets and collections as JSON</div></div>
-          <button class="btn btn-accent btn-sm" id="set-backup">${icon('upload', 14)} Export Library</button>
+          <button class="btn btn-accent btn-sm" id="set-backup">${icon('upload', 14)} <span data-i18n="set.exportLib">Export Library</span></button>
         </div>
         <div class="setting-row">
           <div><div class="sr-label" data-i18n="set.restoreTitle">Restore</div><div class="sr-desc" data-i18n="set.restoreDesc">Import a TextVault backup (merge or replace) — v1 and v2</div></div>
-          <button class="btn btn-ghost btn-sm" id="set-import">${icon('download', 14)} Import Library</button>
+          <button class="btn btn-ghost btn-sm" id="set-import">${icon('download', 14)} <span data-i18n="set.importLib">Import Library</span></button>
         </div>
       </div>
 
@@ -202,7 +202,7 @@ export function initSettings() {
           <div class="sr-label" id="set-version">1.0.0</div>
         </div>
         <div class="setting-row">
-          <div class="sr-label">Persian + English</div>
+          <div class="sr-label" data-i18n="set.languages">Persian + English</div>
           <div class="sr-desc" style="text-align:right"><span data-i18n="set.bidiSupport">Full bidirectional text support</span><br><span data-i18n="set.madeWith">Made with ❤️</span></div>
         </div>
       </div>
@@ -251,7 +251,7 @@ export function initSettings() {
     sw.className = 'swatch';
     sw.style.background = a.color;
     sw.style.color = a.color;
-    sw.title = a.id[0].toUpperCase() + a.id.slice(1);
+    sw.title = t('accent.' + a.id);
     sw.dataset.accentId = a.id;
     sw.addEventListener('click', () => {
       App.settings.accent = a.id;
@@ -330,7 +330,7 @@ export function initSettings() {
   els.clipShortcutSave.addEventListener('click', async () => {
     const accel = els.clipShortcut.value.trim();
     const res = await window.tv.setShortcut(accel);
-    if (!res.ok) { toastError(res.error || 'Invalid shortcut.'); return; }
+    if (!res.ok) { toastError(res.error || t('err.invalidShortcut')); return; }
     if (!res.registered) {
       toastError(t('settings.shortcutInUse'));
       return;
@@ -370,7 +370,7 @@ async function exportLibrary() {
       if (!res.canceled) toastError(t('settings.backupFailed') + ': ' + (res.error || t('settings.unknownError')));
       return;
     }
-    toast(`Backed up ${formatNumber(res.count)} items (v${res.version})`);
+    toast(t('set.backedUpToast', { n: formatNumber(res.count), v: res.version }));
   } catch (err) {
     toastError(t('settings.backupFailed') + ': ' + (err.message || t('settings.unknownError')));
   }
@@ -451,11 +451,11 @@ export function render() {
   const trashed = App.trashedEntries();
   const totalChars = live.reduce((acc, e) => acc + (e.stats?.chars ?? 0), 0);
   els.stats.innerHTML = `
-    <div class="stat-tile"><div class="st-num">${formatNumber(live.length)}</div><div class="st-label">texts</div></div>
-    <div class="stat-tile"><div class="st-num">${formatNumber(live.filter((e) => e.favorite).length)}</div><div class="st-label">favorites</div></div>
-    <div class="stat-tile"><div class="st-num">${formatNumber(App.tagCounts().length)}</div><div class="st-label">tags</div></div>
-    <div class="stat-tile"><div class="st-num">${formatNumber(totalChars)}</div><div class="st-label">characters</div></div>
-    <div class="stat-tile"><div class="st-num">${formatNumber(trashed.length)}</div><div class="st-label">in trash</div></div>`;
+    <div class="stat-tile"><div class="st-num">${formatNumber(live.length)}</div><div class="st-label">${t('texts')}</div></div>
+    <div class="stat-tile"><div class="st-num">${formatNumber(live.filter((e) => e.favorite).length)}</div><div class="st-label">${t('stat.favorites')}</div></div>
+    <div class="stat-tile"><div class="st-num">${formatNumber(App.tagCounts().length)}</div><div class="st-label">${t('stat.tags')}</div></div>
+    <div class="stat-tile"><div class="st-num">${formatNumber(totalChars)}</div><div class="st-label">${t('stat.characters')}</div></div>
+    <div class="stat-tile"><div class="st-num">${formatNumber(trashed.length)}</div><div class="st-label">${t('stat.inTrash')}</div></div>`;
 
   if (App.appInfo) {
     els.dataPath.textContent = App.appInfo.userData;

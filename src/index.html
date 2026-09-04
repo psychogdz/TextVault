@@ -117,7 +117,7 @@
         <span class="qc-icon" data-icon="clipboard"></span>
         <textarea id="qc-input" class="qc-input" rows="1" placeholder="Quick capture — paste text here, then press Ctrl+Enter to save…" data-i18n-ph="qc.placeholder" spellcheck="false"></textarea>
         <div class="qc-actions">
-          <button class="btn btn-ghost btn-sm" id="qc-paste" title="Paste from clipboard"><span class="btn-icon" data-icon="download"></span><span data-i18n="qc.paste">Paste</span></button>
+          <button class="btn btn-ghost btn-sm" id="qc-paste" title="Paste from clipboard" data-i18n-title="qc.pasteTip"><span class="btn-icon" data-icon="download"></span><span data-i18n="qc.paste">Paste</span></button>
           <button class="btn btn-accent btn-sm" id="qc-save"><span class="btn-icon" data-icon="save"></span><span data-i18n="qc.save">Save</span>&nbsp;<kbd class="kbd-accent">Ctrl ↵</kbd></button>
         </div>
       </div>
@@ -136,7 +136,7 @@
         <div class="virtual-grid" id="card-grid">
           <div class="grid-inner" id="grid-inner"></div>
           <div class="empty-state hidden" id="dashboard-empty"></div>
-          <div class="search-progress hidden" id="search-progress"><div class="spinner"></div><span>Searching…</span></div>
+          <div class="search-progress hidden" id="search-progress"><div class="spinner"></div><span data-i18n="search.progress">Searching…</span></div>
         </div>
       </div>
 
@@ -149,7 +149,7 @@
         <h2 class="view-title" data-i18n="clip.title">Clipboard</h2>
         <span class="clip-status" id="clip-status">
           <span class="clip-dot"></span>
-          <span class="clip-status-text">Monitoring active</span>
+          <span class="clip-status-text" data-i18n="clip.monitoring.active">Monitoring active</span>
         </span>
         <span class="spacer"></span>
         <button class="btn btn-ghost btn-sm" id="clip-pause" data-i18n="clip.pause">Pause</button>
@@ -200,7 +200,7 @@
         </div>
         <div class="editor-actions">
           <div class="seg" id="dir-seg" title="Text direction" data-i18n-title="ed.dir">
-            <button data-dir="auto" class="active">Auto</button>
+            <button data-dir="auto" class="active" data-i18n="ed.dirAuto">Auto</button>
             <button data-dir="rtl">RTL</button>
             <button data-dir="ltr">LTR</button>
           </div>
@@ -230,8 +230,8 @@
           </div>
           <div class="find-field">
             <input id="replace-input" placeholder="Replace with" data-i18n-ph="ed.replacePh" autocomplete="off" spellcheck="false">
-            <button class="btn btn-ghost btn-sm" id="replace-one">Replace</button>
-            <button class="btn btn-ghost btn-sm" id="replace-all">All</button>
+            <button class="btn btn-ghost btn-sm" id="replace-one" data-i18n="ed.replaceBtn">Replace</button>
+            <button class="btn btn-ghost btn-sm" id="replace-all" data-i18n="ed.allBtn">All</button>
           </div>
           <button class="icon-btn" id="findbar-close" title="Close (Esc)" data-i18n-title="ed.closeEsc"></button>
         </div>

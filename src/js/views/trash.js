@@ -64,7 +64,7 @@ export function refresh() {
     row.querySelector('[data-act="restore"]').addEventListener('click', async () => {
       await App.restoreEntry(entry.id);
       toast(t('trash.restoreOne'), {
-        action: { label: 'Open', onClick: () => App.openEditor(entry.id) },
+        action: { label: t('qc.open'), onClick: () => App.openEditor(entry.id) },
       });
     });
     row.querySelector('[data-act="purge"]').addEventListener('click', async () => {

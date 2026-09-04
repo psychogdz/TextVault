@@ -92,7 +92,7 @@ export function initDashboard() {
 
   /* ---- selection mode ---- */
   els.btnSelectMode.innerHTML = icon('check-square');
-  els.btnSelectMode.title = 'Selection mode — click cards to select them';
+  els.btnSelectMode.title = t('select.mode');
   els.btnSelectMode.addEventListener('click', () => setSelectionMode(!App.selectionMode));
   els.selAll.addEventListener('click', selectAll);
   els.selClear.addEventListener('click', () => { App.selection.clear(); refresh(); });
@@ -240,7 +240,7 @@ function showSearchProgress() {
     el = document.createElement('div');
     el.className = 'search-progress';
     el.id = 'search-progress';
-    el.innerHTML = '<div class="spinner"></div><span>Searching…</span>';
+    el.innerHTML = `<div class="spinner"></div><span>${t('search.progress')}</span>`;
     els.gridViewport.appendChild(el);
   }
   el.classList.remove('hidden');
@@ -415,7 +415,7 @@ function refreshBulkbar() {
     <button class="btn btn-ghost btn-sm" data-bulk="export" ${n ? '' : 'disabled'}>${icon('download', 14)} ${t('dash.exportBulk')}</button>
     <button class="btn btn-ghost btn-sm" data-bulk="fav" ${n ? '' : 'disabled'}>${icon('star', 14)} ${t('favorite')}</button>
     <button class="btn btn-ghost-danger btn-sm" data-bulk="delete" ${n ? '' : 'disabled'}>${icon('trash', 14)} ${t('delete')}</button>
-    <button class="icon-btn icon-btn-sm" data-bulk="clear" title="Clear selection">${icon('x', 14)}</button>`;
+    <button class="icon-btn icon-btn-sm" data-bulk="clear" title="${t('select.clear')}">${icon('x', 14)}</button>`;
 }
 
 async function handleBulk(act, anchorBtn) {
