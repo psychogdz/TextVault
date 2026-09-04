@@ -7,7 +7,11 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const ROOT = path.resolve(__dirname, '..');
-const VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
+// Production builds use the package.json version. The installer upgrade
+// verification (test/make-release.cjs upgrade) builds two differently-labeled
+// installers from this same source and overrides the label via this variable.
+const VERSION = process.env.TEXTVAULT_RELEASE_VERSION
+  || JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
 const RELEASE = path.join(ROOT, 'release');
 const APP = path.join(RELEASE, `TextVault-${VERSION}-Portable`);
 const APP_RESOURCES = path.join(APP, 'resources', 'app');
@@ -67,7 +71,7 @@ function build() {
   const slim = {
     name: manifest.name,
     productName: manifest.productName,
-    version: manifest.version,
+    version: VERSION,
     description: manifest.description,
     main: manifest.main,
     license: manifest.license,
@@ -109,8 +113,21 @@ function smoke() {
 function zip() {
   const zipPath = path.join(RELEASE, `TextVault-${VERSION}-Portable.zip`);
   if (fs.existsSync(zipPath)) fs.rmSync(zipPath);
-  execFileSync('powershell', ['-NoProfile', '-Command',
-    `Compress-Archive -Path "${APP}" -DestinationPath "${zipPath}" -CompressionLevel Optimal`], { stdio: 'inherit' });
+  // A freshly executed/scanned exe (Defender, indexer) can be transiently
+  // locked — retry the compression instead of failing the release on a
+  // timing race (same robustness layer as the E2E output cleanup).
+  const attempts = 5;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      execFileSync('powershell', ['-NoProfile', '-Command',
+        `Compress-Archive -Path "${APP}" -DestinationPath "${zipPath}" -CompressionLevel Optimal -Force`], { stdio: 'inherit' });
+      break;
+    } catch (err) {
+      if (attempt >= attempts) throw err;
+      console.log(`zip attempt ${attempt} failed (${err.status || err.message}) — retrying in 3s...`);
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 3000);
+    }
+  }
   const size = fs.statSync(zipPath).size;
   console.log('zip:', zipPath, (size / 1024 / 1024).toFixed(1), 'MB');
 }

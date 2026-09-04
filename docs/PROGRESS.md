@@ -1410,14 +1410,19 @@ Overall Release Status:
 CONDITIONALLY_READY
 
 Portable Windows artifact: BUILT, SMOKE-TESTED, packaged (release/ dir, gitignored)
-Installable artifact: NOT BUILT in this environment (Inno Setup compiler absent)
+Installable artifact: BUILT and VERIFIED 2026-09-04 (TextVault-1.0.0-Setup.exe
+81.1MB; fresh install + upgrade + uninstall verified — see the 2026-09-04
+blocker #2 entry)
 
 Items blocking READY (all documented, none hidden):
 1. ≥2 hour long-running soak not executed (environment-bound; interim
    evidence: 10k-item load, stress test, repeated restarts — 0 crashes,
    0 corruption)
-2. Installer build + silent install/upgrade/uninstall verification
-   (requires Inno Setup; scripted and ready via npm run release)
+2. ~~Installer build + silent install/upgrade/uninstall verification~~
+   RESOLVED 2026-09-04 — compiler discovery fixed (Inno Setup 6 was present
+   system-wide all along; the script only probed the gitignored bundled
+   path), npm run release verified end-to-end, and an upgrade-over-existing-
+   install flow was added and verified (see the 2026-09-04 blocker #2 entry)
 3. Electron runtime advisories (fix = major Electron upgrade; requires a
    dedicated, separately-verified migration)
 4. Full screen-reader accessibility audit
@@ -2875,6 +2880,75 @@ Tests:
 Exit:
 COMPLETE (E2E-verified)
 
+## 2026-09-04 (release blocker #2 — Windows installer)
+
+Phase:
+Post-Phase-10 release-blocker work (blocker #2 of §20; no phase gate
+affected)
+
+Completed:
+- Root cause of the earlier failure: test/make-release.cjs probed ONLY the
+  repo-local tools/innosetup/ISCC.exe (gitignored, absent). The audit's
+  "Inno Setup compiler absent from this environment" statement was wrong —
+  Inno Setup 6 IS installed system-wide (Chocolatey shim); only the
+  single-path probe missed it. findIscc() now discovers the compiler in
+  order: TEXTVAULT_ISCC env override → tools/innosetup/ISCC.exe → PATH via
+  `where ISCC.exe` → the standard per-machine Inno Setup 6 install dirs
+- Added the previously missing upgrade-over-existing-install verification
+  (test/make-release.cjs `upgrade` step + test/upgrade-probe.cjs): two REAL
+  installers are built from this source through the normal pipeline with
+  test-only version labels (1.0.0-upgrade-a/-b via TEXTVAULT_RELEASE_VERSION;
+  make-portable applies the override to the packaged manifest too) →
+  silent install A → boot + the clipboard monitor captures a unique marker
+  into the app's real IndexedDB in an ISOLATED profile → read back through
+  the app's own ?e2e=1 test hook → snapshot the profile (relPath+size+sha256
+  manifest) → silent install B over A (same AppId/dir) → profile must be
+  byte-identical → boot B, probe again (marker intact) → Start Menu shortcut
+  intact → silent uninstall → install files + shortcut removed, user data
+  kept. The probe is hosted on the repo's bare Electron runtime because a
+  packaged TextVault.exe always boots its own app and cannot execute an
+  external script; the repo dist is the exact 33.4.11 runtime build the
+  installers ship, and the app code + profile are the installed ones
+- make-portable zip step hardened: Compress-Archive hit a transient
+  PermissionDenied on the freshly executed TextVault.exe (Defender scan)
+  and failed the release — compression now retries (5×, 3s) and forces
+  destination overwrite, mirroring the E2E cleanup robustness layer
+- Recorded as follow-up cleanup (intentionally NOT removed here):
+  electron-builder + the NSIS `build` block in package.json are unused by
+  every script — the release pipeline is Inno Setup based
+
+Tests:
+- node test/syntax.cjs → 19/19 OK (exit 0)
+- npm test → unit 71/71 + ipc/architecture 32/32 (exit 0)
+- npm run release → exit 0 (twice: before and after the upgrade work):
+  portable build → packaged-exe SMOKE OK (boot 933ms / 556ms) → zip
+  111.7MB → installer TextVault-1.0.0-Setup.exe 81.1MB (PE header MZ,
+  ProductVersion 1.0.0) → scripted fresh-install verification VERIFY OK
+  (silent install, SMOKE OK, data in userData / nothing leaked into the
+  install dir, Start Menu shortcut created, silent uninstall, cleanup)
+- node test/make-release.cjs upgrade → exit 0, UPGRADE OK: A
+  (1.0.0-upgrade-a) installed + SMOKE OK; probe A {entries:0, clips:1,
+  hasMarker:true}; B (1.0.0-upgrade-b) installed over A; profile
+  byte-identical after upgrade (49 files); probe B {clips:1,
+  hasMarker:true}; shortcut intact; uninstall removed app + shortcut and
+  KEPT user data
+- npm run test:e2e → 147/147 passed (exit 0)
+
+Limitations (stated, not hidden):
+- The upgrade data probe reads the profile via the repo Electron runtime
+  (same 33.4.11 build the installers ship); the installed binary itself
+  boots and smoke-passes but exposes no script hook to external drivers
+- The upgrade test exercises same-source version-label installers (A→B
+  from this tree); upgrading the historical released v1.0.0 build was not
+  tested (that tag predates the current rebuild architecture)
+- The installer is unsigned — code signing / SmartScreen reputation is a
+  separate distribution concern, not part of blocker #2's script
+
+Exit:
+Release blocker #2 (installer build + install/upgrade verification)
+RESOLVED with the evidence above. Remaining blockers: ≥2h soak, Electron
+major upgrade, full screen-reader audit.
+
 ---
 
 # 43. Current Progress Snapshot
@@ -2903,7 +2977,9 @@ i18n deep sweep RESOLVED 2026-09-04)
 
 Last Verified Test:
 node test/syntax.cjs 19/19 + npm test (unit 71/71 + ipc 32/32) +
-npm run test:e2e (145/145, incl. the full Ctrl+F find matrix) — all
+npm run test:e2e (147/147) + npm run release (portable smoke, zip 111.7MB,
+installer 81.1MB, fresh-install VERIFY OK) + node test/make-release.cjs
+upgrade (UPGRADE OK — byte-identical profile across A→B upgrade) — all
 exit 0 (2026-09-04)
 
 Security Status:
@@ -2928,13 +3004,14 @@ CURRENT through Phase 10 (ARCHITECTURE.md §77 as-built; SECURITY.md §62-63;
 TESTING.md §59; ROADMAP.md reconciled; README refreshed)
 
 Current Task:
-None — in-editor Ctrl+F find completed and E2E-verified 2026-09-04
-(WIP 1242958 finished; see the 2026-09-04 Ctrl+F entry)
+None — release blocker #2 (Windows installer build + install/upgrade
+verification) completed and RESOLVED 2026-09-04 (see the 2026-09-04
+blocker #2 entry)
 
 Next Task:
 Owner review of the CONDITIONALLY_READY release status; decide on the
-remaining documented blockers (2h soak, installer via Inno Setup,
-Electron major upgrade, full a11y audit)
+remaining documented blockers (2h soak, Electron major upgrade, full
+a11y audit)
 ```
 
 The agent must update this snapshot whenever the project state changes.
