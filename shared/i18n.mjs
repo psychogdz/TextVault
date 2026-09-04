@@ -441,6 +441,11 @@ export const STRINGS = {
     'col.empty': 'No collections yet',
     'col.empty.body': 'Group related clipboard items and snippets — Development, Work, Email…',
     'confirm.ok': 'Confirm',
+    // editor find
+    'ed.findCount': '{a} of {b}',
+    'match': 'match',
+    'matches': 'matches',
+    'ed.replacedCount': 'Replaced {n} {matches}',
     },
 
   fa: {
@@ -863,6 +868,10 @@ export const STRINGS = {
   'col.empty': 'هنوز مجموعه\u200cای نیست',
   'col.empty.body': 'مواردهای کلیپ\u200cبورد و اسنیپت\u200cهای مرتبط را یکجا جمع کنید — کاری، شخصی، ایمیل…',
   'confirm.ok': 'تأیید',
+  'ed.findCount': '{a} از {b}',
+  'match': 'مورد',
+  'matches': 'مورد',
+  'ed.replacedCount': '{n} مورد جایگزین شد',
   },
 };
 

@@ -8,6 +8,7 @@ import { applyEdits, createEntry, CARD_COLORS } from '../core/entry.js';
 import { applyTextTool, TEXT_TOOLS } from '../../../shared/text-tools.mjs';
 import { t } from '../../../shared/i18n.mjs';
 import { detectBaseDir } from '../../../shared/bidi.mjs';
+import { escapeHtml } from '../../../shared/snippets.mjs';
 
 const els = {};
 let current = null;      // { entry, isNew, dirty, lastDupHash }
@@ -22,6 +23,8 @@ export function initEditor() {
   els.saveState = document.getElementById('save-state');
   els.saveStateTxt = els.saveState.querySelector('.txt');
   els.textarea = document.getElementById('editor-textarea');
+  els.area = els.textarea.parentElement;
+  els.mirror = document.getElementById('editor-mirror');
   els.tagsWrap = document.getElementById('editor-tags');
   els.tagInput = document.getElementById('tag-input');
   els.tagSuggest = document.getElementById('tag-suggest');
@@ -71,7 +74,18 @@ export function initEditor() {
     markDirty();
     updateStats();
     autoDirection();
+    scheduleFindSync();
   });
+  els.textarea.addEventListener('scroll', syncMirrorScroll);
+  // Keep the highlight layer aligned when the editor box or fonts change.
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(() => {
+      if (!els.area.classList.contains('find-active')) return;
+      syncMirrorGeometry();
+      renderFindMarks();
+      if (findState) scrollCurrentIntoView(false);
+    }).observe(els.textarea);
+  }
   els.textarea.addEventListener('keyup', updateCaretPos);
   els.textarea.addEventListener('click', updateCaretPos);
   els.textarea.addEventListener('keydown', (e) => {
@@ -204,6 +218,8 @@ export function initEditor() {
   els.findInput.addEventListener('input', () => { runFind(); });
   els.findInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); e.shiftKey ? gotoMatch(-1) : gotoMatch(1); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); gotoMatch(1); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); gotoMatch(-1); }
     if (e.key === 'Escape') { e.stopPropagation(); toggleFindbar(false); }
   });
   els.replaceInput.addEventListener('keydown', (e) => {
@@ -570,6 +586,12 @@ export function applyEditorPrefs() {
   els.textarea.classList.toggle('nowrap', !App.settings.editorWrap);
   els.toggleWrap.textContent = App.settings.editorWrap ? t('ed.wrapOn') : t('ed.wrapOff');
   els.toggleFont.textContent = App.settings.editorFont === 'mono' ? t('ed.mono') : t('ed.sans');
+  // Typography changed under an active search → re-align the highlight layer.
+  if (els.area.classList.contains('find-active')) {
+    syncMirrorGeometry();
+    renderFindMarks();
+    if (findState) scrollCurrentIntoView();
+  }
 }
 
 /* ================= stats ================= */
@@ -606,16 +628,100 @@ async function copyAll() {
 }
 
 /* ================= find & replace ================= */
+//
+// Architecture: the textarea keeps the real content (search never mutates it).
+// While a search is active, a mirror layer (`.editor-mirror`) behind the
+// textarea renders the same text with <mark> highlights, and the textarea's
+// own glyphs are made transparent — so highlighting cannot corrupt content,
+// dirty state, or undo history. The current match is additionally selected
+// via setSelectionRange (real selection, usable by replace), and the view
+// scrolls to it using the mirror's geometry.
 
-function toggleFindbar(show, focusReplace = false) {
+const MIRROR_TEXT_STYLES = [
+  'fontFamily', 'fontKerning', 'fontSize', 'fontStyle', 'fontWeight',
+  'letterSpacing', 'wordSpacing', 'lineHeight', 'textIndent', 'textTransform',
+  'tabSize', 'textAlign', 'direction', 'unicodeBidi',
+  'whiteSpace', 'overflowWrap', 'wordBreak', 'boxSizing',
+  'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+];
+
+function findActive() {
+  return !els.findbar.classList.contains('hidden') && !!els.findInput.value;
+}
+
+function setFindActive(on) {
+  const active = els.area.classList.toggle('find-active', on);
+  if (active) syncMirrorGeometry();
+  else els.mirror.innerHTML = '';
+}
+
+/** Copy the textarea's text metrics onto the mirror so both wrap identically.
+ *  The textarea owns the scrollbars, so the mirror's padding absorbs their
+ *  width (border-less textarea: offset-client = scrollbar size). */
+function syncMirrorGeometry() {
+  const cs = getComputedStyle(els.textarea);
+  for (const prop of MIRROR_TEXT_STYLES) els.mirror.style[prop] = cs[prop];
+  const sbV = els.textarea.offsetWidth - els.textarea.clientWidth;
+  els.mirror.style.paddingRight = `${parseFloat(cs.paddingRight) + sbV}px`;
+  syncMirrorScroll();
+}
+
+function syncMirrorScroll() {
+  if (!els.area.classList.contains('find-active')) return;
+  els.mirror.scrollTop = els.textarea.scrollTop;
+  els.mirror.scrollLeft = els.textarea.scrollLeft;
+}
+
+/** Re-render the highlight layer. Text is always escaped; matches become
+ *  <mark>, the active one <mark class="cur">. */
+function renderFindMarks() {
+  if (!findActive()) { els.mirror.innerHTML = ''; return; }
+  const value = els.textarea.value;
+  const len = Math.max(els.findInput.value.length, 1);
+  const indices = findState ? findState.indices : [];
+  let html = '';
+  let pos = 0;
+  for (let i = 0; i < indices.length; i++) {
+    const start = indices[i];
+    if (start > pos) html += escapeHtml(value.slice(pos, start));
+    html += `<mark${i === findState.idx ? ' class="cur"' : ''}>${escapeHtml(value.slice(start, start + len))}</mark>`;
+    pos = start + len;
+  }
+  if (pos < value.length) html += escapeHtml(value.slice(pos));
+  els.mirror.innerHTML = html + '\n';
+  syncMirrorScroll();
+}
+
+/** Editor text changed while a search is live: recompute quietly — no
+ *  selection change, no scrolling — so typing is never disturbed. */
+let findSyncTimer = null;
+function scheduleFindSync() {
+  if (!findState || els.findbar.classList.contains('hidden')) return;
+  clearTimeout(findSyncTimer);
+  findSyncTimer = setTimeout(() => {
+    findSyncTimer = null;
+    if (!findState) return;
+    findState.indices = findMatches();
+    if (findState.idx >= findState.indices.length) findState.idx = Math.max(0, findState.indices.length - 1);
+    syncMirrorGeometry();
+    renderFindMarks();
+    updateFindCount();
+  }, 120);
+}
+
+function toggleFindbar(show) {
   els.findbar.classList.toggle('hidden', !show);
   if (show) {
     els.findInput.focus();
     els.findInput.select();
-    if (els.findInput.value) runFind();
+    if (els.findInput.value) runFind(true);
+    else { setFindActive(false); updateFindCount(); }
   } else {
+    if (findSyncTimer) { clearTimeout(findSyncTimer); findSyncTimer = null; }
     findState = null;
-    els.findCount.textContent = '0/0';
+    setFindActive(false);
+    updateFindCount();
+    // Focus returns to the editor at the caret — the current location stays.
     els.textarea.focus();
   }
 }
@@ -638,30 +744,52 @@ function findMatches() {
   return indices;
 }
 
-function runFind() {
+function runFind(keepCurrent = false) {
+  if (!els.findInput.value) {
+    findState = null;
+    setFindActive(false);
+    updateFindCount();
+    return;
+  }
   const indices = findMatches();
-  findState = indices.length ? { indices, idx: 0 } : null;
-  updateFindCount();
-  if (findState) highlightCurrent(false);
+  const prevIdx = keepCurrent && findState ? findState.idx : 0;
+  findState = { indices, idx: indices.length ? Math.min(prevIdx, indices.length - 1) : 0 };
+  setFindActive(true);
+  if (indices.length) highlightCurrent(true);
+  else { renderFindMarks(); updateFindCount(); }
 }
 
 function updateFindCount() {
-  if (!findState) { els.findCount.textContent = els.findInput.value ? '0/0' : '0/0'; return; }
-  els.findCount.textContent = `${findState.idx + 1}/${findState.indices.length}`;
+  const query = els.findInput.value;
+  const total = findState ? findState.indices.length : 0;
+  const at = findState && total ? findState.idx + 1 : 0;
+  els.findCount.textContent = t('ed.findCount', { a: formatNumber(at), b: formatNumber(total) });
+  els.findCount.classList.toggle('none', !!query && !total);
 }
 
+/** Select the current match as a real selection and bring it into view.
+ *  Focus is NOT stolen from the find input. */
 function highlightCurrent(scroll = true) {
-  if (!findState) return;
+  if (!findState || !findState.indices.length) return;
   const start = findState.indices[findState.idx];
   const len = els.findInput.value.length;
-  els.textarea.focus();
   els.textarea.setSelectionRange(start, start + len);
-  if (scroll) {
-    // Chromium scrolls the caret into view on focus+selection in a textarea.
-    els.textarea.blur();
-    els.textarea.focus();
-  }
+  renderFindMarks();
   updateFindCount();
+  if (scroll) scrollCurrentIntoView();
+}
+
+/** Scroll the editor so the active match is visible (centered when far). */
+function scrollCurrentIntoView() {
+  const mark = els.mirror.querySelector('mark.cur');
+  if (!mark) return;
+  const ta = els.textarea;
+  const top = mark.offsetTop;
+  const bottom = top + mark.offsetHeight;
+  if (top < ta.scrollTop + 8 || bottom > ta.scrollTop + ta.clientHeight - 8) {
+    ta.scrollTop = Math.max(0, top - ta.clientHeight / 2 + mark.offsetHeight / 2);
+    syncMirrorScroll();
+  }
 }
 
 function gotoMatch(delta) {
@@ -702,7 +830,7 @@ function replaceAllMatches() {
   autoDirection();
   const count = indices.length;
   runFind();
-  toast(`Replaced ${formatNumber(count)} ${count === 1 ? 'match' : 'matches'}`);
+  toast(t('ed.replacedCount', { n: formatNumber(count), matches: t(count === 1 ? 'match' : 'matches') }));
 }
 
 export function isActive() { return current !== null; }

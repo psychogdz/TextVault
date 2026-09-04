@@ -219,7 +219,7 @@
         </div>
       </div>
 
-      <div class="findbar hidden" id="findbar">
+      <div class="findbar hidden" id="findbar" role="search" aria-label="Find & Replace" data-i18n-aria="ed.findReplace">
         <div class="findbar-row">
           <div class="find-field">
             <input id="find-input" placeholder="Find" data-i18n-ph="ed.findPh" autocomplete="off" spellcheck="false">
@@ -245,6 +245,7 @@
       </div>
 
       <div class="editor-area">
+        <div class="editor-mirror" id="editor-mirror" aria-hidden="true"></div>
         <textarea id="editor-textarea" class="editor-textarea" spellcheck="false" placeholder="Paste or type your text here…" data-i18n-ph="ed.textPh" wrap="soft"></textarea>
         <div class="dup-banner hidden" id="dup-banner"></div>
       </div>
