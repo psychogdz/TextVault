@@ -134,7 +134,7 @@ An agent must never claim that a test, build, package, security review, performa
 Project: TextVault Pro (rebuild target)
 Repository: TextVault — currently contains TextVault v1.0.0 (released text manager)
 Platform Priority: Windows
-Architecture: Electron Desktop Application (Electron ^33.2.0, vanilla-JS renderer, IndexedDB)
+Architecture: Electron Desktop Application (Electron ^44.2.0, vanilla-JS renderer, IndexedDB)
 Primary Model: Local-First / Privacy-First
 
 Current Phase:
@@ -1423,8 +1423,13 @@ Items blocking READY (all documented, none hidden):
    system-wide all along; the script only probed the gitignored bundled
    path), npm run release verified end-to-end, and an upgrade-over-existing-
    install flow was added and verified (see the 2026-09-04 blocker #2 entry)
-3. Electron runtime advisories (fix = major Electron upgrade; requires a
-   dedicated, separately-verified migration)
+3. ~~Electron runtime advisories (fix = major Electron upgrade; requires a
+   dedicated, separately-verified migration)~~
+   RESOLVED 2026-09-04 — Electron 33.4.11 (branch EOL 2025-04-29) upgraded
+   to 44.2.0 (supported through 2027-03-02); clipboard monitor adapted to
+   the Promise-based clipboard API; full suite 147/147 green and the
+   installer + upgrade flows re-verified on the new runtime (see the
+   2026-09-04 blocker #3 entry)
 4. Full screen-reader accessibility audit
 5. ~~Remaining i18n deep-string sweep (editor internals, export dialogs)~~
    RESOLVED 2026-09-04 — sweep completed and verified (evidence in §42,
@@ -2949,6 +2954,80 @@ Release blocker #2 (installer build + install/upgrade verification)
 RESOLVED with the evidence above. Remaining blockers: ≥2h soak, Electron
 major upgrade, full screen-reader audit.
 
+## 2026-09-04 (release blocker #3 — Electron major upgrade)
+
+Phase:
+Post-Phase-10 release-blocker work (blocker #3 of §20; no phase gate
+affected)
+
+Completed:
+- Electron runtime upgraded 33.4.11 → 44.2.0 (package.json devDependency
+  ^33.2.0 → ^44.2.0 + lockfile). Target rationale: per the 2026-09-04
+  audit, supported majors were 42 (EOL 2026-10-20), 43 and 44 (latest
+  44.2.0, supported through 2027-03-02) — 42 was ruled out as too close
+  to EOL, 44 chosen as the latest supported major
+- Compatibility research against the official breaking-changes doc
+  (v42/v43/v44): the ONLY breaking change touching TextVault's API
+  surface is the Electron 44 clipboard rearchitecture — the clipboard
+  module is removed from renderers (TextVault already routed all
+  renderer clipboard access through IPC; no change needed) and
+  readText()/writeText() are now Promise-based. protocol.handle,
+  net.fetch, webPreferences defaults, contextBridge, globalShortcut,
+  Tray, printToPDF, will-navigate, setWindowOpenHandler and
+  requestSingleInstanceLock are unchanged in 42–44
+- FIX 1 (clipboard-service.js): the 300ms monitor tick used the
+  synchronous readText('clipboard') — on 44 it would have received a
+  Promise and silently skipped every tick, killing clipboard capture.
+  tick() is now async (await readText(), no type argument) with a
+  re-entrancy guard so interval ticks cannot interleave; private-mode,
+  oversize-skip, sensitive-detection and pending-queue logic unchanged
+- FIX 2 (ipc/register.js): tv:clipboard-write now awaits the
+  Promise<void> writeText so the { ok:true } answer lands after the
+  write completes
+- FIX 3 (test/e2e.js): the harness's console-message handler migrated to
+  the (event, details) signature introduced with the deprecation of the
+  positional (level, message) args — handles both shapes so page-error
+  visibility is preserved on any runtime
+- Security posture: UNCHANGED. contextIsolation/sandbox/nodeIntegration
+  settings untouched on all windows; IPC allowlist and validators
+  untouched; no renderer gains clipboard access (the removed
+  renderer-side clipboard module was never used); no new network surface.
+  npm audit shows 12 advisories (1 critical, 11 high) — all in the
+  electron-builder build chain (app-builder-lib/builder-util-runtime/tar),
+  dev-time only, unchanged classification per SECURITY.md §63.1: the
+  shipped pipeline is Inno Setup + the custom portable packer
+
+Tests:
+- Baseline on 33.4.11 (pre-upgrade): syntax 19/19 + unit 71/71 +
+  ipc 32/32 + E2E 147/147 — all exit 0
+- Runtime smoke on 44.2.0: TEXTVAULT_SMOKE=1 boot → SMOKE OK boot=404ms
+- Full regression on 44.2.0: syntax 19/19 + unit 71/71 + ipc 32/32 +
+  E2E 147/147 (exit 0) — includes clipboard capture→persist, rapid
+  stress, private mode, sensitive skip, editor, search, quick clipboard,
+  global shortcut, EN/FA RTL switch, exports
+- Installer regression on 44.2.0: npm run release exit 0 (portable SMOKE
+  OK boot=440ms, zip 152.8MB, TextVault-1.0.0-Setup.exe 110.2MB, fresh
+  install VERIFY OK) and node test/make-release.cjs upgrade exit 0
+  (UPGRADE OK — profile byte-identical across A→B, 53 files, marker
+  preserved, uninstall keeps user data)
+- Warnings: the console-message deprecation warning was eliminated by the
+  API migration (0 occurrences in the final E2E log); remaining page
+  console entries are the pre-existing benign ResizeObserver loop notice
+  also present in the 33 baseline
+
+Limitations (stated, not hidden):
+- Electron 42+ downloads the runtime binary lazily on first run instead
+  of at npm install; every pipeline step that needs node_modules/electron/
+  dist runs after a real launch or npm run test:e2e, so packaging is
+  unaffected in practice
+- npm audit --force would upgrade the electron-builder chain but is
+  intentionally not run here (out of scope; build-time only)
+
+Exit:
+Release blocker #3 (Electron runtime advisories / major upgrade)
+RESOLVED with the evidence above. Remaining blockers: ≥2h soak, full
+screen-reader audit.
+
 ---
 
 # 43. Current Progress Snapshot
@@ -2977,10 +3056,10 @@ i18n deep sweep RESOLVED 2026-09-04)
 
 Last Verified Test:
 node test/syntax.cjs 19/19 + npm test (unit 71/71 + ipc 32/32) +
-npm run test:e2e (147/147) + npm run release (portable smoke, zip 111.7MB,
-installer 81.1MB, fresh-install VERIFY OK) + node test/make-release.cjs
-upgrade (UPGRADE OK — byte-identical profile across A→B upgrade) — all
-exit 0 (2026-09-04)
+npm run test:e2e (147/147) + npm run release (portable SMOKE OK 440ms,
+zip 152.8MB, installer 110.2MB, fresh-install VERIFY OK) +
+node test/make-release.cjs upgrade (UPGRADE OK, profile byte-identical
+across A→B) — all exit 0 on Electron 44.2.0 (2026-09-04)
 
 Security Status:
 STRONG — SECURITY.md §53 checklist executed (§63); findings resolved or
@@ -3004,14 +3083,12 @@ CURRENT through Phase 10 (ARCHITECTURE.md §77 as-built; SECURITY.md §62-63;
 TESTING.md §59; ROADMAP.md reconciled; README refreshed)
 
 Current Task:
-None — release blocker #2 (Windows installer build + install/upgrade
-verification) completed and RESOLVED 2026-09-04 (see the 2026-09-04
-blocker #2 entry)
+None — release blocker #3 (Electron major upgrade 33.4.11 → 44.2.0)
+completed and RESOLVED 2026-09-04 (see the 2026-09-04 blocker #3 entry)
 
 Next Task:
 Owner review of the CONDITIONALLY_READY release status; decide on the
-remaining documented blockers (2h soak, Electron major upgrade, full
-a11y audit)
+remaining documented blockers (2h soak, full a11y audit)
 ```
 
 The agent must update this snapshot whenever the project state changes.

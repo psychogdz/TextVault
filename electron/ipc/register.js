@@ -179,10 +179,10 @@ function registerIpcHandlers(bridgeHooks = {}) {
   ipcMain.handle(HANDLED.BACKUP_IMPORT, handleBackupImport);
 
   ipcMain.handle(HANDLED.CLIPBOARD_READ, () => clipboard.readText());
-  ipcMain.handle(HANDLED.CLIPBOARD_WRITE, (_ev, text) => {
+  ipcMain.handle(HANDLED.CLIPBOARD_WRITE, async (_ev, text) => {
     const check = v.validateClipboardWrite(text);
     if (!check.ok) return localized(check);
-    clipboard.writeText(check.value);
+    await clipboard.writeText(check.value); // Electron 44+: Promise<void>
     return true;
   });
 

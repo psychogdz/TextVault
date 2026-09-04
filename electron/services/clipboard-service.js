@@ -80,56 +80,65 @@ function sha256Hex(text) {
   return crypto.createHash('sha256').update(text, 'utf8').digest('hex');
 }
 
+// One in-flight clipboard read at a time — Electron 44 made readText()
+// Promise-based, and overlapping interval ticks must not interleave.
+let readingClipboard = false;
+
 /** One monitor tick: detect clipboard changes and emit a capture. */
-function tick() {
-  if (!state.enabled || state.paused) return;
-  let text;
+async function tick() {
+  if (readingClipboard || !state.enabled || state.paused) return;
+  readingClipboard = true;
   try {
-    text = clipboard.readText('clipboard');
-  } catch {
-    return; // clipboard temporarily unavailable — try again next tick
-  }
-  if (typeof text !== 'string' || text.length === 0) return;
-  if (text === state.lastText) return;
+    let text;
+    try {
+      text = await clipboard.readText(); // Electron 44+: Promise<string>
+    } catch {
+      return; // clipboard temporarily unavailable — try again next tick
+    }
+    if (typeof text !== 'string' || text.length === 0) return;
+    if (text === state.lastText) return;
 
-  state.lastText = text;
+    state.lastText = text;
 
-  // Private mode (SECURITY.md §47): clipboard state is tracked but content
-  // is deliberately discarded — nothing is persisted while it is active.
-  if (state.private) {
-    state.skipped += 1;
+    // Private mode (SECURITY.md §47): clipboard state is tracked but content
+    // is deliberately discarded — nothing is persisted while it is active.
+    if (state.private) {
+      state.skipped += 1;
+      notifyState();
+      return;
+    }
+
+    if (text.length > state.policy.CLIPBOARD_CONTENT_LIMIT) {
+      state.skipped += 1; // oversized capture: skipped safely, never truncated
+      notifyState();
+      return;
+    }
+
+    const now = Date.now();
+    const det = state.sensitive.detectSensitive(text);
+    const item = state.policy.buildClipboardItem({
+      id: crypto.randomUUID(),
+      content: text,
+      createdAt: now,
+      updatedAt: now,
+      isSensitive: det.sensitive,
+      sensitiveKinds: det.kinds,
+      sourceApplication: null, // not available without native modules (documented)
+    });
+
+    // Bound the pending queue: drop the oldest unacknowledged capture.
+    if (state.pending.size >= MAX_PENDING) {
+      const oldest = state.pending.keys().next().value;
+      state.pending.delete(oldest);
+      state.skipped += 1;
+    }
+    state.pending.set(item.id, item);
+    state.lastCaptureAt = now;
+    sendToMain(EMITTED.CLIPBOARD_CAPTURED, item);
     notifyState();
-    return;
+  } finally {
+    readingClipboard = false;
   }
-
-  if (text.length > state.policy.CLIPBOARD_CONTENT_LIMIT) {
-    state.skipped += 1; // oversized capture: skipped safely, never truncated
-    notifyState();
-    return;
-  }
-
-  const now = Date.now();
-  const det = state.sensitive.detectSensitive(text);
-  const item = state.policy.buildClipboardItem({
-    id: crypto.randomUUID(),
-    content: text,
-    createdAt: now,
-    updatedAt: now,
-    isSensitive: det.sensitive,
-    sensitiveKinds: det.kinds,
-    sourceApplication: null, // not available without native modules (documented)
-  });
-
-  // Bound the pending queue: drop the oldest unacknowledged capture.
-  if (state.pending.size >= MAX_PENDING) {
-    const oldest = state.pending.keys().next().value;
-    state.pending.delete(oldest);
-    state.skipped += 1;
-  }
-  state.pending.set(item.id, item);
-  state.lastCaptureAt = now;
-  sendToMain(EMITTED.CLIPBOARD_CAPTURED, item);
-  notifyState();
 }
 
 function startMonitor() {

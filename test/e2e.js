@@ -67,8 +67,18 @@ async function main() {
   check('app window created', !!win);
   if (!win) return finish();
 
-  win.webContents.on('console-message', (_e, level, message) => {
-    if (level >= 2) console.log('    [page console]', message);
+  win.webContents.on('console-message', (...args) => {
+    // Electron 44 deprecates the positional (event, level, message) form in
+    // favor of (event, details) with details.level as a string
+    // ('info'|'warning'|'error'|'debug'). Handle both shapes: 44.2 still
+    // passes the deprecated positional integer level.
+    const a2 = args[1];
+    const details = (a2 && typeof a2 === 'object')
+      ? a2
+      : { level: a2, message: args[2] };
+    const lvl = details.level;
+    const severe = lvl === 'warning' || lvl === 'error' || (typeof lvl === 'number' && lvl >= 2);
+    if (severe) console.log('    [page console]', details.message);
   });
   win.webContents.on('render-process-gone', (_e, details) => {
     console.error('    RENDERER CRASHED:', details.reason);
