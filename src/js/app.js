@@ -452,6 +452,12 @@ async function boot() {
   clearSkeletons();
   refreshSidebar();
   refreshDashboard();
+  // Persisted settings are live now: re-apply presentation so the restored
+  // theme and UI mode take over from the safe defaults used before init
+  // (pre-init the settings store is not loaded yet — applying only defaults
+  // there would silently drop the user's theme/mode on every restart).
+  applyTheme();
+  applyUiMode();
   App.on('entries-changed', refreshSidebar);
 
   // Clipboard engine: load persisted history, drain pending captures, and
