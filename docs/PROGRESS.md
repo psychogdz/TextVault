@@ -138,15 +138,15 @@ Architecture: Electron Desktop Application (Electron ^44.2.0, vanilla-JS rendere
 Primary Model: Local-First / Privacy-First
 
 Current Phase:
-Phase 2 — Storage Layer (next; Phase 1 verified 2026-09-03)
+Phase 10 — Testing & Release (all phases 0–10 VERIFIED; live snapshot in §43)
 
 Current Phase Status:
-Phase 1 VERIFIED; Phase 2 entry gate not yet evaluated
+Phase 10 VERIFIED (2026-09-03); release blockers resolved or dispositioned (§20)
 
 Release Status:
-CONDITIONALLY_READY (2026-09-03 — portable artifact built and smoke-tested;
-READY blocked by documented items: 2h soak, installer verification,
-Electron major upgrade — see §20)
+READY (2026-09-05 — v1.0.0 production release published; soak VERIFIED,
+installer VERIFIED, Electron 44 VERIFIED; the human screen-reader audit
+is SKIPPED / DEFERRED as non-release-gating — see §20)
 ```
 
 Baseline facts established 2026-09-03 by repository inspection and executed tests (see §42 history and §10 evidence). The v1.0.0 application is a *text/note manager* (manual save of pasted texts). The TextVault Pro clipboard-centric scope (clipboard monitoring, tray, global shortcuts, quick clipboard, snippets, collections, privacy controls) is NOT implemented in the repository at this time.
@@ -3193,6 +3193,62 @@ Next:
 Optional post-release work: the deferred human screen-reader
 (Narrator/NVDA) spoken-announcement audit, when scheduled.
 
+## 2026-09-05 (final v1.0.0 production release)
+
+Phase:
+Final production release of TextVault v1.0.0 (post-release-blocker work;
+no phase gate affected)
+
+Completed:
+- README production showcase: the committed screenshot
+  (`test-output/dashboard.png`) was regenerated from the REAL packaged
+  v1.0.0 portable build (so the version badge reads v1.0.0 — dev-mode
+  Electron reports its runtime version instead) displaying a coherent,
+  entirely FICTIONAL demo workspace (6 notes incl. a Persian RTL note
+  with color labels/pin/favorite and natural relative dates, 5 snippets,
+  1 collection, 10 clipboard items — example.com placeholders only, no
+  real personal data, no test/soak markers). Captured with the project's
+  own capturePage-equivalent mechanism; no application code was modified.
+- README fact refresh: Download section (GitHub Releases link, both
+  artifact names, requirements Windows 10/11 64-bit), current search
+  operators, current test counts (unit 71, ipc 32, e2e 155), and the
+  architecture tree updated to the as-built structure (ipc/, services/,
+  13 shared modules, release scripts). No unsupported claims added.
+- Production artifacts rebuilt and verified via `npm run release`
+  (exit 0): `TextVault-1.0.0-Portable.zip` 152.8MB (packaged exe SMOKE
+  OK) and `TextVault-1.0.0-Setup.exe` 110.2MB (ProductVersion 1.0.0;
+  silent-install VERIFY OK + clean uninstall by the pipeline).
+- Tag `v1.0.0` re-pointed to the final release commit. Justification
+  (recorded per tag-retargeting rule): the existing published tag of the
+  same name dated 2026-08-22 marked the PRE-REBUILD v1.0.0 build and its
+  GitHub Release distributed obsolete pre-rebuild artifacts under the
+  same version; the rebuilt product's package.json, release scripts,
+  installer metadata and all documentation identify 1.0.0 as the current
+  production version, and the release task forbids a version bump. The
+  old tagged commit `337c3f4` remains reachable — it is an ancestor of
+  main; no commit or history was rewritten and main was never
+  force-pushed.
+- GitHub Release `v1.0.0` published (stable, not draft/prerelease) with
+  both assets; notes state the verified test/soak evidence and explicitly
+  record the deferred human screen-reader audit as non-gating.
+
+Tests:
+- Pre-release full suite: syntax 19/19, unit 71/71, ipc 32/32,
+  e2e 155/155 — all exit 0 (2026-09-05).
+- Screenshot verification: visual review of the final PNG (correct
+  version badge, no test/soak artifacts, no raw keys).
+
+Security:
+No source changes; no new IPC surface; demo data is fictional
+(example.com / reserved ranges only); no secrets or binaries committed
+(release/ is gitignored; artifacts live only in the GitHub Release).
+
+Exit:
+TextVault v1.0.0 RELEASED.
+
+Next:
+Optional post-release work: the deferred human screen-reader audit.
+
 ---
 
 # 43. Current Progress Snapshot
@@ -3201,7 +3257,7 @@ This section must always be kept current.
 
 ```text
 Project:
-TextVault Pro (repository currently holds TextVault v1.0.0 + Phase 1 architecture)
+TextVault Pro — v1.0.0 production release (RELEASED 2026-09-05)
 
 Active Phase:
 Phase 10 — Testing & Release
@@ -3250,8 +3306,9 @@ CURRENT through Phase 10 (ARCHITECTURE.md §77 as-built; SECURITY.md §62-63;
 TESTING.md §59; ROADMAP.md reconciled; README refreshed)
 
 Current Task:
-None active — the fresh-clone check, blocker #4 disposition and the ≥2h
-soak are complete (2026-09-05; §42). Release status READY.
+None active — TextVault v1.0.0 is RELEASED (2026-09-05: final commit
+tagged `v1.0.0`, GitHub Release published with the Portable + Installer
+assets; §42 final-release entry).
 
 Next Task:
 Optional post-release work: the deferred human screen-reader

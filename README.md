@@ -8,6 +8,21 @@ Stop scattering `text.txt` files over your desktop: open TextVault, paste, save.
 
 ---
 
+## Download — v1.0.0
+
+Get it from [GitHub Releases](https://github.com/psychogdz/TextVault/releases/tag/v1.0.0):
+
+| Package | File |
+|---|---|
+| **Installer** | `TextVault-1.0.0-Setup.exe` — per-user install (no administrator required), Start Menu shortcut, clean uninstall |
+| **Portable** | `TextVault-1.0.0-Portable.zip` — extract anywhere and double-click `TextVault.exe` |
+
+Both are self-contained Windows builds with the Electron runtime bundled — no Node.js, no terminal.
+
+**Requirements:** Windows 10 or 11 (64-bit). To run from source you need [Node.js](https://nodejs.org) 18+ (22 LTS verified).
+
+---
+
 ## Highlights
 
 | Area | What you get |
@@ -25,7 +40,7 @@ Stop scattering `text.txt` files over your desktop: open TextVault, paste, save.
 | **Card color labels** | Give any text a color (Red / Orange / Yellow / Green / Blue / Purple / Pink) from the 🎨 droplet button in the editor — the card shows a colored stripe on its left edge for quick visual grouping. |
 | **Editor tags** | Type new tags, or click the **tag button** next to the tag field to pick from **all existing tags** (with usage counts) — one click adds the exact tag. |
 | **Persian + English** | Per-paragraph automatic direction detection (`unicode-bidi: plaintext`), Auto/RTL/LTR override per text, correct display of numbers, URLs, code, symbols, emojis inside RTL text — in the editor, cards, previews, search results, and exported files. |
-| **Search** | Instant title/tag search plus full-content search with highlighted snippets, across hundreds/thousands of texts. Supports `tag:python`, `is:fav`. |
+| **Search** | Instant title/tag search plus full-content search with highlighted snippets, across hundreds/thousands of texts. Supports `tag:`, `is:fav`, `is:pinned` on texts and `type:`, `collection:` filters on clipboard & snippets. |
 | **Editor** | Undo/redo, cut/copy/paste, select-all, find & replace (with match count and case toggle), word-wrap and font toggles, live char/word/line/Ln,Col stats. |
 | **Organize** | Tags with sidebar filtering, favorites (⭐ pinned to top), 6 sort orders, multi-select with bulk export/delete/favorite. |
 | **Safety** | Debounced auto-save, crash-safe drafts (restored on next launch), Trash with restore/empty, duplicate detection ("this text already exists"), save-before-quit flush. |
@@ -60,11 +75,11 @@ npm start          # launches TextVault
 
 ### Tests
 ```bash
-npm test           # syntax + unit (bidi, stats, filenames, snippets, exporters, policies, i18n) + IPC/architecture boundary checks
-npm run test:e2e   # full app end-to-end (launches the real window, exports files, screenshots)
+npm test           # syntax + unit (71) + IPC/architecture boundary checks (32)
+npm run test:e2e   # 155 end-to-end checks against the real running app
 ```
 
-The e2e suite (70 checks) covers: creating/saving/editing/deleting, Selection Mode (whole-card toggle, select all/clear/cancel, no editor opening, star-only toggling), the card Trash button (confirm/cancel/restore), export through the selection action bar (dropdown opens upward, single TXT, multi combined DOCX, multi separate PDFs), **Undo for bulk delete**, **Ctrl+M**, **tag suggestions**, **card color labels**, **title ellipsis + plaintext bidi on cards**, searching (EN + FA + tags), sorting, favorites, autosave, restart persistence, 850-line texts, 256 entries with a virtualized grid, TXT byte-exactness, DOCX/PDF generation, multi-page PDFs, and backup/import round-trips. Screenshots land in `test-output/`.
+The e2e suite drives the real app end to end: text/snippet/clipboard CRUD, the clipboard engine (capture, duplicate handling, pause, private mode, sensitive auto-skip, retention), close-to-tray with monitoring while hidden, Quick Clipboard + global shortcut, unified search (English + Persian) with measured p95 over a 10k-entry dataset, exports (TXT byte-exact, DOCX/PDF, combined/separate), versioned backup round-trips across all four stores, i18n (EN/FA RTL), accessibility invariants (landmarks, keyboard-operable cards/dialogs/switches, focus management), restart persistence, and boot/memory/performance gates. Screenshots land in `test-output/`.
 
 ---
 
@@ -149,10 +164,13 @@ TextVault.vbs              everyday launcher (no console; prefers packaged exe)
 start.bat                  setup/dev launcher (visible console)
 installer.iss              Inno Setup installer script (version from package.json)
 release/                   official distributions (portable + setup), built by `npm run release`
-electron/                  Main process (Node)
-  main.js                  window, app:// protocol, menu, IPC (dialogs, clipboard),
-                           PDF printing (hidden Chromium window), quit-flush handshake
+electron/                  Main process
+  main.js                  composition root (window, protocol, services wiring)
   preload.js               contextBridge API (window.tv) — contextIsolation on, nodeIntegration off
+  ipc/                     channel registry + boundary validation + handler registration
+  services/                window, menu, app:// protocol, exports, file dialogs,
+                           clipboard-service (monitor/pause/private/retention),
+                           tray, quick-window (Quick Clipboard), i18n-main
   exporters/
     txt.js                 exact/combined TXT builder
     docx-builder.mjs       Word generation (docx lib, per-paragraph bidi detection)
@@ -160,26 +178,33 @@ electron/                  Main process (Node)
 
 src/                       Renderer (ES modules, no framework, no build step)
   index.html               app shell (CSP: script/style/font from app: only)
+  quick.html               Quick Clipboard launcher window
   styles/                  theme tokens (dark/light/accents), base, components, views
   js/
     app.js                 bootstrap: views, sidebar, shortcuts, menus, export flow
     state.js               App singleton: entries cache, settings, persistence, pub/sub
-    core/db.js             IndexedDB layer (entries + settings stores, indexes)
-    core/entry.js          entry model: derived fields, hashing (SHA-256), validation
-    search/search.js       query parser (tag:/is:fav), scoring, snippets
+    commands.js            command palette registry
+    quick.js               Quick Clipboard window logic
+    core/                  db (IndexedDB), entry model, clipboard policy + persistence,
+                           snippets domain, backup (v2 export/import)
+    search/                query parser (tag:/is:/type:/collection:), scoring, snippets
     ui/                    icons, toasts/modals/dropdowns, virtual card grid
-    views/                 dashboard, editor, trash, settings
+    views/                 dashboard, editor (Ctrl+F find & replace), clipboard,
+                           snippets, collections, trash, settings
 
-shared/                    pure modules used by BOTH processes (also unit-tested)
-  bidi.mjs                 first-strong-character direction detection, RTL ranges
-  stats.mjs                code-point-aware char/word/line/byte counts
-  snippets.mjs             previews, match indices, highlighted snippets, HTML escaping
-  filename.mjs             Windows-safe filename sanitization + dedupe
+shared/                    13 pure modules used by BOTH processes (unit-tested):
+                           bidi, stats, snippets, filename, query, i18n, validation,
+                           clipboard-policy, sensitive, storage-migrations, backup-format,
+                           detect, text-tools
 
 test/
-  unit.mjs                 24 unit tests (incl. DOCX zip/XML inspection, PDF HTML checks)
-  e2e.js                   37 end-to-end checks against the real running app
-  fixtures.mjs             bilingual fixtures (mixed prompts, code, 850-line document)
+  syntax.cjs               renderer module syntax check
+  unit.mjs                 71 unit tests (bidi, stats, policies, i18n, backup format, …)
+  ipc-tests.mjs            32 IPC/architecture boundary checks
+  e2e.js                   155 end-to-end checks against the real running app
+  make-portable.cjs        portable build + smoke + zip
+  make-release.cjs         installer build + install/uninstall verification
+  upgrade-probe.cjs        upgrade-over-existing-install data probe
 ```
 
 **Security model:** renderer runs with `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`; all file/dialog/clipboard operations go through typed IPC handlers; the CSP blocks all remote origins.
