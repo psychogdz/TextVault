@@ -8,14 +8,22 @@ Stop scattering `text.txt` files over your desktop: open TextVault, paste, save.
 
 ---
 
-## Download — v2.0.0
+## Download — v2.1.0
 
-Get it from [GitHub Releases](https://github.com/psychogdz/TextVault/releases/tag/v2.0.0):
+Get it from [GitHub Releases](https://github.com/psychogdz/TextVault/releases/tag/v2.1.0):
 
 | Package | File |
 |---|---|
-| **Installer** | `TextVault-2.0.0-Setup.exe` — per-user install (no administrator required), Start Menu shortcut, clean uninstall |
-| **Portable** | `TextVault-2.0.0-Portable.zip` — extract anywhere and double-click `TextVault.exe` |
+| **Installer** | `TextVault-2.1.0-Setup.exe` — per-user install (no administrator required), Start Menu shortcut, clean uninstall |
+| **Portable** | `TextVault-2.1.0-Portable.zip` — extract anywhere and double-click `TextVault.exe` |
+
+**What's new in v2.1.0** — editor and interface refinements, each with regression coverage:
+
+- **Real RTL/LTR editor direction:** the editor's Auto/RTL/LTR control now changes the actual text direction (previously an unconditional per-paragraph auto-detection overrode the explicit choice, so RTL/LTR only moved alignment and the scrollbar side). Mixed Persian/English content stays correct and stored text is never modified.
+- **Five distinct UI modes** in Settings → Appearance → UI Style: Classic, Compact, Glass, Focus and Power User — genuinely different layout/density systems over the same data and features, applied live and persisted.
+- **Text Tools:** all 16 transformations audited and locked to their labels with an executable contract table plus real menu-path E2E coverage (Persian/Unicode-safe, no string reversal).
+- **Persistence fixes:** the saved theme and UI mode are re-applied after settings load, so both survive restart (a latent theme-restore bug is fixed too).
+- **Responsive polish:** the quick-capture placeholder wraps instead of clipping at narrow widths, and card previews clamp to whole lines (no sliced glyphs).
 
 **What changed in v2.0.0** — four bug fixes, each with a regression test:
 
@@ -63,8 +71,8 @@ Both are self-contained Windows builds with the Electron runtime bundled — no 
 
 The end user never needs Node.js, npm or a command prompt:
 
-- **Installer:** run `TextVault-2.0.0-Setup.exe`, install (no admin needed), launch from the Start Menu.
-- **Portable:** extract `TextVault-2.0.0-Portable.zip` (or copy the folder) and double-click **`TextVault.exe`**.
+- **Installer:** run `TextVault-2.1.0-Setup.exe`, install (no admin needed), launch from the Start Menu.
+- **Portable:** extract `TextVault-2.1.0-Portable.zip` (or copy the folder) and double-click **`TextVault.exe`**.
 
 Both are normal desktop apps with their own window and icon.
 
@@ -82,8 +90,8 @@ npm start          # launches TextVault
 
 ### Tests
 ```bash
-npm test           # syntax + unit (73) + IPC/architecture boundary checks (34)
-npm run test:e2e   # 176 end-to-end checks against the real running app
+npm test           # syntax + unit (76) + IPC/architecture boundary checks (37)
+npm run test:e2e   # 195 end-to-end checks against the real running app
 ```
 
 The e2e suite drives the real app end to end: text/snippet/clipboard CRUD, the clipboard engine (capture, duplicate handling, pause, private mode, sensitive auto-skip, retention), close-to-tray with monitoring while hidden, Quick Clipboard + global shortcut, unified search (English + Persian) with measured p95 over a 10k-entry dataset, exports (TXT byte-exact, DOCX/PDF, combined/separate), versioned backup round-trips across all four stores, i18n (EN/FA RTL), accessibility invariants (landmarks, keyboard-operable cards/dialogs/switches, focus management), restart persistence, and boot/memory/performance gates. Screenshots land in `test-output/`.
@@ -208,7 +216,7 @@ test/
   syntax.cjs               renderer module syntax check
   unit.mjs                 73 unit tests (bidi, stats, policies, i18n, backup format, …)
   ipc-tests.mjs            34 IPC/architecture boundary checks
-  e2e.js                   176 end-to-end checks against the real running app
+  e2e.js                   195 end-to-end checks against the real running app
   make-portable.cjs        portable build + smoke + zip
   make-release.cjs         installer build + install/uninstall verification
   upgrade-probe.cjs        upgrade-over-existing-install data probe
@@ -228,8 +236,8 @@ builds **both official distributions** into `release/` and verifies them:
 
 | Artifact | What it is |
 |---|---|
-| `release/TextVault-2.0.0-Portable/` (+ `.zip`) | Self-contained portable app — extract anywhere and double-click `TextVault.exe`. No admin rights, no Node.js, nothing else needed. |
-| `release/TextVault-2.0.0-Setup.exe` | Windows installer ([Inno Setup](https://jrsoftware.org/isinfo.php) — chosen because the app ships as a ready-to-copy Electron folder; a mature installer system gives us Apps & Features registration, clean uninstall and shortcuts with no extra runtime). Per-user install (no administrator required), Start Menu shortcut, optional Desktop shortcut, custom install directory, app icon and version 2.0.0. |
+| `release/TextVault-2.1.0-Portable/` (+ `.zip`) | Self-contained portable app — extract anywhere and double-click `TextVault.exe`. No admin rights, no Node.js, nothing else needed. |
+| `release/TextVault-2.1.0-Setup.exe` | Windows installer ([Inno Setup](https://jrsoftware.org/isinfo.php) — chosen because the app ships as a ready-to-copy Electron folder; a mature installer system gives us Apps & Features registration, clean uninstall and shortcuts with no extra runtime). Per-user install (no administrator required), Start Menu shortcut, optional Desktop shortcut, custom install directory, app icon and version 2.1.0. |
 
 The release pipeline (`test/make-portable.cjs` + `test/make-release.cjs` + `installer.iss`):
 1. assembles the portable app from the exact Electron runtime the app was tested with (only the production dependency `docx` included),
