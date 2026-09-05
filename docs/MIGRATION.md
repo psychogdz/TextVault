@@ -105,7 +105,11 @@ Per `docs/PROGRESS.md` §20 (authoritative):
 
 - Installer build + install/upgrade verification: RESOLVED
 - Electron major upgrade (33.4.11 → 44.2.0): RESOLVED
-- Screen-reader accessibility audit: NOT VERIFIED (WIP committed at
-  migration; automated + UIA/keyboard verification done, human
-  spoken-announcement audit still required)
-- ≥2h soak test: NOT VERIFIED / DEFERRED
+- Screen-reader accessibility audit: SKIPPED / DEFERRED (2026-09-05,
+  owner decision — intentionally removed from the release-gating
+  checklist; the accessibility implementation from commit `732f823`
+  remains in the codebase. NO human Narrator/NVDA audit was performed —
+  do not record one as done)
+- ≥2h soak test: RESOLVED 2026-09-05 — PASSED (125m14s, 32 activity
+  rounds, 0 failures, 0 crashes; data integrity verified after an app
+  restart; evidence in `docs/PROGRESS.md` §42, 2026-09-05 entry)

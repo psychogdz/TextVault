@@ -1407,17 +1407,23 @@ Record release status
 
 ```text
 Overall Release Status:
-CONDITIONALLY_READY
+READY (2026-09-05 — the ≥2h soak, the last required release blocker,
+passed with the evidence in §42; the screen-reader accessibility audit
+is SKIPPED / DEFERRED as non-release-gating work by owner decision —
+see item 4 below; no human screen-reader audit was performed or claimed)
 
 Portable Windows artifact: BUILT, SMOKE-TESTED, packaged (release/ dir, gitignored)
 Installable artifact: BUILT and VERIFIED 2026-09-04 (TextVault-1.0.0-Setup.exe
 81.1MB; fresh install + upgrade + uninstall verified — see the 2026-09-04
-blocker #2 entry)
+blocker #2 entry) and RE-VERIFIED 2026-09-05 on the post-soak tree
+(TextVault-1.0.0-Setup.exe 110.2MB; fresh-install VERIFY OK — §42)
+```
 
 Items blocking READY (all documented, none hidden):
-1. ≥2 hour long-running soak not executed (environment-bound; interim
-   evidence: 10k-item load, stress test, repeated restarts — 0 crashes,
-   0 corruption)
+1. ~~≥2 hour long-running soak not executed~~ RESOLVED 2026-09-05 — a
+   ≥2-hour soak was executed to completion and PASSED (125m14s, 32
+   activity rounds, 0 failures, 0 crashes, data integrity verified after
+   an app restart — full evidence in §42, 2026-09-05 soak entry)
 2. ~~Installer build + silent install/upgrade/uninstall verification~~
    RESOLVED 2026-09-04 — compiler discovery fixed (Inno Setup 6 was present
    system-wide all along; the script only probed the gitignored bundled
@@ -1430,7 +1436,16 @@ Items blocking READY (all documented, none hidden):
    the Promise-based clipboard API; full suite 147/147 green and the
    installer + upgrade flows re-verified on the new runtime (see the
    2026-09-04 blocker #3 entry)
-4. Full screen-reader accessibility audit
+4. ~~Full screen-reader accessibility audit~~
+   SKIPPED / DEFERRED 2026-09-05 (owner decision) — intentionally removed
+   from the release-gating checklist. The accessibility IMPLEMENTATION
+   (commit 732f823: keyboard/screen-reader-operable dashboard cards,
+   named dialogs with focus trap/restoration, operable switches,
+   landmarks, localized aria-labels, focus-visible rings) REMAINS in the
+   codebase and is covered by 8 automated a11y-invariant E2E checks. A
+   HUMAN screen-reader (Narrator/NVDA spoken-announcement) audit was NOT
+   performed and must not be claimed as done; it is deferred as
+   non-release-gating follow-up work.
 5. ~~Remaining i18n deep-string sweep (editor internals, export dialogs)~~
    RESOLVED 2026-09-04 — sweep completed and verified (evidence in §42,
    2026-09-04 entry: EN/FA E2E 132/132 incl. dynamic-string and
@@ -3086,6 +3101,98 @@ Limitations (why the blocker stays NOT VERIFIED):
   call app.setAccessibilitySupportEnabled(true) — deliberately NOT done
   (perf trade-off, not required by the audit)
 
+## 2026-09-05 (fresh-clone check, blocker #4 disposition, ≥2h soak — release blocker #1)
+
+Phase:
+Post-Phase-10 release-blocker work on a FRESH clone of origin/main
+(HEAD 7a97e93 = origin/main, clean tree; GitHub as source of truth).
+No product source was modified in this task — documentation only.
+
+Completed:
+- Fresh clone verified: branch main, clean tree, HEAD == origin/main;
+  all previously completed work confirmed present (i18n, Ctrl+F, Windows
+  E2E cleanup hardening, installer discovery/upgrade verification,
+  Electron 44.2.0, accessibility implementation from 732f823, tests,
+  release scripts, docs). Nothing missing.
+- Screen-reader accessibility audit (blocker #4): SKIPPED / DEFERRED by
+  owner decision — removed from the release-gating checklist (§20 item
+  4). The accessibility IMPLEMENTATION remains in the codebase. NO human
+  Narrator/NVDA spoken-announcement audit was performed; none is claimed.
+- ≥2h soak test (blocker #1) executed to completion and PASSED:
+  * Method: the REAL app (electron/main.js) on a dedicated soak profile
+    (TEXTVAULT_USER_DATA), visible desktop window, real system tray and
+    real OS clipboard, driven by a soak driver kept OUTSIDE the repo via
+    the app's own ?e2e=1 test hook (the same mechanism the E2E suite
+    uses). No repo file was modified for the soak.
+  * Window: start 2026-09-05T03:51:33Z, end 05:56:47Z = 125m14s (≥120m);
+    32 activity rounds every ~4 min; independent 60s process monitor
+    (126 samples, zero process dropouts inside the soak window).
+  * Per round: clipboard capture (rotating EN / FA / mixed synthetic
+    markers, capture→visible latency measured), dashboard search (EN,
+    Persian 'سوزن', no-match), editor open→edit→autosave→close→reopen
+    with byte-exact round-trip (EN and FA/RTL notes alternately), Ctrl+F
+    (open, live counter, forward/backward navigation with wrap, no-match
+    '0 of 0', Escape close, content unchanged, save-state clean). Every
+    2nd round: Quick Clipboard open/search/copy-on-select/close. Every
+    6th: close-to-tray, capture-verified-WHILE-HIDDEN, reopen. Every
+    5th: language FA↔EN with RTL/LTR + translated-chrome asserts.
+    Additionally 12 external cross-process clipboard writes (PowerShell)
+    at ~9-min intervals.
+  * Stability: 0 renderer crashes, 0 child-process crashes, 0 round
+    failures, renderer ping 0–1ms every round (no event-loop starvation),
+    no hangs; app responsive at every step.
+  * Memory: renderer JS heap 2.2–2.6MB flat across all rounds; main
+    process WS 116→126MB over 2h05m (≈+4.7MB/h; private memory +2MB);
+    GPU and renderer WS flat-to-down; no leak signature (bounded,
+    consistent with normal allocator variance at 55 stored items).
+  * CPU: main process 14.6s total over 125 min (≈0.2% average); no
+    runaway processes.
+  * Latency: clipboard capture 100–526ms (bounded by the documented
+    300ms poll), no trend; search/editor/find/quick step wall-times flat
+    across rounds (no progressive degradation).
+  * Data integrity: end-of-soak in-suite checks all passed; after a full
+    app restart, the persisted stores were re-verified: ALL synthetic
+    markers present (3 seed + 32 per-round + 12 external + 5
+    hidden-window = 52), both notes byte-exact incl. all 32 appended
+    soak edits (EN and FA/RTL), snippet byte-exact, 55 clipboard items /
+    0 corrupt-empty / 0 unexpected sensitive flags / 55 unique contents.
+    3 non-synthetic items captured during the window from OTHER
+    processes' clipboard use — expected clipboard-manager behavior.
+  * Driver tooling note (stated, not hidden): a soak-driver argument-order
+    slip routed the quick/tray/lang detail payloads and the per-round
+    marker list into seeds.json instead of the rounds log; all pass/fail
+    assertions were unaffected, and the post-restart prefix sweep over
+    the FULL persisted history was performed as compensation.
+- Final regression on the post-soak tree, all exit 0 (below), including
+  npm run release re-verification (portable + installer + fresh-install
+  VERIFY OK + clean uninstall).
+
+Tests:
+- Baseline (fresh clone, before soak): node test/syntax.cjs 19/19;
+  npm test unit 71/71 + ipc/architecture 32/32; npm run test:e2e 155/155;
+  TEXTVAULT_SMOKE=1 SMOKE OK boot=432ms — all exit 0.
+- Soak: PASS as detailed above (artifacts: soak-rounds.jsonl, 60s
+  monitor.log, soak-summary.json, soak-dump.json + seeds.json in the
+  external soak-logs directory, outside the repository).
+- Final (post-soak): node test/syntax.cjs 19/19; npm test 71/71 + 32/32;
+  npm run test:e2e 155/155; npm run release exit 0 (portable SMOKE OK,
+  zip built, TextVault-1.0.0-Setup.exe 110.2MB, silent install VERIFY OK,
+  silent uninstall clean).
+
+Security:
+No source changes; no new IPC surface; no dependency changes; no secrets
+in any commit (soak artifacts and logs live outside the repository and
+contain synthetic content only).
+
+Exit:
+Release blocker #1 (≥2h soak) RESOLVED. Blocker #4 (screen-reader audit)
+SKIPPED / DEFERRED — non-gating. No required release blocker remains;
+release status READY (see §20).
+
+Next:
+Optional post-release work: the deferred human screen-reader
+(Narrator/NVDA) spoken-announcement audit, when scheduled.
+
 ---
 
 # 43. Current Progress Snapshot
@@ -3109,15 +3216,16 @@ Phase Exit Gate:
 Phase 10 PASSED (2026-09-03 — evidence in §20)
 
 Overall Release Status:
-CONDITIONALLY_READY (see §20 for the explicit blocker list; blocker #5
-i18n deep sweep RESOLVED 2026-09-04)
+READY (2026-09-05 — §20: blocker #1 soak RESOLVED with evidence; blocker
+#4 screen-reader audit SKIPPED / DEFERRED as non-gating; no required
+release blocker remains)
 
 Last Verified Test:
 node test/syntax.cjs 19/19 + npm test (unit 71/71 + ipc 32/32) +
-npm run test:e2e (147/147) + npm run release (portable SMOKE OK 440ms,
-zip 152.8MB, installer 110.2MB, fresh-install VERIFY OK) +
-node test/make-release.cjs upgrade (UPGRADE OK, profile byte-identical
-across A→B) — all exit 0 on Electron 44.2.0 (2026-09-04)
+npm run test:e2e (155/155) + npm run release (portable + installer
+110.2MB + fresh-install VERIFY OK) — all exit 0 on Electron 44.2.0
+(2026-09-05, post-soak tree); ≥2h soak PASSED (125m14s, 32 rounds,
+0 failures — §42 2026-09-05 entry)
 
 Security Status:
 STRONG — SECURITY.md §53 checklist executed (§63); findings resolved or
@@ -3127,7 +3235,8 @@ Phase 10 decision)
 Performance Status:
 MEASURED — boot 568ms/239ms (≤2s PASS), capture persist 0.6–1.5ms (≤100ms
 PASS), search p95 12.9ms @10k (≤100ms PASS), quick clipboard 14–15ms
-(≤300ms PASS), memory bounded @10k; ≥2h soak NOT RUN (environment)
+(≤300ms PASS), memory bounded @10k; ≥2h soak VERIFIED 2026-09-05
+(125m14s, 32 rounds — see §42)
 
 Data Integrity Status:
 VERIFIED — schema migrations preserve data (tested); all multi-record
@@ -3141,16 +3250,13 @@ CURRENT through Phase 10 (ARCHITECTURE.md §77 as-built; SECURITY.md §62-63;
 TESTING.md §59; ROADMAP.md reconciled; README refreshed)
 
 Current Task:
-Screen-reader accessibility audit — IN PROGRESS (fixes implemented and
-verified via E2E 155/155 + UIA tree + keyboard-only pass with Narrator
-running; human spoken-announcement audit still required — see the
-2026-09-05 WIP entry). State preserved at the 2026-09-05 migration
-backup.
+None active — the fresh-clone check, blocker #4 disposition and the ≥2h
+soak are complete (2026-09-05; §42). Release status READY.
 
 Next Task:
-Finish blocker #4: human screen-reader (Narrator/NVDA) spoken-
-announcement pass over dashboard browse mode, toasts, dialogs and the
-find bar; then the deferred ≥2h soak test
+Optional post-release work: the deferred human screen-reader
+(Narrator/NVDA) spoken-announcement audit (SKIPPED / DEFERRED —
+non-release-gating by owner decision).
 ```
 
 The agent must update this snapshot whenever the project state changes.
