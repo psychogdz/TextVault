@@ -375,6 +375,10 @@ export async function closeEditor(skipSave = false) {
   clearDraft(current.entry.id);
   current = null;
   App.setView('dashboard');
+  // focus restoration: the editor textarea is being hidden, so keyboard/SR
+  // focus would otherwise fall to <body> — land it on the library view.
+  const dash = document.getElementById('view-dashboard');
+  if (dash) dash.focus({ preventScroll: true });
 }
 
 /* ================= saving ================= */

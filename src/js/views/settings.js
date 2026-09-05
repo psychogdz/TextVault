@@ -86,11 +86,11 @@ export function initSettings() {
         </div>
         <div class="setting-row">
           <div><div class="sr-label" data-i18n="set.wrap">Word wrap</div><div class="sr-desc" data-i18n="set.wrap.d">Wrap long lines instead of scrolling sideways</div></div>
-          <div class="switch" id="set-wrap" role="switch"></div>
+          <div class="switch" id="set-wrap" role="switch" tabindex="0" aria-checked="false" aria-label="Word wrap" data-i18n-aria="set.wrap"></div>
         </div>
         <div class="setting-row">
           <div><div class="sr-label" data-i18n="set.autosave">Auto-save</div><div class="sr-desc" data-i18n="set.autosave.d">Save automatically while you type</div></div>
-          <div class="switch" id="set-autosave" role="switch"></div>
+          <div class="switch" id="set-autosave" role="switch" tabindex="0" aria-checked="false" aria-label="Auto-save" data-i18n-aria="set.autosave"></div>
         </div>
         <div class="setting-row">
           <div><div class="sr-label" data-i18n="set.asDelay">Auto-save delay</div><div class="sr-desc" data-i18n="set.asDelay.d">How long to wait after you stop typing</div></div>
@@ -106,7 +106,7 @@ export function initSettings() {
         <div class="settings-sub" data-i18n="set.clipboard.sub">History capture and privacy basics.</div>
         <div class="setting-row">
           <div><div class="sr-label" data-i18n="set.clip.monitor">Clipboard monitoring</div><div class="sr-desc" data-i18n="set.clip.monitor.d">Save a copy of everything you copy</div></div>
-          <div class="switch" id="set-clip-monitor" role="switch"></div>
+          <div class="switch" id="set-clip-monitor" role="switch" tabindex="0" aria-checked="false" aria-label="Clipboard monitoring" data-i18n-aria="set.clip.monitor"></div>
         </div>
         <div class="setting-row">
           <div><div class="sr-label" data-i18n="set.clip.dup">Duplicate copies</div><div class="sr-desc" data-i18n="set.clip.dup.d">Re-copying an item moves it to the top</div></div>
@@ -141,11 +141,11 @@ export function initSettings() {
         </div>
         <div class="setting-row">
           <div><div class="sr-label" data-i18n="set.clip.skipSens">Skip sensitive captures</div><div class="sr-desc" data-i18n="set.clip.skipSens.d">Never save clipboard content that looks like a password, key or token</div></div>
-          <div class="switch" id="set-clip-skip-sens" role="switch"></div>
+          <div class="switch" id="set-clip-skip-sens" role="switch" tabindex="0" aria-checked="false" aria-label="Skip sensitive captures" data-i18n-aria="set.clip.skipSens"></div>
         </div>
         <div class="setting-row">
           <div><div class="sr-label" data-i18n="set.clip.private">Private mode (this session)</div><div class="sr-desc" data-i18n="set.clip.private.d">Temporarily discard everything you copy — nothing is saved while on</div></div>
-          <div class="switch" id="set-clip-private" role="switch"></div>
+          <div class="switch" id="set-clip-private" role="switch" tabindex="0" aria-checked="false" aria-label="Private mode (this session)" data-i18n-aria="set.clip.private"></div>
         </div>
         <div class="setting-row">
           <div><div class="sr-label" data-i18n="set.clip.shortcut">Quick Clipboard shortcut</div><div class="sr-desc" data-i18n="set.clip.shortcut.d">Global shortcut to open quick clipboard</div></div>
@@ -232,6 +232,14 @@ export function initSettings() {
     dataPath: document.getElementById('set-datapath'),
     version: document.getElementById('set-version'),
   };
+
+  // role="switch" divs are divs — give them native-button keyboard behavior
+  // (Enter/Space toggle via the same click handler the pointer uses).
+  view.querySelectorAll('[role="switch"]').forEach((sw) => {
+    sw.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sw.click(); }
+    });
+  });
 
   els.themeBtns.forEach((btn) => btn.addEventListener('click', () => {
     App.settings.theme = btn.dataset.themeOpt;
@@ -434,15 +442,20 @@ export function render() {
   els.fontSize.value = App.settings.editorFontSize;
   els.fontSizeVal.textContent = App.settings.editorFontSize + 'px';
   els.wrap.classList.toggle('on', App.settings.editorWrap);
+  els.wrap.setAttribute('aria-checked', String(!!App.settings.editorWrap));
   els.autoSave.classList.toggle('on', App.settings.autoSave);
+  els.autoSave.setAttribute('aria-checked', String(!!App.settings.autoSave));
   els.asDelay.value = App.settings.autoSaveDelay;
   els.asDelayVal.textContent = App.settings.autoSaveDelay + 'ms';
   els.clipMonitor.classList.toggle('on', App.settings.clipboard?.monitorEnabled !== false);
+  els.clipMonitor.setAttribute('aria-checked', String(App.settings.clipboard?.monitorEnabled !== false));
   els.clipDup.value = App.settings.clipboard?.duplicatePolicy || 'top';
   els.clipMax.value = String(App.settings.clipboard?.maxItems || 1000);
   els.clipRetention.value = String(App.settings.clipboard?.retentionDays ?? 0);
   els.clipSkipSens.classList.toggle('on', !!App.settings.clipboard?.autoClearSensitive);
+  els.clipSkipSens.setAttribute('aria-checked', String(!!App.settings.clipboard?.autoClearSensitive));
   els.clipPrivate.classList.toggle('on', !!getMonitorState().private);
+  els.clipPrivate.setAttribute('aria-checked', String(!!getMonitorState().private));
   els.clipShortcut.value = App.settings.clipboard?.quickShortcut || 'Control+Shift+V';
   els.closeBehavior.value = App.settings.closeBehavior || 'ask';
   els.langBtns.forEach((b) => b.classList.toggle('active', App.settings.language === b.dataset.langOpt));

@@ -143,12 +143,12 @@ function renderRow(item) {
       ${type !== 'text' ? `<span class="meta-dot"></span><span class="clip-type">${type}</span>` : ''}
     </div>
     <div class="clip-actions">
-      ${type === 'url' ? `<button class="icon-btn icon-btn-sm" data-act="open" title="${t('open.url')}">${icon('external', 14)}</button>` : ''}
-      <button class="icon-btn icon-btn-sm" data-act="copy" title="${t('copy')}">${icon('copy', 14)}</button>
-      <button class="icon-btn icon-btn-sm ${item.isPinned ? 'active' : ''}" data-act="pin" title="${item.isPinned ? t('unpin') : t('pin')}">${icon('pin', 14)}</button>
-      <button class="icon-btn icon-btn-sm ${item.isFavorite ? 'fav-on' : ''}" data-act="fav" title="${item.isFavorite ? t('unfavorite') : t('favorite')}">${icon(item.isFavorite ? 'star-filled' : 'star', 14)}</button>
-      <button class="icon-btn icon-btn-sm" data-act="coll" title="${t('collections.btn')}">${icon('layers', 14)}</button>
-      <button class="icon-btn icon-btn-sm" data-act="del" title="${t('delete')}">${icon('trash', 14)}</button>
+      ${type === 'url' ? `<button class="icon-btn icon-btn-sm" data-act="open" title="${t('open.url')}" aria-label="${t('open.url')}">${icon('external', 14)}</button>` : ''}
+      <button class="icon-btn icon-btn-sm" data-act="copy" title="${t('copy')}" aria-label="${t('copy')}">${icon('copy', 14)}</button>
+      <button class="icon-btn icon-btn-sm ${item.isPinned ? 'active' : ''}" data-act="pin" title="${item.isPinned ? t('unpin') : t('pin')}" aria-label="${item.isPinned ? t('unpin') : t('pin')}">${icon('pin', 14)}</button>
+      <button class="icon-btn icon-btn-sm ${item.isFavorite ? 'fav-on' : ''}" data-act="fav" title="${item.isFavorite ? t('unfavorite') : t('favorite')}" aria-label="${item.isFavorite ? t('unfavorite') : t('favorite')}">${icon(item.isFavorite ? 'star-filled' : 'star', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="coll" title="${t('collections.btn')}" aria-label="${t('collections.btn')}">${icon('layers', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="del" title="${t('delete')}" aria-label="${t('delete')}">${icon('trash', 14)}</button>
     </div>`;
 
   const openBtn = row.querySelector('[data-act="open"]');

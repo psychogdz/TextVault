@@ -72,11 +72,11 @@ function renderSnippetRow(s) {
       <span class="snippet-tags"></span>
     </div>
     <div class="clip-actions">
-      <button class="icon-btn icon-btn-sm" data-act="copy" title="${t('sn.copyTip')}">${icon('copy', 14)}</button>
-      <button class="icon-btn icon-btn-sm ${s.isFavorite ? 'fav-on' : ''}" data-act="fav" title="${s.isFavorite ? t('unfavorite') : t('favorite')}">${icon(s.isFavorite ? 'star-filled' : 'star', 14)}</button>
-      <button class="icon-btn icon-btn-sm" data-act="edit" title="${t('edit')}">${icon('edit', 14)}</button>
-      <button class="icon-btn icon-btn-sm" data-act="coll" title="${t('collections.btn')}">${icon('layers', 14)}</button>
-      <button class="icon-btn icon-btn-sm" data-act="del" title="${t('delete')}">${icon('trash', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="copy" title="${t('sn.copyTip')}" aria-label="${t('sn.copyTip')}">${icon('copy', 14)}</button>
+      <button class="icon-btn icon-btn-sm ${s.isFavorite ? 'fav-on' : ''}" data-act="fav" title="${s.isFavorite ? t('unfavorite') : t('favorite')}" aria-label="${s.isFavorite ? t('unfavorite') : t('favorite')}">${icon(s.isFavorite ? 'star-filled' : 'star', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="edit" title="${t('edit')}" aria-label="${t('edit')}">${icon('edit', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="coll" title="${t('collections.btn')}" aria-label="${t('collections.btn')}">${icon('layers', 14)}</button>
+      <button class="icon-btn icon-btn-sm" data-act="del" title="${t('delete')}" aria-label="${t('delete')}">${icon('trash', 14)}</button>
     </div>`;
   row.querySelector('.snippet-title').textContent = s.title || t('exp.untitled');
   row.querySelector('.clip-preview').textContent = s.content.length > 200 ? s.content.slice(0, 200) + '…' : s.content;

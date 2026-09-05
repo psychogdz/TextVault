@@ -138,6 +138,10 @@ kbd, .kbd {
 .nav-item:hover { background: var(--surface-2); color: var(--text); }
 .nav-item.active { background: var(--accent-soft); color: var(--accent); }
 .nav-item.active .nav-icon, .nav-item.active .nav-icon-sm { color: var(--accent); }
+/* keyboard focus visibility for elements whose focusability is not native
+   (nav buttons already inherit .btn-style rings where applicable) */
+.nav-item:focus-visible,
+.nav-item[aria-current]:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
 .nav-icon { display: inline-grid; place-items: center; width: 20px; height: 20px; flex-shrink: 0; }
 .nav-icon-sm { display: inline-grid; place-items: center; width: 15px; height: 15px; color: var(--text-3); }

@@ -31,7 +31,7 @@
       <kbd class="kbd-accent">Ctrl N</kbd>
     </button>
 
-    <nav class="sidebar-nav" id="sidebar-nav">
+    <nav class="sidebar-nav" id="sidebar-nav" aria-label="Sections" data-i18n-aria="aria.navSections">
       <button class="nav-item" data-nav="clipboard">
         <span class="nav-icon" data-icon="clipboard"></span>
         <span class="nav-label" data-i18n="nav.clipboard">Clipboard</span>
@@ -84,18 +84,18 @@
   </aside>
 
   <!-- ======================= Main column ======================= -->
-  <div class="main">
+  <main class="main">
 
     <!-- Topbar -->
     <header class="topbar" id="topbar">
       <div class="searchbox">
         <span class="search-icon" data-icon="search"></span>
-        <input id="search-input" type="text" placeholder="Search titles, content, tags…" data-i18n-ph="search.placeholder" autocomplete="off" spellcheck="false">
+        <input id="search-input" type="text" placeholder="Search titles, content, tags…" aria-label="Search" data-i18n-ph="search.placeholder" data-i18n-aria="search.placeholder" autocomplete="off" spellcheck="false">
         <kbd class="kbd">Ctrl F</kbd>
         <button class="icon-btn icon-btn-sm search-clear hidden" id="search-clear" title="Clear" data-i18n-title="aria.clear" data-icon-x></button>
       </div>
       <div class="topbar-right">
-        <button class="icon-btn" id="btn-select-mode" title="Selection mode — click cards to select them" data-i18n-title="select.mode"></button>
+        <button class="icon-btn" id="btn-select-mode" title="Selection mode — click cards to select them" data-i18n-title="select.mode" data-i18n-aria="select.mode"></button>
         <div class="select-wrap" id="sort-wrap" title="Sort" data-i18n-title="sort.label">
           <span class="select-icon" data-icon="sort"></span>
           <select id="sort-select" aria-label="Sort by" data-i18n-aria="aria.sortBy">
@@ -112,10 +112,10 @@
     </header>
 
     <!-- View: Dashboard -->
-    <section class="view view-dashboard" id="view-dashboard">
+    <section class="view view-dashboard" id="view-dashboard" tabindex="-1">
       <div class="quickcapture card-raised" id="quickcapture">
         <span class="qc-icon" data-icon="clipboard"></span>
-        <textarea id="qc-input" class="qc-input" rows="1" placeholder="Quick capture — paste text here, then press Ctrl+Enter to save…" data-i18n-ph="qc.placeholder" spellcheck="false"></textarea>
+        <textarea id="qc-input" class="qc-input" rows="1" placeholder="Quick capture — paste text here, then press Ctrl+Enter to save…" aria-label="Quick capture" data-i18n-ph="qc.placeholder" data-i18n-aria="qc.placeholder" spellcheck="false"></textarea>
         <div class="qc-actions">
           <button class="btn btn-ghost btn-sm" id="qc-paste" title="Paste from clipboard" data-i18n-title="qc.pasteTip"><span class="btn-icon" data-icon="download"></span><span data-i18n="qc.paste">Paste</span></button>
           <button class="btn btn-accent btn-sm" id="qc-save"><span class="btn-icon" data-icon="save"></span><span data-i18n="qc.save">Save</span>&nbsp;<kbd class="kbd-accent">Ctrl ↵</kbd></button>
@@ -157,7 +157,7 @@
       </div>
       <div class="clip-search">
         <span class="search-icon" data-icon="search"></span>
-        <input id="clip-search-input" type="text" placeholder="Search clipboard history…" data-i18n-ph="clip.search" autocomplete="off" spellcheck="false">
+        <input id="clip-search-input" type="text" placeholder="Search clipboard history…" aria-label="Search clipboard history" data-i18n-ph="clip.search" data-i18n-aria="clip.search" autocomplete="off" spellcheck="false">
       </div>
       <div class="clip-list" id="clip-list"></div>
       <div class="empty-state hidden" id="clipboard-empty"></div>
@@ -173,7 +173,7 @@
       </div>
       <div class="clip-search">
         <span class="search-icon" data-icon="search"></span>
-        <input id="snippet-search-input" type="text" placeholder="Search snippets…" data-i18n-ph="sn.search" autocomplete="off" spellcheck="false">
+        <input id="snippet-search-input" type="text" placeholder="Search snippets…" aria-label="Search snippets" data-i18n-ph="sn.search" data-i18n-aria="sn.search" autocomplete="off" spellcheck="false">
       </div>
       <div class="clip-list" id="snippet-list"></div>
       <div class="empty-state hidden" id="snippets-empty"></div>
@@ -193,10 +193,10 @@
     <!-- View: Editor -->
     <section class="view view-editor hidden" id="view-editor">
       <div class="editor-top">
-        <button class="icon-btn" id="editor-back" title="Back (Esc)" data-i18n-title="ed.back" data-icon="arrow-left"></button>
+        <button class="icon-btn" id="editor-back" title="Back (Esc)" data-i18n-title="ed.back" data-i18n-aria="ed.back" data-icon="arrow-left"></button>
         <div class="editor-titlewrap">
           <input id="editor-title" class="editor-title" placeholder="Untitled" data-i18n-ph="exp.untitled" autocomplete="off" spellcheck="false">
-          <div class="editor-save-state" id="save-state"><span class="dot"></span><span class="txt" data-i18n="ed.saveState.saved">Saved</span></div>
+          <div class="editor-save-state" id="save-state" aria-live="polite"><span class="dot"></span><span class="txt" data-i18n="ed.saveState.saved">Saved</span></div>
         </div>
         <div class="editor-actions">
           <div class="seg" id="dir-seg" title="Text direction" data-i18n-title="ed.dir">
@@ -204,16 +204,16 @@
             <button data-dir="rtl">RTL</button>
             <button data-dir="ltr">LTR</button>
           </div>
-          <button class="icon-btn" id="btn-color" title="Card color label" data-i18n-title="ed.color"></button>
-          <button class="icon-btn" id="btn-find-toggle" title="Find & Replace (Ctrl+F)" data-i18n-title="ed.findReplace"></button>
-          <button class="icon-btn" id="btn-copy-all" title="Copy all (Ctrl+Shift+C)" data-i18n-title="ed.copyAllTitle"></button>
-          <button class="icon-btn" id="btn-fav" title="Favorite" data-i18n-title="favorite"></button>
+          <button class="icon-btn" id="btn-color" title="Card color label" data-i18n-title="ed.color" data-i18n-aria="ed.color"></button>
+          <button class="icon-btn" id="btn-find-toggle" title="Find & Replace (Ctrl+F)" data-i18n-title="ed.findReplace" data-i18n-aria="ed.findReplace"></button>
+          <button class="icon-btn" id="btn-copy-all" title="Copy all (Ctrl+Shift+C)" data-i18n-title="ed.copyAllTitle" data-i18n-aria="ed.copyAllTitle"></button>
+          <button class="icon-btn" id="btn-fav" title="Favorite" data-i18n-title="favorite" data-i18n-aria="favorite"></button>
           <div class="menu-wrap">
-            <button class="icon-btn" id="btn-export" title="Export (Ctrl+E)" data-i18n-title="ed.exportTitle"></button>
+            <button class="icon-btn" id="btn-export" title="Export (Ctrl+E)" data-i18n-title="ed.exportTitle" data-i18n-aria="ed.exportTitle"></button>
             <div class="dropdown hidden" id="export-menu"></div>
           </div>
           <div class="menu-wrap">
-            <button class="icon-btn" id="btn-more" title="More" data-i18n-title="ed.more"></button>
+            <button class="icon-btn" id="btn-more" title="More" data-i18n-title="ed.more" data-i18n-aria="ed.more"></button>
             <div class="dropdown hidden" id="more-menu"></div>
           </div>
         </div>
@@ -239,7 +239,7 @@
 
       <div class="editor-tags-row">
         <div class="chips" id="editor-tags"></div>
-        <input id="tag-input" class="tag-input" placeholder="Add tag…" data-i18n-ph="tag.add" autocomplete="off" spellcheck="false">
+        <input id="tag-input" class="tag-input" placeholder="Add tag…" aria-label="Add tag" data-i18n-ph="tag.add" data-i18n-aria="tag.add" autocomplete="off" spellcheck="false">
         <button class="icon-btn icon-btn-sm" id="btn-tag-suggest" title="Pick from existing tags" data-i18n-title="ed.tagSuggest"></button>
         <div class="tag-suggest hidden" id="tag-suggest"></div>
       </div>
@@ -277,7 +277,7 @@
 
     <!-- View: Settings -->
     <section class="view view-settings hidden" id="view-settings"></section>
-  </div>
+  </main>
 </div>
 
 <!-- Overlay roots -->

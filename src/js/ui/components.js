@@ -8,6 +8,9 @@ export function toast(message, { type = 'ok', duration = 2600, action = null } =
   const root = document.getElementById('toast-root');
   const el = document.createElement('div');
   el.className = `toast toast-${type}`;
+  // status → polite live region (success/info); alert → assertive (errors).
+  // Toast texts are generic status lines and never contain clipboard content.
+  el.setAttribute('role', type === 'error' ? 'alert' : 'status');
   const iconName = type === 'ok' ? 'check' : type === 'error' ? 'alert' : 'info';
   el.innerHTML = `<span class="toast-icon">${icon(iconName, 16)}</span><span class="toast-msg"></span>`;
   el.querySelector('.toast-msg').textContent = message;
@@ -40,6 +43,8 @@ export const toastInfo = (msg, opts) => toast(msg, { ...opts, type: 'info' });
 
 /* ---------------- Modal / confirm ---------------- */
 
+let modalSeq = 0; // unique ids for dialog accessible names
+
 export function confirmDialog({
   title = null,
   message = '',
@@ -50,11 +55,12 @@ export function confirmDialog({
 }) {
   return new Promise((resolve) => {
     const root = document.getElementById('modal-root');
+    const opener = document.activeElement; // restore focus when the dialog closes
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
     backdrop.innerHTML = `
-      <div class="modal${danger ? ' danger' : ''}" role="dialog" aria-modal="true">
-        <h3 class="modal-title"></h3>
+      <div class="modal${danger ? ' danger' : ''}" role="dialog" aria-modal="true" aria-labelledby="modal-title-${++modalSeq}">
+        <h3 class="modal-title" id="modal-title-${modalSeq}"></h3>
         <div class="modal-body"></div>
         <div class="modal-actions">
           <button class="btn btn-ghost" data-act="cancel"></button>
@@ -76,11 +82,30 @@ export function confirmDialog({
     const close = (result) => {
       document.removeEventListener('keydown', onKey, true);
       backdrop.remove();
+      // focus restoration: never leave keyboard/SR users stranded on <body>
+      if (opener && opener.isConnected && typeof opener.focus === 'function') opener.focus();
       resolve(result);
     };
     const onKey = (e) => {
       if (e.key === 'Escape') { e.stopPropagation(); close(false); }
-      if (e.key === 'Enter') { e.stopPropagation(); close(true); }
+      // Enter confirms — but never hijack Enter pressed on a focused button
+      // (pressing Enter on "Cancel" must actuate "Cancel", not "Confirm").
+      if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) { e.stopPropagation(); close(true); }
+      // minimal focus containment: aria-modal hides the background from AT,
+      // so keyboard focus must stay inside the dialog as well
+      if (e.key === 'Tab') {
+        const focusables = [...backdrop.querySelectorAll('button')];
+        if (!focusables.length) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && (document.activeElement === first || !backdrop.contains(document.activeElement))) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && (document.activeElement === last || !backdrop.contains(document.activeElement))) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
     okBtn.addEventListener('click', () => close(true));
     cancelBtn.addEventListener('click', () => close(false));
@@ -145,14 +170,35 @@ export function showDropdown(anchorEl, items, { align = 'right' } = {}) {
   }
   dd.classList.remove('hidden');
 
+  // keyboard/SR support: expose the popup state on the trigger, move focus
+  // into the menu, close on Escape, and always restore focus to the trigger.
+  // Items stay native <button>s (Enter/Space work natively; Tab walks them).
+  if (anchorEl && anchorEl.isConnected) {
+    anchorEl.setAttribute('aria-haspopup', 'menu');
+    anchorEl.setAttribute('aria-expanded', 'true');
+  }
   const close = () => {
     dd.remove();
     document.removeEventListener('mousedown', onDocMouseDown, true);
+    document.removeEventListener('keydown', onKey, true);
+    if (anchorEl && anchorEl.isConnected) {
+      anchorEl.setAttribute('aria-expanded', 'false');
+      if (document.activeElement === document.body || (dd.contains && dd.contains(document.activeElement))) anchorEl.focus();
+    }
+  };
+  const onKey = (e) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      close();
+    }
   };
   const onDocMouseDown = (e) => {
     if (!dd.contains(e.target) && e.target !== anchorEl && !(anchorEl && anchorEl.contains(e.target))) close();
   };
   document.addEventListener('mousedown', onDocMouseDown, true);
+  document.addEventListener('keydown', onKey, true);
+  const firstItem = dd.querySelector('button');
+  if (firstItem) firstItem.focus();
   return close;
 }
 

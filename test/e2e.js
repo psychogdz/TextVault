@@ -97,7 +97,10 @@ async function main() {
     return false;
   };
   check('app boots without errors', await waitHook());
-  const js = (code) => win.webContents.executeJavaScript(code, true);
+  const js = (code) => win.webContents.executeJavaScript(code, true).catch((err) => {
+    console.error('    [js fail]', String(err.message || err).slice(0, 200), '| code:', code.slice(0, 150).replace(/\s+/g, ' '));
+    throw err;
+  });
   const { ALL_FIXTURES } = await import(pathToFileURL(path.join(ROOT, 'test/fixtures.mjs')).href);
 
   /* ---------- seed fixtures through the real state layer ---------- */
@@ -1006,6 +1009,108 @@ async function main() {
   })()`);
   check('Help menu "About" scrolls to the about card',
     abJump && abJump.atMax && abJump.heading === 'About', JSON.stringify(abJump));
+  await js(`window.__TV_TEST__.App.setView('dashboard')`);
+
+  /* ---------- accessibility invariants (SR/keyboard surfaces) ---------- */
+  await sleep(250);
+  const a11y = await js(`(() => {
+    const card = document.querySelector('#grid-inner .card');
+    return {
+      main: !!document.querySelector('main.main'),
+      navLabel: document.getElementById('sidebar-nav')?.getAttribute('aria-label') || '',
+      cardRole: card?.getAttribute('role'),
+      cardTab: card?.getAttribute('tabindex'),
+      cardName: (card?.getAttribute('aria-label') || '').length > 0,
+    };
+  })()`);
+  check('a11y: main landmark, named nav, cards are named keyboard buttons',
+    a11y.main && !!a11y.navLabel && a11y.cardRole === 'button' && a11y.cardTab === '0' && a11y.cardName, JSON.stringify(a11y));
+
+  // keyboard: Enter on a card opens the editor
+  await js(`(() => {
+    const card = document.querySelector('#grid-inner .card');
+    card.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  })()`);
+  await sleep(300);
+  check('a11y: Enter on a card opens the editor', (await js(`window.__TV_TEST__.App.view`)) === 'editor');
+  await js(`document.getElementById('editor-back').click()`);
+  await sleep(200);
+
+  // modal: accessible name, focus inside, Escape restores focus
+  const a11yCardId = await js(`window.__TV_TEST__.dashboard.cards()[0]`);
+  await js(`window.__TV_TEST__.dashboard.clickTrash('${a11yCardId}')`);
+  await sleep(250);
+  const modalA = await js(`(() => {
+    const dlg = document.querySelector('.modal[role="dialog"]');
+    const titleEl = dlg && dlg.getAttribute('aria-labelledby') ? document.getElementById(dlg.getAttribute('aria-labelledby')) : null;
+    return {
+      open: !!dlg,
+      named: !!titleEl && (titleEl.textContent || '').length > 0,
+      focusInside: !!dlg && dlg.contains(document.activeElement),
+    };
+  })()`);
+  check('a11y: confirm dialog has an accessible name and contains focus',
+    modalA.open && modalA.named && modalA.focusInside, JSON.stringify(modalA));
+  await js(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))`);
+  await sleep(150);
+  const modalB = await js(`({
+    open: !!document.querySelector('.modal-backdrop'),
+    bodyFocus: document.activeElement === document.body,
+  })`);
+  check('a11y: Escape closes the dialog and focus is restored (not to body)',
+    !modalB.open && !modalB.bodyFocus, JSON.stringify(modalB));
+
+  // dropdown: expanded state on the trigger, focus moves in, Escape restores
+  await js(`window.__TV_TEST__.editor.open('${a11yCardId}')`);
+  await sleep(300);
+  await js(`document.getElementById('btn-more').click()`);
+  await sleep(200);
+  const ddA = await js(`({
+    expanded: document.getElementById('btn-more').getAttribute('aria-expanded'),
+    focusInMenu: !!(document.activeElement.closest && document.activeElement.closest('.dropdown')),
+  })`);
+  check('a11y: dropdown moves focus in and exposes expanded state',
+    ddA.expanded === 'true' && ddA.focusInMenu, JSON.stringify(ddA));
+  await js(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))`);
+  await sleep(150);
+  const ddB = await js(`({
+    gone: ![...document.querySelectorAll('.dropdown')].some((d) => !d.classList.contains('hidden')),
+    expanded: document.getElementById('btn-more').getAttribute('aria-expanded'),
+    focusBack: document.activeElement === document.getElementById('btn-more'),
+  })`);
+  check('a11y: Escape closes the dropdown, resets state, restores focus',
+    ddB.gone && ddB.expanded === 'false' && ddB.focusBack, JSON.stringify(ddB));
+
+  // toasts announce (status role); editor save-state is a polite live region
+  await js(`document.getElementById('btn-copy-all').click()`);
+  await sleep(200);
+  const toastA = await js(`({
+    status: !!document.querySelector('#toast-root .toast[role="status"]'),
+    saveLive: document.getElementById('save-state')?.getAttribute('aria-live') === 'polite',
+  })`);
+  check('a11y: toasts use status/alert roles and save state is a live region',
+    toastA.status && toastA.saveLive, JSON.stringify(toastA));
+  await js(`document.getElementById('editor-back').click()`);
+  await sleep(200);
+
+  // settings switches: focusable, named, Space toggles aria-checked
+  await js(`window.__TV_TEST__.App.setView('settings')`);
+  await sleep(250);
+  const swA = await js(`(() => {
+    const sw = document.getElementById('set-wrap');
+    const before = sw.getAttribute('aria-checked');
+    sw.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+    const after = sw.getAttribute('aria-checked');
+    sw.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+    return {
+      tab: sw.getAttribute('tabindex'),
+      named: (sw.getAttribute('aria-label') || '').length > 0,
+      before, after,
+      restored: sw.getAttribute('aria-checked'),
+    };
+  })()`);
+  check('a11y: switches are focusable, named, and Space toggles aria-checked',
+    swA.tab === '0' && swA.named && swA.before !== swA.after && swA.restored === swA.before, JSON.stringify(swA));
   await js(`window.__TV_TEST__.App.setView('dashboard')`);
 
   /* ---------- Phase 6: language switch + RTL ---------- */

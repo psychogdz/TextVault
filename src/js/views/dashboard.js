@@ -315,14 +315,21 @@ function renderCard(el, entry) {
 
   el.className = 'card' + (selected ? ' selected' : '');
   el.dataset.id = entry.id;
+  // Cards are divs styled as cards (buttons would nest invalid interactive
+  // children) — give them the button semantics so keyboard/SR users can open,
+  // favorite or trash entries. el.onclick/onkeydown property assignments are
+  // recycle-safe by design (see the card click comment below).
+  el.setAttribute('role', 'button');
+  el.setAttribute('tabindex', '0');
+  el.setAttribute('aria-label', title || t('exp.untitled'));
   // set AND clear: recycled elements must never keep the previous card's color
   if (entry.color) el.dataset.color = entry.color;
   else el.removeAttribute('data-color');
   el.innerHTML = `
-    <button class="card-check" title="${t('aria.selectCard')}" aria-label="${t('aria.selectCard')}"></button>
+    <button class="card-check" title="${t('aria.selectCard')}" aria-label="${t('aria.selectCard')}" aria-pressed="${selected}"></button>
     <div class="card-actions">
-      <button class="card-star ${entry.favorite ? 'fav-on' : ''}" title="${entry.favorite ? t('unfavorite') : t('favorite')}">${icon(entry.favorite ? 'star-filled' : 'star', 15)}</button>
-      <button class="card-trash" title="${t('dash.moveToTrash')}">${icon('trash', 15)}</button>
+      <button class="card-star ${entry.favorite ? 'fav-on' : ''}" title="${entry.favorite ? t('unfavorite') : t('favorite')}" aria-label="${entry.favorite ? t('unfavorite') : t('favorite')}">${icon(entry.favorite ? 'star-filled' : 'star', 15)}</button>
+      <button class="card-trash" title="${t('dash.moveToTrash')}" aria-label="${t('dash.moveToTrash')}">${icon('trash', 15)}</button>
     </div>
     <div class="card-top">
       <div class="card-title"><span class="t"></span></div>
@@ -384,8 +391,8 @@ function renderCard(el, entry) {
     e.stopPropagation();
     if (!App.selectionMode) setSelectionMode(true);
     toggleCardSelection(entry.id);
-    // refresh this card's visual state
     el.classList.toggle('selected', App.selection.has(entry.id));
+    e.currentTarget.setAttribute('aria-pressed', App.selection.has(entry.id));
     els.selCount.textContent = `${App.selection.size} ${t('selected')}`;
   });
   // card click: select in selection mode, open otherwise.
@@ -395,10 +402,15 @@ function renderCard(el, entry) {
     if (App.selectionMode) {
       toggleCardSelection(entry.id);
       el.classList.toggle('selected', App.selection.has(entry.id));
+      el.setAttribute('aria-pressed', App.selection.has(entry.id));
       els.selCount.textContent = `${App.selection.size} ${t('selected')}`;
     } else {
       App.openEditor(entry.id);
     }
+  };
+  // keyboard activation mirrors the click (Enter/Space on a role=button)
+  el.onkeydown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
   };
 }
 

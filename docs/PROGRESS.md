@@ -3028,6 +3028,64 @@ Release blocker #3 (Electron runtime advisories / major upgrade)
 RESOLVED with the evidence above. Remaining blockers: ≥2h soak, full
 screen-reader audit.
 
+## 2026-09-05 (screen-reader accessibility audit — WIP at migration)
+
+Phase:
+Release blocker #4 — IN PROGRESS (work preserved uncommitted-to-that-
+point and committed as WIP for the server migration backup; the blocker
+is NOT resolved — see Limitations)
+
+Completed so far:
+- Accessibility audit of the whole UI found and FIXED (minimal changes,
+  no redesign): dashboard cards and their action buttons were invisible
+  to keyboard/screen-reader users (plain divs) — cards are now
+  role=button + tabindex=0 + named + Enter/Space-activated, with
+  aria-pressed on the selection checkbox and aria-labels on star/trash;
+  clipboard/snippet row action buttons got aria-labels (title-only
+  before); toasts were never announced — now role=status (polite) /
+  role=alert (errors); confirm dialogs had no accessible name, no focus
+  trap, no focus restoration, and Enter-on-Cancel confirmed the dialog —
+  now aria-labelledby the title, minimal Tab containment, focus restored
+  to the opener, and Enter no longer hijacks focused buttons; dropdown
+  menus got focus-on-open, Escape-to-close with focus restoration, and
+  aria-haspopup/aria-expanded on the trigger; the five settings switches
+  were unnamed, stateless and NOT keyboard-operable — now tabindex=0,
+  localized aria-labels, aria-checked synced with the visual state, and
+  Enter/Space toggling; main window gained the <main> landmark, the nav
+  a localized accessible name (new i18n key aria.navSections, EN/FA),
+  all icon-only buttons localized aria-labels (data-i18n-aria), search/
+  tag/quick-capture inputs named, editor save-state is aria-live=polite;
+  closing the editor restores focus to the library view instead of
+  dropping to <body>; Quick Clipboard search input named; visible
+  :focus-visible rings added for cards, switches and nav items
+- Verification performed: node test/syntax.cjs 19/19; npm test 71/71 +
+  32/32; npm run test:e2e 155/155 (147 pre-existing + 8 new automated
+  a11y-invariant checks: landmarks, named keyboard cards, Enter
+  activation, dialog name/focus/restore, dropdown expanded-state/Escape/
+  focus-restore, toast status role + live save-state, switch focus/name/
+  Space-toggle); REAL Windows Narrator session: Narrator launched, and
+  with the window focused Chromium's full UIA accessibility tree was
+  verified across dashboard/editor/settings in EN and FA (nav landmark
+  "Sections"/"بخش‌ها", cards exposed as named buttons with named
+  actions, switches as named toggle buttons, comboboxes with name+value,
+  zero raw translation keys); keyboard-only pass with visual focus-ring
+  verification (Tab traversal, Space switch toggle, Enter card open,
+  Esc flows) — screenshots retained in the session record
+- npm run release re-verified on the WIP tree during the migration
+  backup (portable + installer + fresh-install VERIFY OK)
+
+Limitations (why the blocker stays NOT VERIFIED):
+- Narrator's spoken announcements could not be captured/judged in this
+  environment (no audio path; verification used the UIA tree Narrator
+  consumes plus keyboard/visual checks) — a human listening pass over
+  the flows (dashboard browse mode, toasts, dialogs, find bar) is still
+  required before calling blocker #4 RESOLVED
+- Chromium's accessibility tree activates when an assistive technology
+  engages the focused window (standard Chromium behavior, verified
+  working); apps that need the tree exposed before first focus could
+  call app.setAccessibilitySupportEnabled(true) — deliberately NOT done
+  (perf trade-off, not required by the audit)
+
 ---
 
 # 43. Current Progress Snapshot
@@ -3083,12 +3141,16 @@ CURRENT through Phase 10 (ARCHITECTURE.md §77 as-built; SECURITY.md §62-63;
 TESTING.md §59; ROADMAP.md reconciled; README refreshed)
 
 Current Task:
-None — release blocker #3 (Electron major upgrade 33.4.11 → 44.2.0)
-completed and RESOLVED 2026-09-04 (see the 2026-09-04 blocker #3 entry)
+Screen-reader accessibility audit — IN PROGRESS (fixes implemented and
+verified via E2E 155/155 + UIA tree + keyboard-only pass with Narrator
+running; human spoken-announcement audit still required — see the
+2026-09-05 WIP entry). State preserved at the 2026-09-05 migration
+backup.
 
 Next Task:
-Owner review of the CONDITIONALLY_READY release status; decide on the
-remaining documented blockers (2h soak, full a11y audit)
+Finish blocker #4: human screen-reader (Narrator/NVDA) spoken-
+announcement pass over dashboard browse mode, toasts, dialogs and the
+find bar; then the deferred ≥2h soak test
 ```
 
 The agent must update this snapshot whenever the project state changes.
