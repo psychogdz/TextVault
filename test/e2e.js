@@ -1144,6 +1144,80 @@ async function main() {
   check('editor transformation applies and autosaves', toolVal === 'HELLO WORLD', toolVal);
   await js(`window.__TV_TEST__.App.moveToTrash((window.__TV_TEST__.App.liveEntries().find((e) => e.title === 'tools e2e') || {}).id)`);
 
+  /* ---------- text tools: the real MENU path must match every label,
+     keep Persian/Unicode intact, and fail safe on invalid input ---------- */
+  const menuToolsId = await js(`(async () => {
+    const { App } = window.__TV_TEST__;
+    const e = await App.createNew({ title: 'tools menu e2e', content: 'hello world\\n  سلام دوم  \\nhello world' });
+    App.openEditor(e.id);
+    return e.id;
+  })()`);
+  await sleep(600);
+  const openToolsMenu = `(() => {
+    document.getElementById('btn-more').click();
+    setTimeout(() => window.__TV_TEST__.dashboard.dropdownClick('Text tools…'), 60);
+  })()`;
+  const runMenuTool = async (label) => {
+    await js(openToolsMenu);
+    await sleep(180);
+    await js(`window.__TV_TEST__.dashboard.dropdownClick(${JSON.stringify(label)})`);
+    await sleep(180);
+  };
+  await runMenuTool('UPPERCASE');
+  const upperVal = await js(`window.__TV_TEST__.editor.get()`);
+  // UPPERCASE changes letters only — whitespace must survive untouched here
+  // (that is trim-lines' contract, proving the tools don't over-reach).
+  check('tools menu UPPERCASE matches its label; Persian glyphs + spacing untouched',
+    upperVal === 'HELLO WORLD\n  سلام دوم  \nHELLO WORLD', JSON.stringify(upperVal));
+  await waitFor(async () => (await js(`window.__TV_TEST__.App.get('${menuToolsId}').content`)) === upperVal, 4000);
+  check('menu transformation autosaves to the entry', true);
+
+  await runMenuTool('UPPERCASE'); // already uppercase → documented no-change path
+  const noChange = await js(`({
+    val: window.__TV_TEST__.editor.get(),
+    toast: [...document.querySelectorAll('#toast-root .toast')].map((t) => t.textContent).join(' '),
+  })`);
+  check('already-transformed text reports "No change" and stays intact',
+    noChange.val === upperVal && /No change/.test(noChange.toast), JSON.stringify(noChange));
+
+  await runMenuTool('Remove duplicate lines');
+  const dedupVal = await js(`window.__TV_TEST__.editor.get()`);
+  // dedupe keeps the FIRST occurrence verbatim (case-insensitive key); the
+  // RTL line keeps its exact glyphs and position in the line order.
+  check('tools menu dedupe matches its label; RTL line order and glyphs preserved',
+    dedupVal === 'HELLO WORLD\n  سلام دوم  ', JSON.stringify(dedupVal));
+
+  await runMenuTool('JSON — format'); // invalid JSON → safe error, content untouched
+  const jsonFail = await js(`({
+    val: window.__TV_TEST__.editor.get(),
+    toast: [...document.querySelectorAll('#toast-root .toast')].map((t) => t.textContent).join(' '),
+  })`);
+  check('invalid JSON keeps content and shows the documented error',
+    jsonFail.val === dedupVal && /not valid JSON/.test(jsonFail.toast), JSON.stringify(jsonFail));
+
+  // empty content: the menu is inert and reports it instead of crashing
+  const emptyToolsId = await js(`(async () => {
+    const { App } = window.__TV_TEST__;
+    const e = await App.createNew({ title: 'tools empty e2e', content: '' });
+    App.openEditor(e.id);
+    return e.id;
+  })()`);
+  await sleep(500);
+  await runMenuTool('UPPERCASE');
+  const emptyRes = await js(`({
+    val: window.__TV_TEST__.editor.get(),
+    toast: [...document.querySelectorAll('#toast-root .toast')].map((t) => t.textContent).join(' '),
+  })`);
+  check('empty editor reports "Nothing to transform"',
+    emptyRes.val === '' && /Nothing to transform/.test(emptyRes.toast), JSON.stringify(emptyRes));
+  await js(`(async () => {
+    const { App } = window.__TV_TEST__;
+    await App.moveToTrash('${menuToolsId}');
+    await App.purgeEntry('${menuToolsId}');
+    await App.moveToTrash('${emptyToolsId}');
+    await App.purgeEntry('${emptyToolsId}');
+  })()`);
+
   /* ---------- Phase 5: search performance at ~10k entries ---------- */
   // Real measurement: seed 10,000 clipboard items through the validated
   // storage layer, then run the production parsed-query scan repeatedly.

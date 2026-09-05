@@ -8,7 +8,7 @@
 //   - secure webPreferences and navigation/window guards are present
 
 import { strict as assert } from 'node:assert';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -293,6 +293,31 @@ test('tray binds the double-click event to the window-show action', () => {
 test('tray showWindow is wired to the main-window restore/focus path', () => {
   const m = src('electron/main.js');
   assert.match(m, /createTray\([\s\S]*?showWindow:\s*\(\)\s*=>\s*focusMainWindow\(\)/);
+});
+
+console.log('\narchitecture: production startup never executes test/temp scripts');
+test('package entry points stay on the production runtime', () => {
+  const pkg = JSON.parse(src('package.json'));
+  assert.equal(pkg.main, 'electron/main.js', 'npm start must boot electron/main.js');
+  assert.equal(pkg.scripts.start, 'electron .');
+});
+test('main process never spawns/forks scripts or generates temp harness files', () => {
+  const walk = (dir) => readdirSync(dir, { recursive: true })
+    .filter((f) => f.endsWith('.js')).map((f) => path.join(dir, f));
+  for (const file of [...walk('electron')]) {
+    const code = src(path.relative(ROOT, file));
+    assert.ok(!/mkdtemp|spawn\(|fork\(/.test(code), `${file} must not create/spawn scripts`);
+    assert.ok(!/\brequire\(\s*[^'" )]/.test(code), `${file} must not dynamically require paths`);
+    assert.ok(!/AppData|%TEMP%|tv-focus|tv-e2e/.test(code), `${file} must not reference temp harness dirs`);
+  }
+});
+test('test-mode switches are limited to the documented hooks', () => {
+  // The ONLY test-mode entry points: the e2e env var selects the ?e2e=1 URL,
+  // and the renderer creates the test hook solely under that query param.
+  const w = src('electron/services/window.js');
+  assert.ok(w.includes("loadURL(process.env.TEXTVAULT_E2E"), 'e2e env var may only select the e2e URL');
+  const app = src('src/js/app.js');
+  assert.ok(app.includes("get('e2e') === '1'"), 'renderer test hook must be guarded by the e2e query param');
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

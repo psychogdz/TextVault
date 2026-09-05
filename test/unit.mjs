@@ -437,6 +437,39 @@ test('large input stays fast (10k lines, unique-lines)', () => {
   assert.ok(res.ok);
   assert.ok(ms < 2000, `took ${ms.toFixed(0)}ms`);
 });
+test('tool contract: every advertised id matches its UI label exactly', async () => {
+  // Executable audit table (tool id → [input, exact expected output]).
+  // Guards the "label says X, button does Y" bug class, including Persian,
+  // numbers, punctuation and mixed RTL/LTR inputs. reverse-lines reverses
+  // line ORDER only; no tool ever reverses the characters of a line.
+  const { TEXT_TOOLS } = await imp('shared/text-tools.mjs');
+  const CONTRACT = {
+    'uppercase': ['Hello world سلام 123', 'HELLO WORLD سلام 123'],
+    'lowercase': ['Hello WORLD سلام 123', 'hello world سلام 123'],
+    'title-case': ['hello big WORLD سلام', 'Hello Big World سلام'],
+    'sentence-case': ['hi there. how? fine! سلام', 'Hi there. How? Fine! سلام'],
+    'trim-lines': ['  a \n\t سلام \n b\t', 'a\nسلام\nb'],
+    'normalize-whitespace': [' a\n\n  سلام   b\tc ', 'a سلام b c'],
+    'sort-lines': ['b\na\nc\n2\n10', '10\n2\na\nb\nc'],
+    'sort-lines-desc': ['b\na\nc\n2\n10', 'c\nb\na\n2\n10'],
+    'unique-lines': ['x\nX\nسلام\nسلام\nx', 'x\nسلام'],
+    'reverse-lines': ['1\nسلام\n3', '3\nسلام\n1'],
+    'json-pretty': ['{"b":1,"a":"سلام"}', '{\n  "b": 1,\n  "a": "سلام"\n}'],
+    'json-minify': ['{\n  "b": 1\n}', '{"b":1}'],
+    'base64-encode': ['سلام', '2LPZhNin2YU='],
+    'base64-decode': ['2LPZhNin2YU=', 'سلام'],
+    'url-encode': ['سلام a&b', '%D8%B3%D9%84%D8%A7%D9%85%20a%26b'],
+    'url-decode': ['%D8%B3%D9%84%D8%A7%D9%85%20a%26b', 'سلام a&b'],
+  };
+  const advertised = new Set(TEXT_TOOLS);
+  for (const [id, [input, expected]] of Object.entries(CONTRACT)) {
+    assert.ok(advertised.has(id), `contract id ${id} is not advertised in TEXT_TOOLS`);
+    const res = applyTextTool(id, input);
+    assert.ok(res.ok, `${id} failed: ${res.error}`);
+    assert.equal(res.result, expected, `${id} does not match its label/contract`);
+  }
+  assert.equal(advertised.size, Object.keys(CONTRACT).length, 'a TEXT_TOOLS id is missing from the contract table');
+});
 
 console.log('\ncontent detection:');
 test('detects common types', () => {
