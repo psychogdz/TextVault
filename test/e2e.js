@@ -153,6 +153,97 @@ async function main() {
   await js(`window.__TV_TEST__.dashboard.search('')`);
   await sleep(400);
 
+  /* ---------- v2.0.0 regression: explicit navigation clears a stale search ---------- */
+  await js(`window.__TV_TEST__.dashboard.search('retrofit')`);
+  await sleep(1200);
+  check('regression setup: search filters to the retrofit entry',
+    (await js(`window.__TV_TEST__.dashboard.cards()`)).length === 1);
+
+  // opening a card and returning must KEEP the search (same context, visible query)
+  await js(`window.__TV_TEST__.App.openEditor(window.__TV_TEST__.dashboard.cards()[0])`);
+  await sleep(400);
+  check('card opened from search results', (await js(`window.__TV_TEST__.App.view`)) === 'editor');
+  await js(`document.getElementById('editor-back').click()`);
+  await sleep(300);
+  const keptSearch = await js(`({ q: window.__TV_TEST__.App.query, n: window.__TV_TEST__.dashboard.cards().length })`);
+  check('returning from the editor preserves the active search',
+    keptSearch.q === 'retrofit' && keptSearch.n === 1, JSON.stringify(keptSearch));
+
+  // explicit sidebar navigation to All Texts must drop the stale filter
+  await js(`document.querySelector('#sidebar-nav .nav-item[data-nav="all"]').click()`);
+  await sleep(400);
+  const clearedSearch = await js(`({
+    q: window.__TV_TEST__.App.query,
+    input: document.getElementById('search-input').value,
+    n: window.__TV_TEST__.dashboard.cards().length,
+  })`);
+  check('navigating to All Texts clears the stale search',
+    clearedSearch.q === '' && clearedSearch.input === '' && clearedSearch.n > 1, JSON.stringify(clearedSearch));
+
+  // a new search still works normally afterwards
+  await js(`window.__TV_TEST__.dashboard.search('سلام')`);
+  await sleep(1200);
+  check('search still works after a navigation cleared it',
+    (await js(`window.__TV_TEST__.dashboard.cards()`)).length >= 2);
+  await js(`window.__TV_TEST__.dashboard.search('')`);
+  await sleep(400);
+
+  /* ---------- v2.0.0 regression: re-clicking the same tag keeps its context ---------- */
+  const tagIds = await js(`(async () => {
+    const { App } = window.__TV_TEST__;
+    const a = await App.createNew({ title: 'TagCtx A', content: 'tag context a', tags: ['TVTagA'] });
+    const b = await App.createNew({ title: 'TagCtx B', content: 'tag context b', tags: ['TVTagB'] });
+    return { a: a.id, b: b.id };
+  })()`);
+  await sleep(300); // sidebar tag list rebuilds on entries-changed
+  const clickTag = (name) => js(`(() => {
+    const items = [...document.querySelectorAll('#tag-list .tag-item')];
+    const el = items.find((i) => i.querySelector('.tag-name').textContent === '${name}');
+    if (!el) throw new Error('tag item not rendered: ${name}');
+    el.click();
+    return true;
+  })()`);
+  const tagState = () => js(`({
+    nav: window.__TV_TEST__.App.nav,
+    view: window.__TV_TEST__.App.view,
+    cards: window.__TV_TEST__.dashboard.cards(),
+  })`);
+  await clickTag('TVTagA');
+  await sleep(300);
+  let ts = await tagState();
+  check('clicking a tag activates it and shows its items',
+    ts.nav === 'tag:TVTagA' && ts.view === 'dashboard' && ts.cards.length === 1 && ts.cards[0] === tagIds.a, JSON.stringify(ts));
+  await clickTag('TVTagA');
+  await sleep(300);
+  ts = await tagState();
+  check('clicking the SAME tag again keeps the tag context (was: jumped to All Texts)',
+    ts.nav === 'tag:TVTagA' && ts.view === 'dashboard' && ts.cards.length === 1 && ts.cards[0] === tagIds.a, JSON.stringify(ts));
+  await clickTag('TVTagB');
+  await sleep(300);
+  ts = await tagState();
+  check('clicking another tag switches to it',
+    ts.nav === 'tag:TVTagB' && ts.cards.length === 1 && ts.cards[0] === tagIds.b, JSON.stringify(ts));
+  // open a card from the tag, come back, re-click the original tag
+  await js(`window.__TV_TEST__.App.openEditor(window.__TV_TEST__.dashboard.cards()[0])`);
+  await sleep(400);
+  await js(`document.getElementById('editor-back').click()`);
+  await sleep(300);
+  await clickTag('TVTagA');
+  await sleep(300);
+  ts = await tagState();
+  check('after opening a card, clicking tag A keeps/shows tag A filtered view',
+    ts.nav === 'tag:TVTagA' && ts.cards.length === 1 && ts.cards[0] === tagIds.a, JSON.stringify(ts));
+  // cleanup: remove helper entries, reset nav, restore the 256-entry invariant
+  await js(`(async () => {
+    const { App } = window.__TV_TEST__;
+    await App.purgeEntry('${tagIds.a}');
+    await App.purgeEntry('${tagIds.b}');
+  })()`);
+  await js(`document.querySelector('#sidebar-nav .nav-item[data-nav="all"]').click()`);
+  await sleep(300);
+  check('tag regression cleanup restores the library state',
+    (await js(`window.__TV_TEST__.App.liveEntries().length`)) === 256);
+
   /* ---------- sort ---------- */
   await js(`window.__TV_TEST__.dashboard.setSort('title-asc')`);
   await sleep(300);
@@ -173,6 +264,45 @@ async function main() {
   // mixed card titles render with the same plaintext bidi isolation as the editor
   const titleBidi = await js(`getComputedStyle(document.querySelector('#grid-inner .card .card-title .t')).unicodeBidi`);
   check('mixed card titles use plaintext bidi (match editor)', titleBidi === 'plaintext', titleBidi);
+
+  /* ---------- v2.0.0 regression: sort state and visible label stay in sync ---------- */
+  for (const sv of ['modified-desc', 'created-desc', 'created-asc', 'used-desc', 'title-asc', 'title-desc']) {
+    await js(`window.__TV_TEST__.dashboard.setSort('${sv}')`);
+    await sleep(120);
+    const s = await js(`({ sel: document.getElementById('sort-select').value, st: window.__TV_TEST__.App.settings.sort })`);
+    check(`sort ${sv}: visible control matches the active state`, s.sel === sv && s.st === sv, JSON.stringify(s));
+  }
+  // restart: the persisted sort must hydrate BOTH the ordering and the visible label
+  const sortMarkerId = await js(`(async () =>
+    (await window.__TV_TEST__.App.createNew({ title: 'TV-SORT-NEWEST marker', content: 'sort hydration marker' })).id)()`);
+  await js(`window.__TV_TEST__.dashboard.setSort('created-desc')`);
+  await sleep(400); // let persistSettings flush before the restart
+  await win.webContents.reload();
+  await waitHook();
+  await sleep(400);
+  await waitFor(async () => (await js(`document.querySelectorAll('#grid-inner .card').length > 0`)), 5000);
+  const hydrated = await js(`(() => {
+    const cards = [...document.querySelectorAll('#grid-inner .card')];
+    let best = null, bt = 1e9, bl = 1e9;
+    for (const c of cards) {
+      const r = c.getBoundingClientRect();
+      if (r.top < bt - 2 || (Math.abs(r.top - bt) <= 2 && r.left < bl)) { bt = r.top; bl = r.left; best = c; }
+    }
+    return {
+      sel: document.getElementById('sort-select').value,
+      st: window.__TV_TEST__.App.settings.sort,
+      top: best?.querySelector('.card-title .t')?.textContent,
+    };
+  })()`);
+  check('restart keeps created-desc: persisted state AND visible label in sync',
+    hydrated.sel === 'created-desc' && hydrated.st === 'created-desc',
+    `select=${hydrated.sel} state=${hydrated.st}`);
+  check('ordering is actually Newest → Oldest after restart (marker on top)',
+    hydrated.top === 'TV-SORT-NEWEST marker', hydrated.top);
+  // cleanup: restore the default sort and remove the marker entry
+  await js(`window.__TV_TEST__.dashboard.setSort('modified-desc')`);
+  await js(`(async () => { await window.__TV_TEST__.App.purgeEntry('${sortMarkerId}'); })()`);
+  await sleep(300);
 
   /* ---------- favorites ---------- */
   const mixedId = seedResult[0].id;
@@ -732,8 +862,18 @@ async function main() {
   };
   win.maximize();
   await waitForWnd(() => win.isMaximized());
-  await sleep(400);
-  const layoutMax = await layoutAssertions();
+  // The virtual grid re-flows asynchronously via ResizeObserver — wait for the
+  // layout to settle instead of using a fixed sleep (a mid-transition capture
+  // can still hold pre-maximize positions and show transient overlaps).
+  const settleLayout = async () => {
+    let last = await layoutAssertions();
+    for (let i = 0; i < 30 && !last.error && (last.overlap > 0 || last.outside > 0 || last.widths.length !== 1); i++) {
+      await sleep(150);
+      last = await layoutAssertions();
+    }
+    return last;
+  };
+  const layoutMax = await settleLayout();
   check('maximized layout: no overlap, none outside, uniform widths',
     !layoutMax.error && layoutMax.overlap === 0 && layoutMax.outside === 0 && layoutMax.widths.length === 1,
     JSON.stringify(layoutMax));
@@ -857,6 +997,25 @@ async function main() {
   sysClipboard.writeText('BACKGROUND_CAPTURE_AFTER_CLOSE_TRAY');
   check('clipboard monitoring survives window close',
     await waitForClipboard(() => js(`window.__TV_TEST__.clipboard.has('BACKGROUND_CAPTURE_AFTER_CLOSE_TRAY')`)));
+
+  /* ---------- v2.0.0 regression: tray double-click restores the window ---------- */
+  const traySvc = require(path.join(ROOT, 'electron/services/tray.js'));
+  const trayObj = traySvc.getTray();
+  check('tray icon created', !!trayObj);
+  check('tray listens for the double-click event', !!trayObj && trayObj.listenerCount('double-click') === 1);
+  // Deterministic replay of the double-click handler (the tray icon itself is
+  // an OS surface — the physical gesture is manually verified on Windows).
+  trayObj.emit('double-click');
+  const trayRestored = await (async () => {
+    for (let i = 0; i < 20; i++) {
+      if (win.isVisible() && !win.isMinimized() && win.isFocused()) return true;
+      await sleep(150);
+    }
+    return win.isVisible() && !win.isMinimized() && win.isFocused();
+  })();
+  check('tray double-click shows/restores/focuses the main window', trayRestored,
+    `visible=${win.isVisible()} minimized=${win.isMinimized()} focused=${win.isFocused()}`);
+  await sleep(200);
   win.show();
   await sleep(400);
 
@@ -981,32 +1140,37 @@ async function main() {
 
   /* ---------- Help menu -> settings card jump (real menu IPC path) ---------- */
   await js(`window.__TV_TEST__.App.setView('dashboard')`);
-  await win.webContents.send('menu', 'shortcuts');
-  await sleep(800);
-  const scJump = await js(`(() => {
-    const card = document.getElementById('set-card-shortcuts');
-    if (!card) return null;
-    const r = card.getBoundingClientRect();
-    return { heading: card.querySelector('h3').textContent, top: Math.round(r.top), inView: r.top >= -5 && r.top < 300 };
-  })()`);
-  check('Help menu "Keyboard Shortcuts" scrolls to the shortcuts card',
-    scJump && scJump.inView && scJump.heading === 'Keyboard Shortcuts', JSON.stringify(scJump));
-  await win.webContents.send('menu', 'about');
-  await sleep(800);
-  // About is the LAST card: block:'start' clamps at the container's maximum
-  // scroll, so the correct behavior is "scrolled fully down to About" — the
-  // old index bug stopped early at the Shortcuts card and left scroll unused
-  const abJump = await js(`(() => {
-    const card = document.getElementById('set-card-about');
+  // The smooth scroll into the settings card races a fixed sleep under load —
+  // poll until the target state is reached, then assert (same criteria).
+  const measureJump = (cardId) => js(`(() => {
+    const card = document.getElementById('${cardId}');
     if (!card) return null;
     const sc = document.getElementById('view-settings');
     const maxScroll = sc.scrollHeight - sc.clientHeight;
     return {
       heading: card.querySelector('h3').textContent,
       top: Math.round(card.getBoundingClientRect().top),
+      inView: card.getBoundingClientRect().top >= -5 && card.getBoundingClientRect().top < 300,
       atMax: Math.abs(sc.scrollTop - maxScroll) <= 2,
     };
   })()`);
+  const waitJump = async (cardId, prop) => {
+    let r = await measureJump(cardId);
+    for (let i = 0; i < 20 && !(r && r[prop]); i++) {
+      await sleep(150);
+      r = await measureJump(cardId);
+    }
+    return r;
+  };
+  await win.webContents.send('menu', 'shortcuts');
+  const scJump = await waitJump('set-card-shortcuts', 'inView');
+  check('Help menu "Keyboard Shortcuts" scrolls to the shortcuts card',
+    scJump && scJump.inView && scJump.heading === 'Keyboard Shortcuts', JSON.stringify(scJump));
+  await win.webContents.send('menu', 'about');
+  // About is the LAST card: block:'start' clamps at the container's maximum
+  // scroll, so the correct behavior is "scrolled fully down to About" — the
+  // old index bug stopped early at the Shortcuts card and left scroll unused
+  const abJump = await waitJump('set-card-about', 'atMax');
   check('Help menu "About" scrolls to the about card',
     abJump && abJump.atMax && abJump.heading === 'About', JSON.stringify(abJump));
   await js(`window.__TV_TEST__.App.setView('dashboard')`);

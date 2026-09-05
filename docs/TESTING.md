@@ -850,6 +850,16 @@ Manual and automated testing should verify:
 * quit
 * application remains active when expected
 * quit actually terminates the application
+* double-clicking the tray icon restores and focuses the main window
+  (added in v2.0.0)
+
+v2.0.0 double-click verification status:
+
+* Automated: the E2E suite replays the tray `double-click` handler while the
+  window is hidden and requires it to become visible, restored and focused;
+  static IPC tests pin the handler wiring (PASS).
+* Manual: the physical double-click gesture on the Windows system tray icon
+  was verified by the user on Windows (USER VERIFIED, 2026-09-05).
 
 Test after:
 

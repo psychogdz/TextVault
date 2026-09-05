@@ -4,7 +4,7 @@
 import { App } from './state.js';
 import { hydrateIcons, icon } from './ui/icons.js';
 import { toast, toastError, showDropdown, confirmDialog, formatNumber } from './ui/components.js';
-import { initDashboard, refresh as refreshDashboard, showSkeletons, clearSkeletons, focusSearch, setSelectionMode as dashboardSetSelectionMode, selectAll as dashboardSelectAll } from './views/dashboard.js';
+import { initDashboard, refresh as refreshDashboard, showSkeletons, clearSkeletons, focusSearch, clearSearchIfPresent, setSelectionMode as dashboardSetSelectionMode, selectAll as dashboardSelectAll } from './views/dashboard.js';
 import { initEditor, openEditor as openEditorView, closeEditor, saveNow, openFindbar, openReplacebar, handleEscape, isActive as editorActive } from './views/editor.js';
 import { initTrash, refresh as refreshTrash } from './views/trash.js';
 import { initSettings, render as renderSettings, applyTheme, openSettingsHelp } from './views/settings.js';
@@ -147,7 +147,10 @@ function refreshSidebar() {
       item.innerHTML = `<span class="tag-dot"></span><span class="tag-name"></span><span class="nav-count">${count}</span>`;
       item.querySelector('.tag-name').textContent = tag;
       item.addEventListener('click', () => {
-        App.nav = App.nav === 'tag:' + tag ? 'all' : 'tag:' + tag;
+        // Explicit navigation to a tag is a fresh destination: an active search
+        // belonged to the previous context and must not filter this one.
+        clearSearchIfPresent();
+        App.nav = 'tag:' + tag;
         App.setView('dashboard');
       });
       list.appendChild(item);
@@ -156,9 +159,13 @@ function refreshSidebar() {
 }
 
 function wireSidebar() {
+  // Dashboard library destinations: explicit navigation here starts a fresh
+  // context, so a leftover search query must not invisibly filter it.
+  const DASHBOARD_DESTS = ['all', 'favorites', 'recent'];
   document.querySelectorAll('#sidebar-nav .nav-item').forEach((btn) => {
     btn.addEventListener('click', () => {
       App.nav = btn.dataset.nav;
+      if (DASHBOARD_DESTS.includes(App.nav)) clearSearchIfPresent();
       if (App.nav === 'trash') App.setView('trash');
       else if (App.nav === 'clipboard') App.setView('clipboard');
       else if (App.nav === 'snippets') App.setView('snippets');

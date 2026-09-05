@@ -284,5 +284,16 @@ test('backup import accepts pathOverride only via the test-dir validator', () =>
   assert.match(r, /validateBackupImportOpts\(opts,\s*\{\s*testDir:\s*TEST_DIR\s*\}\)/);
 });
 
+console.log('\narchitecture: tray double-click restore (v2.0.0 regression)');
+test('tray binds the double-click event to the window-show action', () => {
+  const t = src('electron/services/tray.js');
+  assert.match(t, /tray\.on\('double-click'/, 'tray must listen for double-click');
+  assert.match(t, /double-click'[^]*?actions\.showWindow\(\)/, 'double-click must route to showWindow');
+});
+test('tray showWindow is wired to the main-window restore/focus path', () => {
+  const m = src('electron/main.js');
+  assert.match(m, /createTray\([\s\S]*?showWindow:\s*\(\)\s*=>\s*focusMainWindow\(\)/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed ? 1 : 0);

@@ -194,6 +194,11 @@ function navFilter(entry) {
 
 export function refresh() {
   if (!grid) return;
+  // The visible sort control is derived from the active state on every pass —
+  // initDashboard() runs before persisted settings load, so hydrating the
+  // select only there left it showing the default while the persisted sort
+  // was actually applied (state/label mismatch after restart).
+  if (els.sortSelect.value !== App.settings.sort) els.sortSelect.value = App.settings.sort;
   const token = ++searchToken;
   const q = parseQuery(App.query);
 

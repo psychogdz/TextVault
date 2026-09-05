@@ -8,14 +8,21 @@ Stop scattering `text.txt` files over your desktop: open TextVault, paste, save.
 
 ---
 
-## Download — v1.0.0
+## Download — v2.0.0
 
-Get it from [GitHub Releases](https://github.com/psychogdz/TextVault/releases/tag/v1.0.0):
+Get it from [GitHub Releases](https://github.com/psychogdz/TextVault/releases/tag/v2.0.0):
 
 | Package | File |
 |---|---|
-| **Installer** | `TextVault-1.0.0-Setup.exe` — per-user install (no administrator required), Start Menu shortcut, clean uninstall |
-| **Portable** | `TextVault-1.0.0-Portable.zip` — extract anywhere and double-click `TextVault.exe` |
+| **Installer** | `TextVault-2.0.0-Setup.exe` — per-user install (no administrator required), Start Menu shortcut, clean uninstall |
+| **Portable** | `TextVault-2.0.0-Portable.zip` — extract anywhere and double-click `TextVault.exe` |
+
+**What changed in v2.0.0** — four bug fixes, each with a regression test:
+
+- Double-clicking the system-tray icon now restores and focuses the window (the tray menu still works as before).
+- The sort control now always shows the active sort after a restart (previously it could display the default label while the persisted ordering was applied).
+- Navigating to All Texts / Favorites / Recently Used (or a tag) no longer keeps a stale search filter from the previous context; returning from the editor still preserves your search.
+- Clicking the tag you are already in keeps that tag's filtered view instead of jumping to All Texts.
 
 Both are self-contained Windows builds with the Electron runtime bundled — no Node.js, no terminal.
 
@@ -56,8 +63,8 @@ Both are self-contained Windows builds with the Electron runtime bundled — no 
 
 The end user never needs Node.js, npm or a command prompt:
 
-- **Installer:** run `TextVault-1.0.0-Setup.exe`, install (no admin needed), launch from the Start Menu.
-- **Portable:** extract `TextVault-1.0.0-Portable.zip` (or copy the folder) and double-click **`TextVault.exe`**.
+- **Installer:** run `TextVault-2.0.0-Setup.exe`, install (no admin needed), launch from the Start Menu.
+- **Portable:** extract `TextVault-2.0.0-Portable.zip` (or copy the folder) and double-click **`TextVault.exe`**.
 
 Both are normal desktop apps with their own window and icon.
 
@@ -75,8 +82,8 @@ npm start          # launches TextVault
 
 ### Tests
 ```bash
-npm test           # syntax + unit (71) + IPC/architecture boundary checks (32)
-npm run test:e2e   # 155 end-to-end checks against the real running app
+npm test           # syntax + unit (73) + IPC/architecture boundary checks (34)
+npm run test:e2e   # 176 end-to-end checks against the real running app
 ```
 
 The e2e suite drives the real app end to end: text/snippet/clipboard CRUD, the clipboard engine (capture, duplicate handling, pause, private mode, sensitive auto-skip, retention), close-to-tray with monitoring while hidden, Quick Clipboard + global shortcut, unified search (English + Persian) with measured p95 over a 10k-entry dataset, exports (TXT byte-exact, DOCX/PDF, combined/separate), versioned backup round-trips across all four stores, i18n (EN/FA RTL), accessibility invariants (landmarks, keyboard-operable cards/dialogs/switches, focus management), restart persistence, and boot/memory/performance gates. Screenshots land in `test-output/`.
@@ -199,9 +206,9 @@ shared/                    13 pure modules used by BOTH processes (unit-tested):
 
 test/
   syntax.cjs               renderer module syntax check
-  unit.mjs                 71 unit tests (bidi, stats, policies, i18n, backup format, …)
-  ipc-tests.mjs            32 IPC/architecture boundary checks
-  e2e.js                   155 end-to-end checks against the real running app
+  unit.mjs                 73 unit tests (bidi, stats, policies, i18n, backup format, …)
+  ipc-tests.mjs            34 IPC/architecture boundary checks
+  e2e.js                   176 end-to-end checks against the real running app
   make-portable.cjs        portable build + smoke + zip
   make-release.cjs         installer build + install/uninstall verification
   upgrade-probe.cjs        upgrade-over-existing-install data probe
@@ -221,8 +228,8 @@ builds **both official distributions** into `release/` and verifies them:
 
 | Artifact | What it is |
 |---|---|
-| `release/TextVault-1.0.0-Portable/` (+ `.zip`) | Self-contained portable app — extract anywhere and double-click `TextVault.exe`. No admin rights, no Node.js, nothing else needed. |
-| `release/TextVault-1.0.0-Setup.exe` | Windows installer ([Inno Setup](https://jrsoftware.org/isinfo.php) — chosen because the app ships as a ready-to-copy Electron folder; a mature installer system gives us Apps & Features registration, clean uninstall and shortcuts with no extra runtime). Per-user install (no administrator required), Start Menu shortcut, optional Desktop shortcut, custom install directory, app icon and version 1.0.0. |
+| `release/TextVault-2.0.0-Portable/` (+ `.zip`) | Self-contained portable app — extract anywhere and double-click `TextVault.exe`. No admin rights, no Node.js, nothing else needed. |
+| `release/TextVault-2.0.0-Setup.exe` | Windows installer ([Inno Setup](https://jrsoftware.org/isinfo.php) — chosen because the app ships as a ready-to-copy Electron folder; a mature installer system gives us Apps & Features registration, clean uninstall and shortcuts with no extra runtime). Per-user install (no administrator required), Start Menu shortcut, optional Desktop shortcut, custom install directory, app icon and version 2.0.0. |
 
 The release pipeline (`test/make-portable.cjs` + `test/make-release.cjs` + `installer.iss`):
 1. assembles the portable app from the exact Electron runtime the app was tested with (only the production dependency `docx` included),

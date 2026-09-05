@@ -144,9 +144,9 @@ Current Phase Status:
 Phase 10 VERIFIED (2026-09-03); release blockers resolved or dispositioned (§20)
 
 Release Status:
-READY (2026-09-05 — v1.0.0 production release published; soak VERIFIED,
-installer VERIFIED, Electron 44 VERIFIED; the human screen-reader audit
-is SKIPPED / DEFERRED as non-release-gating — see §20)
+READY / v2.0.0 RELEASED (2026-09-05 — v2.0.0 bug-fix release published;
+v1.0.0 remains tagged and intact; four bug fixes + regression tests
+verified — see §42 2026-09-05 v2.0.0 entry)
 ```
 
 Baseline facts established 2026-09-03 by repository inspection and executed tests (see §42 history and §10 evidence). The v1.0.0 application is a *text/note manager* (manual save of pasted texts). The TextVault Pro clipboard-centric scope (clipboard monitoring, tray, global shortcuts, quick clipboard, snippets, collections, privacy controls) is NOT implemented in the repository at this time.
@@ -3251,13 +3251,100 @@ Optional post-release work: the deferred human screen-reader audit.
 
 ---
 
+## 2026-09-05 (v2.0.0 bug-fix release)
+
+Phase:
+Post-release maintenance of the released v1.0.0 product; four reported
+bugs fixed, regression-tested, verified and released as v2.0.0
+(no phase gate affected)
+
+Completed:
+- Bug #1 — system tray double-click did not open TextVault. Root cause:
+  `electron/services/tray.js` never registered a `double-click` handler
+  (only the context menu existed), so the only way in was the menu's
+  Open entry. Fix: bind `tray.on('double-click', ...)` to the existing
+  `showWindow` action (`focusMainWindow`: restore if minimized, show,
+  focus) — the same path the menu and second-instance launches use.
+  Electron 44.2.0 supports the `double-click` tray event on Windows.
+- Bug #2 — persisted sort state and visible sort label became
+  inconsistent. Root cause: `initDashboard()` hydrated the sort `<select>`
+  from default settings BEFORE `App.init()` loaded persisted settings,
+  and nothing re-synced it afterwards — after a restart the persisted
+  ordering was applied while the control kept showing the default
+  ("Recently Modified"). Fix: the dashboard `refresh()` now derives the
+  select's value from `App.settings.sort` on every pass (display state is
+  derived from the single source of truth, not renamed).
+- Bug #3 — search state was not cleared when the navigation context
+  changed. Root cause: `App.query` was global and survived context
+  changes; `clearSearchIfPresent()` existed in `dashboard.js` but was
+  never wired into any navigation handler. Fix: explicit sidebar
+  navigation to a dashboard destination (All Texts / Favorites /
+  Recently Used / a tag) now clears the active search; returning from
+  the editor, switching to non-dashboard views and Ctrl+F focus keep the
+  search, so the clearing is context-aware, not blanket.
+- Bug #4 — clicking the same tag again navigated to All Texts. Root
+  cause: the sidebar tag click handler treated a re-click of the active
+  tag as a toggle (`App.nav === 'tag:'+tag ? 'all' : 'tag:'+tag`).
+  Fix: clicking a tag always selects that tag (re-click re-affirms the
+  same tag context); switching tags still works as before.
+- Regression tests: E2E — stale search cleared on All-Texts navigation,
+  preserved across an editor round-trip, and a new search working
+  afterwards; tag activation / same-tag re-click / switch / open-card +
+  re-click flows; per-mode sort control/state consistency for all six
+  modes; restart hydration of the persisted sort (control, state and
+  actual Newest→Oldest ordering); tray `double-click` replay with the
+  window hidden (visible + restored + focused). Unit — sort-select
+  markup parity with the `SORTS` enum. IPC — static tray double-click
+  wiring checks.
+- Test-infrastructure robustness (assertions unchanged): two pre-existing
+  E2E checks that capture layout/scroll state after fixed sleeps
+  (maximized layout, Help-menu → settings-card jump) observed one
+  intermittent mid-transition failure across runs; they now poll briefly
+  for the settled state before the identical assertions.
+- Version bump 1.0.0 → 2.0.0 (package.json single source of truth;
+  package-lock.json synced via npm version --no-git-tag-version).
+- Documentation: README (v2.0.0 download/artifacts, v2.0.0 change list,
+  refreshed test counts), TESTING.md §27 (tray double-click requirement
+  + verification status), PROGRESS.md (this entry + snapshot).
+
+Verification:
+- Syntax: node test/syntax.cjs — 19/19 files OK (exit 0).
+- Unit: 73/73 PASS. IPC/architecture: 34/34 PASS (npm test exit 0).
+- E2E: 176/176 PASS (exit 0) — includes the 21 new regression checks;
+  full suite executed multiple times (176/176 on 2026-09-05).
+- Tray double-click: IMPLEMENTED, automated handler-level coverage PASS,
+  and the physical Windows tray double-click gesture was manually
+  verified by the user (USER VERIFIED, 2026-09-05).
+- Production release: `npm run release` (exit 0, 2026-09-05) —
+  `TextVault-2.0.0-Portable.zip` 152.8MB (packaged exe SMOKE OK,
+  boot=440ms; SHA-256 96cf7461cbf21691d2519d5606c8f489ea654c3451c2d501d8d4dd7239bccdd8)
+  and `TextVault-2.0.0-Setup.exe` 110.2MB (ProductVersion 2.0.0; silent
+  install SMOKE OK, data in userData, no leakage into the install dir,
+  clean uninstall VERIFY OK; SHA-256 9f7b305df381feef65a24d42d1bdb42f507d994ae199f11f04343484e78bd3ec).
+  GitHub Release `v2.0.0` published (stable) with both assets; hashes
+  mirrored in the release notes. v1.0.0 tag and release untouched.
+
+Security:
+No new IPC surface; no telemetry/network additions; no secrets or
+machine-specific data committed; release/ artifacts remain gitignored.
+Two E2E-only helpers added (`getTray()` accessor in tray.js, e2e-only).
+
+Exit:
+TextVault v2.0.0 RELEASED.
+
+Next:
+None (task complete; optional deferred screen-reader audit remains
+non-gating).
+
+---
+
 # 43. Current Progress Snapshot
 
 This section must always be kept current.
 
 ```text
 Project:
-TextVault Pro — v1.0.0 production release (RELEASED 2026-09-05)
+TextVault Pro — v2.0.0 production release (RELEASED 2026-09-05)
 
 Active Phase:
 Phase 10 — Testing & Release
@@ -3277,11 +3364,11 @@ READY (2026-09-05 — §20: blocker #1 soak RESOLVED with evidence; blocker
 release blocker remains)
 
 Last Verified Test:
-node test/syntax.cjs 19/19 + npm test (unit 71/71 + ipc 32/32) +
-npm run test:e2e (155/155) + npm run release (portable + installer
-110.2MB + fresh-install VERIFY OK) — all exit 0 on Electron 44.2.0
-(2026-09-05, post-soak tree); ≥2h soak PASSED (125m14s, 32 rounds,
-0 failures — §42 2026-09-05 entry)
+node test/syntax.cjs 19/19 + npm test (unit 73/73 + ipc 34/34) +
+npm run test:e2e (176/176) + npm run release (v2.0.0 portable +
+installer) — all exit 0 on Electron 44.2.0 (2026-09-05, v2.0.0 tree);
+tray double-click USER VERIFIED (2026-09-05); v1.0.0 ≥2h soak record
+unchanged (125m14s, 32 rounds, 0 failures — §42)
 
 Security Status:
 STRONG — SECURITY.md §53 checklist executed (§63); findings resolved or
@@ -3306,9 +3393,9 @@ CURRENT through Phase 10 (ARCHITECTURE.md §77 as-built; SECURITY.md §62-63;
 TESTING.md §59; ROADMAP.md reconciled; README refreshed)
 
 Current Task:
-None active — TextVault v1.0.0 is RELEASED (2026-09-05: final commit
-tagged `v1.0.0`, GitHub Release published with the Portable + Installer
-assets; §42 final-release entry).
+None active — TextVault v2.0.0 is RELEASED (2026-09-05: commit tagged
+`v2.0.0`, GitHub Release published with the Portable + Installer
+assets; §42 v2.0.0 entry). v1.0.0 remains tagged and intact.
 
 Next Task:
 Optional post-release work: the deferred human screen-reader

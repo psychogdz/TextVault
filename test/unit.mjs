@@ -12,7 +12,7 @@ const { detectBaseDir, containsRtl, rtlDominance } = await imp('shared/bidi.mjs'
 const { textStats, charCount, lineCount, wordCount } = await imp('shared/stats.mjs');
 const { sanitizeFilename, uniqueFilename } = await imp('shared/filename.mjs');
 const { buildPreview, matchIndices, snippetAround, escapeHtml } = await imp('shared/snippets.mjs');
-const { validateEntryRecord, validateClipboardRecord, sanitizeSettings, DEFAULT_SETTINGS, LIMITS } = await imp('shared/validation.mjs');
+const { validateEntryRecord, validateClipboardRecord, sanitizeSettings, DEFAULT_SETTINGS, LIMITS, SORTS } = await imp('shared/validation.mjs');
 const { runMigrations, MIGRATIONS } = await imp('shared/storage-migrations.mjs');
 const { detectSensitive } = await imp('shared/sensitive.mjs');
 const { duplicateAction, applyRetention, applyTimeRetention, buildClipboardItem, clipboardPreview, CLIPBOARD_CONTENT_LIMIT } = await imp('shared/clipboard-policy.mjs');
@@ -592,6 +592,20 @@ test('exporters localize document labels with the lang option', async () => {
   const { buildPdfHtml } = await imp('electron/exporters/pdf-html.mjs');
   const html = buildPdfHtml([{ title: '', content: 'x' }], { fonts: { regular: 'QQ==', bold: 'QQ==' }, lang: 'fa' });
   assert.ok(html.includes('بدون عنوان') && html.includes('خروجی TextVault'), 'FA pdf labels');
+});
+
+console.log('\nsort state ↔ UI control consistency (v2.0.0 regression):');
+test('every SORTS value has a matching option in the sort-select markup', () => {
+  const html = readFileSync(path.join(ROOT, 'src/index.html'), 'utf8');
+  const block = html.match(/<select id="sort-select"[\s\S]*?<\/select>/);
+  assert.ok(block, 'sort-select found in index.html');
+  const values = [...block[0].matchAll(/<option value="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(values, [...SORTS]);
+});
+test('sanitizeSettings accepts every value the sort-select can submit', () => {
+  for (const v of SORTS) {
+    assert.equal(sanitizeSettings({ sort: v }).sort, v, v);
+  }
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

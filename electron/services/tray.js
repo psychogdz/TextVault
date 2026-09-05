@@ -47,6 +47,9 @@ function createTray(getState, actionFns, labelsFn) {
   actions = actionFns;
   getLabels = labelsFn;
   tray = new Tray(ICON);
+  // Double-clicking the tray icon must behave like the menu's Open entry:
+  // restore/show/focus the main window (works on Windows, macOS and Linux).
+  tray.on('double-click', () => actions.showWindow());
   rebuild(getState());
   return tray;
 }
@@ -56,4 +59,9 @@ function refreshTray(state) {
   rebuild(state);
 }
 
-module.exports = { createTray, refreshTray };
+/** The live Tray instance (or null before createTray) — used by the E2E suite. */
+function getTray() {
+  return tray;
+}
+
+module.exports = { createTray, refreshTray, getTray };

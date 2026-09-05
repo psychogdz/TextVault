@@ -1,7 +1,7 @@
 {
   "name": "textvault",
   "productName": "TextVault",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "A modern, polished text manager for saving, organizing, searching and exporting snippets, notes and documents — with first-class Persian/English bidirectional text support.",
   "main": "electron/main.js",
   "author": "TextVault",
