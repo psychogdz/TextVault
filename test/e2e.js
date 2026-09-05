@@ -485,10 +485,49 @@ async function main() {
   await waitFor(async () => (await js(`window.__TV_TEST__.App.get('${mixedId}').color`)) === 'blue', 4000);
   check('card color saved on the entry', await js(`window.__TV_TEST__.App.get('${mixedId}').color`) === 'blue');
 
-  const dirAttr = await js(`document.getElementById('editor-textarea').getAttribute('dir')`);
-  check('auto direction resolves RTL for Persian-leading text', dirAttr === 'rtl', `dir=${dirAttr}`);
-  const bidiCss = await js(`getComputedStyle(document.getElementById('editor-textarea')).unicodeBidi`);
-  check('textarea uses unicode-bidi: plaintext', bidiCss === 'plaintext', bidiCss);
+  /* ---------- direction: auto resolves per content; explicit RTL/LTR change
+     the actual text direction (not just alignment/scrollbar side) and never
+     mutate the stored content ---------- */
+  const dirState = () => js(`(() => {
+    const t = document.getElementById('editor-textarea');
+    const cs = getComputedStyle(t);
+    return {
+      dir: t.getAttribute('dir'),
+      auto: t.classList.contains('dir-auto'),
+      cssDir: cs.direction,
+      bidi: cs.unicodeBidi,
+      stat: document.getElementById('stat-dir').textContent,
+      seg: document.querySelector('#dir-seg button.active')?.dataset.dir,
+    };
+  })()`);
+  const autoState = await dirState();
+  check('auto direction resolves RTL for Persian-leading text',
+    autoState.dir === 'rtl' && autoState.auto && autoState.bidi === 'plaintext' && autoState.seg === 'auto',
+    JSON.stringify(autoState));
+  const dirContentBefore = await js(`window.__TV_TEST__.App.get('${mixedId}').content`);
+  await js(`document.querySelector('#dir-seg button[data-dir="rtl"]').click()`);
+  await sleep(150);
+  const rtlState = await dirState();
+  // Chromium's UA stylesheet gives textarea unicode-bidi: isolate — base
+  // direction comes from the dir attribute, which is the explicit contract.
+  // What must NOT happen: 'plaintext' (content-driven), which would ignore RTL.
+  const explicitBidi = (s) => s.bidi === 'normal' || s.bidi === 'isolate';
+  check('explicit RTL drives real paragraph direction (dir attr honored, plaintext off)',
+    rtlState.dir === 'rtl' && !rtlState.auto && rtlState.cssDir === 'rtl' && explicitBidi(rtlState)
+    && rtlState.seg === 'rtl' && rtlState.stat === 'RTL', JSON.stringify(rtlState));
+  await js(`document.querySelector('#dir-seg button[data-dir="ltr"]').click()`);
+  await sleep(150);
+  const ltrState = await dirState();
+  check('explicit LTR drives real paragraph direction',
+    ltrState.dir === 'ltr' && !ltrState.auto && ltrState.cssDir === 'ltr' && explicitBidi(ltrState)
+    && ltrState.seg === 'ltr' && ltrState.stat === 'LTR', JSON.stringify(ltrState));
+  await js(`document.querySelector('#dir-seg button[data-dir="auto"]').click()`);
+  await sleep(150);
+  const autoRestored = await dirState();
+  check('direction round-trip restores auto and never mutates stored text',
+    autoRestored.auto && autoRestored.bidi === 'plaintext'
+    && (await js(`window.__TV_TEST__.App.get('${mixedId}').content`)) === dirContentBefore,
+    JSON.stringify(autoRestored));
 
   // long text opens and stays intact
   const longId = longEntry.id;

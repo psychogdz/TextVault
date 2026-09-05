@@ -7,7 +7,7 @@ import { toast, toastError, confirmDialog, showDropdown, formatNumber } from '..
 import { applyEdits, createEntry, CARD_COLORS } from '../core/entry.js';
 import { applyTextTool, TEXT_TOOLS } from '../../../shared/text-tools.mjs';
 import { t } from '../../../shared/i18n.mjs';
-import { detectBaseDir } from '../../../shared/bidi.mjs';
+import { resolveDirection } from '../../../shared/bidi.mjs';
 import { escapeHtml } from '../../../shared/snippets.mjs';
 
 const els = {};
@@ -583,11 +583,16 @@ function syncFavButton() {
 
 function applyDirection() {
   if (!current) return;
-  let effective = current.entry.dir;
-  if (effective === 'auto') effective = detectBaseDir(els.textarea.value || current.entry.content);
+  // entry.dir is the user's choice: 'auto' | 'rtl' | 'ltr' (validated in entry.js).
+  const mode = current.entry.dir === 'rtl' || current.entry.dir === 'ltr' ? current.entry.dir : 'auto';
+  const effective = resolveDirection(mode, els.textarea.value || current.entry.content);
   els.textarea.dir = effective;
+  // plaintext per-paragraph isolation ONLY in Auto mode — with an explicit
+  // RTL/LTR choice the dir attribute itself must drive paragraph direction
+  // (views.css documents the contract).
+  els.textarea.classList.toggle('dir-auto', mode === 'auto');
   els.title.dir = 'auto';
-  els.statDir.textContent = current.entry.dir === 'auto' ? `${t('ed.dirAuto')} (${effective.toUpperCase()})` : effective.toUpperCase();
+  els.statDir.textContent = mode === 'auto' ? `${t('ed.dirAuto')} (${effective.toUpperCase()})` : effective.toUpperCase();
 }
 
 function autoDirection() {

@@ -8,7 +8,7 @@ import path from 'node:path';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const imp = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
 
-const { detectBaseDir, containsRtl, rtlDominance } = await imp('shared/bidi.mjs');
+const { detectBaseDir, containsRtl, rtlDominance, resolveDirection } = await imp('shared/bidi.mjs');
 const { textStats, charCount, lineCount, wordCount } = await imp('shared/stats.mjs');
 const { sanitizeFilename, uniqueFilename } = await imp('shared/filename.mjs');
 const { buildPreview, matchIndices, snippetAround, escapeHtml } = await imp('shared/snippets.mjs');
@@ -62,6 +62,18 @@ test('rtlDominance between 0 and 1 for mixed text', () => {
   const d = rtlDominance(MIXED_PROMPT);
   assert.ok(d > 0.05 && d < 0.95, `dominance=${d}`);
   assert.equal(rtlDominance('english only'), 0);
+});
+test('direction resolution: explicit rtl/ltr pass through, auto follows content', () => {
+  // an explicit choice must be honored regardless of the text's own script
+  assert.equal(resolveDirection('rtl', 'Hello world'), 'rtl');
+  assert.equal(resolveDirection('ltr', 'سلام دنیا'), 'ltr');
+  // auto resolves from the first strong character (mixed text never reversed)
+  assert.equal(resolveDirection('auto', 'سلام دنیا'), 'rtl');
+  assert.equal(resolveDirection('auto', 'Hello world'), 'ltr');
+  assert.equal(resolveDirection('auto', 'https://example.com'), 'ltr');
+  assert.equal(resolveDirection('auto', ''), 'ltr');
+  // anything unexpected falls back to auto-detection, never throws
+  assert.equal(resolveDirection(undefined, 'سلام'), 'rtl');
 });
 
 console.log('\nstats:');

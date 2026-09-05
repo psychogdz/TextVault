@@ -55,3 +55,13 @@ export function containsRtl(text = '') {
   }
   return false;
 }
+
+/**
+ * Effective text direction for the editor: 'auto' resolves from the content's
+ * first strong character; an explicit 'rtl'/'ltr' choice passes through.
+ * Presentation-only — the stored text is never modified by direction.
+ */
+export function resolveDirection(mode, text = '') {
+  if (mode === 'rtl' || mode === 'ltr') return mode;
+  return detectBaseDir(text);
+}

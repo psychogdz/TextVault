@@ -450,13 +450,19 @@
   line-height: 1.8;
   color: var(--text);
   tab-size: 4;
-  /* The core of correct mixed Persian/English display:
-     each paragraph's base direction is decided by its own first strong
-     character instead of one forced document-wide direction. */
-  unicode-bidi: plaintext;
   text-align: start;
   user-select: text;
+  /* Direction contract (editor.js applyDirection):
+     - Auto (.dir-auto): unicode-bidi: plaintext lets every paragraph take its
+       base direction from its own first strong character (UAX #9 P2/P3) —
+       correct mixed Persian/English display.
+     - Explicit RTL/LTR: NO unicode-bidi override, so the textarea's dir
+       attribute genuinely sets the base direction of every paragraph
+       (mixed-script runs still reorder per the Unicode bidi algorithm).
+       The direction control must change the text itself — never just the
+       alignment/scrollbar side. */
 }
+.editor-textarea.dir-auto { unicode-bidi: plaintext; }
 .editor-textarea.mono { font-family: var(--font-mono); font-size: 13.5px; line-height: 1.7; }
 .editor-textarea.nowrap { white-space: pre; overflow-x: auto; }
 
