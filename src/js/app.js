@@ -7,7 +7,7 @@ import { toast, toastError, showDropdown, confirmDialog, formatNumber } from './
 import { initDashboard, refresh as refreshDashboard, showSkeletons, clearSkeletons, focusSearch, clearSearchIfPresent, setSelectionMode as dashboardSetSelectionMode, selectAll as dashboardSelectAll } from './views/dashboard.js';
 import { initEditor, openEditor as openEditorView, closeEditor, saveNow, openFindbar, openReplacebar, handleEscape, isActive as editorActive } from './views/editor.js';
 import { initTrash, refresh as refreshTrash } from './views/trash.js';
-import { initSettings, render as renderSettings, applyTheme, openSettingsHelp } from './views/settings.js';
+import { initSettings, render as renderSettings, applyTheme, applyUiMode, openSettingsHelp } from './views/settings.js';
 import { initClipboardView, refresh as refreshClipboardView } from './views/clipboard.js';
 import { initSnippetsView, refreshSnippets, refreshCollections, initCollectionsView } from './views/snippets.js';
 import {
@@ -415,6 +415,9 @@ function askCloseBehavior() {
 async function boot() {
   hydrateIcons(document.body);
   applyTheme();
+  // apply the saved UI mode before views initialize so the first paint already
+  // uses the right layout system (later switches are live via the event)
+  applyUiMode();
 
   initDashboard();
   initClipboardView();

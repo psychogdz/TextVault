@@ -7,7 +7,10 @@ export class VirtualGrid {
    * @param {HTMLElement} viewport  scroll container (.virtual-grid)
    * @param {HTMLElement} inner     absolutely-positioned sizer (.grid-inner)
    * @param {object} opts
-   *   minCardWidth, gap, rowHeight (fallback), renderItem(cardEl, item, index)
+   *   minCardWidth, gap, rowHeight (fallback), renderItem(cardEl, item, index),
+   *   metrics() — optional callback re-read at every layout so the grid picks
+   *   up presentation-driven metrics (e.g. the active UI mode's density
+   *   custom properties) without recreating the grid.
    */
   constructor(viewport, inner, opts) {
     this.viewport = viewport;
@@ -15,6 +18,7 @@ export class VirtualGrid {
     this.minCardWidth = opts.minCardWidth || 300;
     this.gap = opts.gap ?? 16;
     this.rowHeight = opts.rowHeight || 150;
+    this.metrics = opts.metrics || null;
     this.renderItem = opts.renderItem;
     this.items = [];
     this.pool = [];      // recycled card elements
@@ -46,6 +50,13 @@ export class VirtualGrid {
   }
 
   _layout() {
+    // presentation-driven metrics (UI mode density) — read fresh each layout
+    if (this.metrics) {
+      const m = this.metrics();
+      if (m.minCardWidth > 0) this.minCardWidth = m.minCardWidth;
+      if (m.gap >= 0) this.gap = m.gap;
+      if (m.rowHeight > 0) this.rowHeight = m.rowHeight;
+    }
     const w = this.viewport.clientWidth - 2; // scrollbar allowance
     this.columns = Math.max(1, Math.floor((w + this.gap) / (this.minCardWidth + this.gap)));
     this.cardWidth = Math.floor((w - this.gap * (this.columns - 1)) / this.columns);

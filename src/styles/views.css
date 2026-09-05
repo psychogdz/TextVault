@@ -862,3 +862,102 @@
   outline: none;
 }
 .prompt-input:focus { border-color: var(--accent); }
+
+/* ---------------- UI mode selector (Appearance) ---------------- */
+
+.uim-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin: 6px 0 14px;
+}
+.uim-card {
+  display: flex; flex-direction: column; align-items: stretch; gap: 2px;
+  text-align: left;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 10px 9px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text-2);
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease),
+              background var(--dur-fast) var(--ease);
+}
+.uim-card:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); color: var(--text); }
+.uim-card:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.uim-card.active { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
+.uim-card.active .uim-name { color: var(--accent); }
+
+/* miniature layout wireframes — each mode previews its own geometry */
+.uim-preview {
+  direction: ltr;
+  position: relative;
+  display: block;
+  height: 62px;
+  border-radius: 7px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border-soft);
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.uim-preview .uim-rail {
+  position: absolute; top: 0; bottom: 0; left: 0;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 4px; padding-top: 5px;
+  background: var(--surface-3);
+}
+.uim-preview .uim-rail i { display: block; width: 8px; height: 5px; border-radius: 2px; background: var(--text-3); opacity: 0.65; }
+.uim-preview .uim-bar {
+  position: absolute; top: 0; height: 9px;
+  display: flex; align-items: center; gap: 3px; padding-inline: 4px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-soft);
+}
+.uim-preview .uim-bar u { display: block; width: 14px; height: 3px; border-radius: 2px; background: var(--text-3); opacity: 0.5; }
+.uim-preview .uim-body {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  display: flex; flex-wrap: wrap; gap: 3px; align-content: flex-start; padding: 3px;
+}
+.uim-preview .uim-body b { display: block; height: 12px; border-radius: 3px; background: var(--surface); border: 1px solid var(--border); }
+
+/* classic: balanced rail, roomy cards */
+.uim-preview--classic .uim-rail { width: 24%; }
+.uim-preview--classic .uim-bar { left: 24%; right: 0; }
+.uim-preview--classic .uim-body { left: calc(24% + 3px); top: 12px; }
+.uim-preview--classic .uim-body b { flex: 1 1 42%; }
+
+/* compact: narrow rail, many tight cards */
+.uim-preview--compact .uim-rail { width: 16%; gap: 3px; }
+.uim-preview--compact .uim-bar { left: 16%; right: 0; height: 7px; }
+.uim-preview--compact .uim-body { left: calc(16% + 2px); top: 10px; gap: 2px; padding: 2px; }
+.uim-preview--compact .uim-body b { flex: 1 1 28%; height: 9px; border-radius: 2px; }
+
+/* glass: floating rounded translucent blocks over a gradient */
+.uim-preview--glass { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, var(--bg-soft)), var(--bg-soft)); }
+.uim-preview--glass .uim-rail {
+  width: 22%; top: 4px; bottom: 4px; left: 3px; border-radius: 5px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  border: 1px solid var(--border);
+}
+.uim-preview--glass .uim-bar { left: calc(22% + 6px); right: 3px; top: 4px; height: 10px; border-radius: 5px; background: color-mix(in srgb, var(--surface) 70%, transparent); border: 1px solid var(--border); }
+.uim-preview--glass .uim-body { left: calc(22% + 6px); top: 17px; right: 3px; padding: 3px; gap: 4px; }
+.uim-preview--glass .uim-body b { flex: 1 1 44%; height: 14px; border-radius: 4px; background: color-mix(in srgb, var(--surface) 72%, transparent); box-shadow: 0 2px 5px rgb(0 0 0 / 0.14); }
+
+/* focus: slim icon rail, one dominant editor surface */
+.uim-preview--focus .uim-rail { width: 9%; }
+.uim-preview--focus .uim-rail i { width: 6px; }
+.uim-preview--focus .uim-bar { left: 9%; right: 0; height: 7px; background: transparent; border-bottom-color: transparent; }
+.uim-preview--focus .uim-bar u { opacity: 0.25; }
+.uim-preview--focus .uim-body { left: calc(9% + 3px); top: 10px; }
+.uim-preview--focus .uim-body b { flex: 1 1 100%; height: 38px; background: var(--surface); }
+
+/* power: dense bordered rows + strong toolbar band + mono grid */
+.uim-preview--power .uim-rail { width: 20%; background: var(--surface); border-right: 1px solid var(--border); }
+.uim-preview--power .uim-rail i { width: 10px; height: 4px; border-radius: 1px; }
+.uim-preview--power .uim-bar { left: 20%; right: 0; height: 12px; background: var(--surface-2); border-bottom: 1px solid var(--accent); }
+.uim-preview--power .uim-body { left: calc(20% + 3px); top: 15px; gap: 2px; padding: 2px; }
+.uim-preview--power .uim-body b { flex: 1 1 31%; height: 10px; border-radius: 2px; }
+
+.uim-name { font-size: 13px; font-weight: 700; color: var(--text); }
+.uim-desc { font-size: 11.5px; line-height: 1.35; color: var(--text-3); }

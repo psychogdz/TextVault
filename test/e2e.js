@@ -1472,6 +1472,80 @@ async function main() {
   })()`);
   check('no raw translation keys rendered in English UI', enRawKey === false);
 
+  /* ---------- UI modes: five distinct layout systems over one data set ---------- */
+  const UI_MODES = ['classic', 'compact', 'glass', 'focus', 'power'];
+  await js(`window.__TV_TEST__.App.setView('settings')`);
+  await sleep(300);
+  const uimCards = await js(`[...document.querySelectorAll('#set-uimode .uim-card')].map((b) => b.dataset.uimOpt)`);
+  check('settings lists all five UI styles with previews', JSON.stringify(uimCards) === JSON.stringify(UI_MODES), JSON.stringify(uimCards));
+
+  // live switching: stay on the dashboard and watch the layout change in place
+  await js(`window.__TV_TEST__.App.setView('dashboard')`);
+  await sleep(300);
+  const contentSnapshotLen = await js(`window.__TV_TEST__.App.liveEntries().map((e) => e.content).join('|').length`);
+  const modeMetrics = {};
+  for (const m of UI_MODES) {
+    await js(`[...document.querySelectorAll('#set-uimode .uim-card')].find((b) => b.dataset.uimOpt === '${m}').click()`);
+    await sleep(280);
+    const st = await js(`(() => {
+      const cs = getComputedStyle(document.documentElement);
+      const card = document.querySelector('#grid-inner .card');
+      return {
+        mode: document.documentElement.dataset.uiMode,
+        rail: Math.round(document.querySelector('.sidebar').getBoundingClientRect().width),
+        rowH: Math.round(parseFloat(cs.getPropertyValue('--grid-row-h'))),
+        cardH: card ? Math.round(parseFloat(card.style.height)) : null,
+        blur: getComputedStyle(document.querySelector('.sidebar')).backdropFilter,
+        radius: cs.getPropertyValue('--radius-lg').trim(),
+      };
+    })()`);
+    modeMetrics[m] = `${st.rail}|${st.rowH}|${st.cardH}|${st.blur}|${st.radius}`;
+    check(`UI mode ${m}: applied live with its own geometry (rail=${st.rail}px rowH=${st.rowH}px cardH=${st.cardH} blur=${st.blur ? 'on' : 'off'})`,
+      st.mode === m && st.cardH === st.rowH, JSON.stringify(st));
+  }
+  check('the five modes produce five distinct layout signatures (not color swaps)',
+    new Set(Object.values(modeMetrics)).size === 5, JSON.stringify(modeMetrics));
+  check('switching UI modes never touches stored text data',
+    (await js(`window.__TV_TEST__.App.liveEntries().map((e) => e.content).join('|').length`)) === contentSnapshotLen);
+
+  // editor-first mode: editor usable over the collapsed rail, direction intact
+  await js(`[...document.querySelectorAll('#set-uimode .uim-card')].find((b) => b.dataset.uimOpt === 'focus').click()`);
+  await sleep(200);
+  await js(`window.__TV_TEST__.editor.open('${mixedId}')`);
+  await sleep(400);
+  const focusEditor = await js(`({
+    visible: window.__TV_TEST__.editor.visible(),
+    rail: Math.round(document.querySelector('.sidebar').getBoundingClientRect().width),
+    dir: document.getElementById('editor-textarea').getAttribute('dir'),
+    navStillClickable: (() => {
+      document.querySelector('#sidebar-nav .nav-item[data-nav="all"]').click();
+      return !document.getElementById('view-dashboard').classList.contains('hidden');
+    })(),
+  })`);
+  check('focus mode: slim rail (editor-first), editor + navigation fully working',
+    focusEditor.visible && focusEditor.rail > 0 && focusEditor.rail < 70
+    && !!focusEditor.dir && focusEditor.navStillClickable, JSON.stringify(focusEditor));
+
+  // persistence: choose power, restart, expect it restored; then return to classic
+  await js(`window.__TV_TEST__.App.setView('settings')`);
+  await sleep(200);
+  await js(`[...document.querySelectorAll('#set-uimode .uim-card')].find((b) => b.dataset.uimOpt === 'power').click()`);
+  await sleep(400); // let persistSettings flush before the restart
+  await win.webContents.reload();
+  await waitHook();
+  await sleep(400);
+  check('UI mode persists across restart', (await js(`document.documentElement.dataset.uiMode`)) === 'power');
+  await js(`(() => {
+    const { App } = window.__TV_TEST__;
+    App.settings.uiMode = 'classic';
+    App.persistSettings();
+  })()`);
+  await win.webContents.reload();
+  await waitHook();
+  await sleep(400);
+  check('default UI mode restored for the remaining checks',
+    (await js(`document.documentElement.dataset.uiMode`)) === 'classic');
+
   /* ---------- Phase 6: quick clipboard launcher ---------- */
   // History was cleared after the perf run — give the quick window something
   // to find (also proves monitoring is still active after everything above).

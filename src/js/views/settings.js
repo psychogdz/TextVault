@@ -6,7 +6,7 @@ import { applyEditorPrefs } from './editor.js';
 import { setMonitorEnabled, setPrivateMode, getMonitorState } from '../core/clipboard.js';
 import { exportLibrary as exportBackup, importBackup } from '../core/backup.js';
 import { t } from '../../../shared/i18n.mjs';
-import { LANGUAGES } from '../../../shared/validation.mjs';
+import { LANGUAGES, UI_MODES } from '../../../shared/validation.mjs';
 
 const ACCENTS = [
   { id: 'violet', color: '#8b7cf8' },
@@ -41,6 +41,21 @@ export function initSettings() {
       <div class="settings-card">
         <h3 data-i18n="set.appearance">Appearance</h3>
         <div class="settings-sub" data-i18n="set.appearance.sub">Theme and accent color.</div>
+        <div class="setting-row">
+          <div><div class="sr-label" data-i18n="set.uimode">UI Style</div><div class="sr-desc" data-i18n="set.uimode.d">How the app is laid out — every style has the same features.</div></div>
+        </div>
+        <div class="uim-grid" id="set-uimode" role="radiogroup" aria-label="UI Style" data-i18n-aria="set.uimode">
+          ${UI_MODES.map((m) => `
+            <button class="uim-card" role="radio" data-uim-opt="${m}" aria-checked="false">
+              <span class="uim-preview uim-preview--${m}" aria-hidden="true">
+                <span class="uim-rail"><i></i><i></i><i></i></span>
+                <span class="uim-bar"><u></u><u></u></span>
+                <span class="uim-body"><b></b><b></b><b></b></span>
+              </span>
+              <span class="uim-name" data-i18n="set.uimode.${m}">${t('set.uimode.' + m)}</span>
+              <span class="uim-desc" data-i18n="set.uimode.${m}.d">${t('set.uimode.' + m + '.d')}</span>
+            </button>`).join('')}
+        </div>
         <div class="setting-row">
           <div><div class="sr-label" data-i18n="set.theme">Theme</div></div>
           <div class="theme-picker" id="set-theme">
@@ -210,6 +225,7 @@ export function initSettings() {
 
   els = {
     themeBtns: view.querySelectorAll('[data-theme-opt]'),
+    uimBtns: view.querySelectorAll('[data-uim-opt]'),
     fontBtns: view.querySelectorAll('[data-font-opt]'),
     accentWrap: document.getElementById('set-accent'),
     fontSize: document.getElementById('set-fontsize'),
@@ -245,6 +261,13 @@ export function initSettings() {
     App.settings.theme = btn.dataset.themeOpt;
     App.persistSettings();
     applyTheme();
+    render();
+  }));
+  els.uimBtns.forEach((btn) => btn.addEventListener('click', () => {
+    if (App.settings.uiMode === btn.dataset.uimOpt) return;
+    App.settings.uiMode = btn.dataset.uimOpt;
+    App.persistSettings();
+    applyUiMode();
     render();
   }));
   els.fontBtns.forEach((btn) => btn.addEventListener('click', () => {
@@ -369,6 +392,15 @@ export function applyTheme() {
   if (quick) quick.innerHTML = icon(theme === 'dark' ? 'sun' : 'moon', 16);
 }
 
+/** Apply the UI mode (layout system) live: one attribute drives all of
+ *  ui-modes.css. Presentation only — data and behavior are untouched. */
+export function applyUiMode() {
+  const mode = UI_MODES.includes(App.settings.uiMode) ? App.settings.uiMode : 'classic';
+  document.documentElement.dataset.uiMode = mode;
+  // views with presentation-coupled layout re-render/re-layout (grid density)
+  App.emit('ui-mode-changed', mode);
+}
+
 /* ---------------- backup / import ---------------- */
 
 async function exportLibrary() {
@@ -435,6 +467,11 @@ export function render() {
   if (!els) return;
 
   els.themeBtns.forEach((b) => b.classList.toggle('active', App.settings.theme === b.dataset.themeOpt));
+  els.uimBtns.forEach((b) => {
+    const active = App.settings.uiMode === b.dataset.uimOpt;
+    b.classList.toggle('active', active);
+    b.setAttribute('aria-checked', String(active));
+  });
   els.fontBtns.forEach((b) => b.classList.toggle('active', App.settings.editorFont === b.dataset.fontOpt));
   els.accentWrap.querySelectorAll('.swatch').forEach((s) =>
     s.classList.toggle('active', s.dataset.accentId === App.settings.accent));

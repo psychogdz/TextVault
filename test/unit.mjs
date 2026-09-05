@@ -267,6 +267,14 @@ test('drops unknown keys instead of persisting them', () => {
   const s = sanitizeSettings({ ...DEFAULT_SETTINGS, evil: 'x', theme: 'dark' });
   assert.equal('evil' in s, false);
 });
+test('uiMode: valid modes kept, invalid/missing fall back to classic', () => {
+  for (const m of ['classic', 'compact', 'glass', 'focus', 'power']) {
+    assert.equal(sanitizeSettings({ uiMode: m }).uiMode, m, m);
+  }
+  assert.equal(sanitizeSettings({}).uiMode, 'classic');
+  assert.equal(sanitizeSettings({ uiMode: 'neon-hacker' }).uiMode, 'classic');
+  assert.equal(sanitizeSettings({ uiMode: 42 }).uiMode, 'classic');
+});
 
 console.log('\nstorage migrations:');
 test('identity run: version 3 → 3 changes nothing', () => {

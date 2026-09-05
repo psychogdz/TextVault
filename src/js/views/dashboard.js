@@ -34,6 +34,20 @@ export function initDashboard() {
   els.btnSelectMode = document.getElementById('btn-select-mode');
 
   grid = new VirtualGrid(els.gridViewport, els.gridInner, {
+    // density metrics follow the active UI mode (ui-modes.css custom props);
+    // re-read on every layout so switching mode reflows the grid in place
+    metrics: () => {
+      const cs = getComputedStyle(document.documentElement);
+      const px = (name, fallback) => {
+        const v = parseFloat(cs.getPropertyValue(name));
+        return Number.isFinite(v) ? v : fallback;
+      };
+      return {
+        minCardWidth: px('--grid-min-card', 292),
+        gap: px('--grid-gap', 16),
+        rowHeight: px('--grid-row-h', 148),
+      };
+    },
     minCardWidth: 292,
     gap: 16,
     rowHeight: 148,
@@ -106,6 +120,8 @@ export function initDashboard() {
   });
 
   App.on('entries-changed', refresh);
+  // switching UI mode changes the grid's density custom properties in place
+  App.on('ui-mode-changed', () => grid.refresh());
 }
 
 function autoGrowQc() {

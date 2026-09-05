@@ -22,6 +22,7 @@ export const SCHEMA_VERSION = 3;
 
 export const THEMES = ['light', 'dark', 'system'];
 export const ACCENTS = ['violet', 'blue', 'teal', 'rose', 'amber'];
+export const UI_MODES = ['classic', 'compact', 'glass', 'focus', 'power'];
 export const SORTS = ['modified-desc', 'created-desc', 'created-asc', 'used-desc', 'title-asc', 'title-desc'];
 export const DUPLICATE_POLICIES = ['top', 'new'];
 export const CLOSE_BEHAVIORS = ['quit', 'tray', 'ask'];
@@ -31,6 +32,7 @@ export const LANGUAGES = ['en', 'fa'];
 export const DEFAULT_SETTINGS = Object.freeze({
   theme: 'dark',
   accent: 'violet',
+  uiMode: 'classic',     // 'classic' | 'compact' | 'glass' | 'focus' | 'power' — layout system
   sort: 'modified-desc',
   editorFontSize: 14.5,
   editorFont: 'sans',
@@ -197,6 +199,7 @@ export function sanitizeSettings(raw) {
   const out = { ...DEFAULT_SETTINGS, clipboard: { ...DEFAULT_SETTINGS.clipboard } };
   if (THEMES.includes(src.theme)) out.theme = src.theme;
   if (ACCENTS.includes(src.accent)) out.accent = src.accent;
+  if (UI_MODES.includes(src.uiMode)) out.uiMode = src.uiMode;
   if (SORTS.includes(src.sort)) out.sort = src.sort;
   if (['sans', 'mono'].includes(src.editorFont)) out.editorFont = src.editorFont;
   if (typeof src.editorWrap === 'boolean') out.editorWrap = src.editorWrap;

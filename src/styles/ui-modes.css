@@ -1,0 +1,253 @@
+/* ============ UI Modes: Classic | Compact | Glass | Focus | Power ============
+   One layout system, five presentations. The active mode is the single
+   `data-ui-mode` attribute on <html> (set live by settings.applyUiMode()); a
+   mode may ONLY change presentation — spacing, density, surfaces, prominence.
+   Data, functionality, shortcuts, DOM structure and themes stay identical;
+   every mode must work in light + dark, LTR + RTL, and at small window sizes.
+
+   Virtual-grid metrics are exposed as custom properties so the dashboard's
+   JS layout reads the SAME numbers the CSS renders (single source of truth). */
+
+:root {
+  --grid-min-card: 292px;
+  --grid-gap: 16px;
+  --grid-row-h: 148px;
+}
+
+/* ================= 1. CLASSIC =================
+   The refined baseline layout — the original TextVault presentation. Nothing
+   to override; declared for clarity and as the sanitize fallback. */
+:root[data-ui-mode="classic"] { /* baseline */ }
+
+/* ================= 2. COMPACT =================
+   Maximum information density: narrower rail, tighter rows and cards, smaller
+   (still readable ≥12px) chrome. NOT a uniform font shrink — spacing, list
+   rows and the card grid densify while text keeps its hierarchy. */
+:root[data-ui-mode="compact"] {
+  --grid-min-card: 232px;
+  --grid-gap: 10px;
+  --grid-row-h: 112px;
+  --radius-md: 9px;
+  --radius-lg: 11px;
+  --radius-xl: 13px;
+}
+[data-ui-mode="compact"] body { font-size: 13.5px; }
+[data-ui-mode="compact"] .app { grid-template-columns: 208px 1fr; }
+[data-ui-mode="compact"] .sidebar { padding: 10px 8px 8px; gap: 10px; }
+[data-ui-mode="compact"] .btn-new { height: 34px; font-size: 13px; }
+[data-ui-mode="compact"] .nav-item { padding: 5.5px 8px; font-size: 12.5px; }
+[data-ui-mode="compact"] .nav-item .nav-count { font-size: 10px; padding: 0 6px; min-width: 20px; }
+[data-ui-mode="compact"] .tag-item { padding: 3.5px 8px; font-size: 11.5px; }
+[data-ui-mode="compact"] .topbar { padding: 8px 14px 6px; gap: 10px; }
+[data-ui-mode="compact"] .searchbox { height: 32px; }
+[data-ui-mode="compact"] .searchbox input { font-size: 12.5px; }
+[data-ui-mode="compact"] .select-wrap { height: 32px; }
+[data-ui-mode="compact"] .select-wrap select { font-size: 12px; }
+[data-ui-mode="compact"] .btn { height: 32px; padding: 0 12px; font-size: 12.5px; }
+[data-ui-mode="compact"] .btn-sm { height: 26px; padding: 0 10px; font-size: 11.5px; }
+[data-ui-mode="compact"] .icon-btn { width: 30px; height: 30px; }
+[data-ui-mode="compact"] .seg { height: 30px; }
+[data-ui-mode="compact"] .view-dashboard, [data-ui-mode="compact"] .view-editor { padding: 0 14px 0; }
+[data-ui-mode="compact"] .view-trash, [data-ui-mode="compact"] .view-settings { padding: 0 14px; }
+[data-ui-mode="compact"] .quickcapture { padding: 5px 5px 5px 12px; margin-bottom: 10px; }
+[data-ui-mode="compact"] .qc-input { min-height: 28px; line-height: 28px; font-size: 12.5px; }
+[data-ui-mode="compact"] .card { padding: 9px 11px 7px; }
+[data-ui-mode="compact"] .card-title { font-size: 12.5px; padding-inline-start: 24px; padding-inline-end: 50px; }
+[data-ui-mode="compact"] .card-preview { font-size: 12px; line-height: 1.45; }
+[data-ui-mode="compact"] .card-meta { font-size: 10.5px; }
+[data-ui-mode="compact"] .clip-head { padding: 8px 0 8px; }
+[data-ui-mode="compact"] .view-title { font-size: 16px; }
+[data-ui-mode="compact"] .editor-top { padding: 6px 0 4px; }
+[data-ui-mode="compact"] .editor-title { font-size: 15px; }
+[data-ui-mode="compact"] .editor-textarea { padding: 12px 14px; line-height: 1.65; }
+[data-ui-mode="compact"] .editor-status { padding: 5px 4px 0; font-size: 10.5px; }
+[data-ui-mode="compact"] .settings-card { padding: 12px 14px; }
+[data-ui-mode="compact"] .settings-wrap { gap: 14px; }
+
+/* ================= 3. GLASS =================
+   Layered, translucent surfaces with real depth. backdrop-filter is limited
+   to a handful of STRUCTURAL panels (sidebar, topbar controls, quickcapture,
+   editor area, modals, dropdowns) — never to virtualized cards — so the
+   frosted look stays cheap even with thousands of rows. */
+:root[data-ui-mode="glass"] {
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --shadow-1: 0 2px 6px rgb(0 0 0 / 0.10), 0 10px 30px rgb(0 0 0 / 0.12);
+  --shadow-2: 0 8px 26px rgb(0 0 0 / 0.16), 0 2px 8px rgb(0 0 0 / 0.10);
+  --shadow-pop: 0 24px 70px rgb(0 0 0 / 0.35);
+}
+:root[data-ui-mode="glass"][data-theme="dark"] {
+  --shadow-1: 0 2px 6px rgb(0 0 0 / 0.30), 0 10px 30px rgb(0 0 0 / 0.30);
+  --shadow-2: 0 8px 26px rgb(0 0 0 / 0.42), 0 2px 8px rgb(0 0 0 / 0.28);
+  --shadow-pop: 0 24px 70px rgb(0 0 0 / 0.55);
+}
+[data-ui-mode="glass"] body {
+  background:
+    radial-gradient(1100px 520px at 12% -8%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
+    radial-gradient(900px 480px at 105% 8%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 55%),
+    var(--bg);
+}
+[data-ui-mode="glass"] .sidebar,
+[data-ui-mode="glass"] .quickcapture,
+[data-ui-mode="glass"] .editor-area,
+[data-ui-mode="glass"] .modal,
+[data-ui-mode="glass"] .dropdown,
+[data-ui-mode="glass"] .palette,
+[data-ui-mode="glass"] .searchbox,
+[data-ui-mode="glass"] .select-wrap {
+  background: color-mix(in srgb, var(--surface) 74%, transparent);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+[data-ui-mode="glass"] .sidebar { border-right-color: color-mix(in srgb, var(--border) 60%, transparent); }
+[data-ui-mode="glass"] .card {
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  box-shadow: var(--shadow-1);
+  border-color: color-mix(in srgb, var(--border) 70%, transparent);
+}
+[data-ui-mode="glass"] .card:hover { box-shadow: var(--grid-card-hover-shadow); }
+[data-ui-mode="glass"] .settings-card {
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  box-shadow: var(--shadow-1);
+  border-color: color-mix(in srgb, var(--border) 70%, transparent);
+}
+[data-ui-mode="glass"] .modal-backdrop { backdrop-filter: blur(6px); }
+[data-ui-mode="glass"] .btn-accent { box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 45%, transparent); }
+/* Graceful fallback: engines without backdrop-filter get fully opaque panels
+   (same layout, no frost) so nothing ever becomes unreadable. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  [data-ui-mode="glass"] .sidebar,
+  [data-ui-mode="glass"] .quickcapture,
+  [data-ui-mode="glass"] .editor-area,
+  [data-ui-mode="glass"] .modal,
+  [data-ui-mode="glass"] .dropdown,
+  [data-ui-mode="glass"] .palette,
+  [data-ui-mode="glass"] .searchbox,
+  [data-ui-mode="glass"] .select-wrap,
+  [data-ui-mode="glass"] .settings-card {
+    background: var(--surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* ================= 4. FOCUS =================
+   Editor-first: the chrome collapses to a slim icon rail (labels stay in the
+   accessibility tree via the sr-only pattern) and the text surface takes over
+   the window — wide, quiet, borderless. Everything remains reachable. */
+[data-ui-mode="focus"] .app { grid-template-columns: 58px 1fr; }
+[data-ui-mode="focus"] .sidebar { padding: 12px 9px 10px; gap: 12px; }
+[data-ui-mode="focus"] .brand-logo { width: 34px; height: 34px; border-radius: 10px; margin-inline: auto; }
+[data-ui-mode="focus"] .brand-text { display: none; }
+[data-ui-mode="focus"] #theme-quick-toggle { margin-inline: auto; }
+[data-ui-mode="focus"] .btn-new { padding: 0; justify-content: center; }
+[data-ui-mode="focus"] .btn-new > span:not(.btn-icon), [data-ui-mode="focus"] .btn-new .kbd-accent { display: none; }
+[data-ui-mode="focus"] .nav-item { justify-content: center; padding: 10px 0; }
+[data-ui-mode="focus"] .nav-item .nav-label {
+  /* visually hidden, still announced: the rail keeps accessible names */
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+[data-ui-mode="focus"] .nav-item .nav-count { display: none; }
+[data-ui-mode="focus"] .sidebar-tags { display: none; }
+[data-ui-mode="focus"] .sidebar-footer { border-top: none; padding-top: 0; }
+[data-ui-mode="focus"] .topbar { padding: 10px 18px 6px; }
+[data-ui-mode="focus"] .view-editor { padding: 0 26px 0; }
+[data-ui-mode="focus"] .editor-top { padding: 4px 0 2px; }
+[data-ui-mode="focus"] .editor-title { font-size: 19px; font-weight: 650; }
+[data-ui-mode="focus"] .editor-save-state { opacity: 0.6; }
+[data-ui-mode="focus"] .editor-actions .icon-btn { color: var(--text-3); }
+[data-ui-mode="focus"] .editor-actions .icon-btn:hover { color: var(--accent); background: var(--accent-soft); }
+[data-ui-mode="focus"] .editor-tags-row { opacity: 0.75; }
+[data-ui-mode="focus"] .editor-tags-row:focus-within { opacity: 1; }
+[data-ui-mode="focus"] .editor-area {
+  background: transparent;
+  border-color: transparent;
+}
+[data-ui-mode="focus"] .editor-area:focus-within { border-color: color-mix(in srgb, var(--accent) 26%, transparent); }
+[data-ui-mode="focus"] .editor-textarea {
+  padding: 26px max(28px, calc((100% - 780px) / 2));
+  line-height: 1.9;
+}
+[data-ui-mode="focus"] .editor-status { padding: 8px 10px 2px; opacity: 0.75; }
+[data-ui-mode="focus"] .dir-seg-focus-hide { /* reserved: no functional element is hidden in focus mode */ }
+
+/* ================= 5. POWER USER =================
+   Utility-first: dense like Compact but visually LOUDER where Compact is
+   neutral — a permanent toolbar band, boxed controls, monospace numerals and
+   metrics everywhere, and a bordered command-strip status bar. */
+:root[data-ui-mode="power"] {
+  --grid-min-card: 258px;
+  --grid-gap: 12px;
+  --grid-row-h: 124px;
+  --radius-md: 7px;
+  --radius-lg: 9px;
+  --radius-xl: 11px;
+}
+[data-ui-mode="power"] .app { grid-template-columns: 196px 1fr; }
+[data-ui-mode="power"] .sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 10px 8px 8px;
+  gap: 10px;
+}
+[data-ui-mode="power"] .btn-new { height: 34px; font-size: 12.5px; }
+[data-ui-mode="power"] .nav-item { padding: 5px 8px; font-size: 12.5px; border-radius: var(--radius-sm); }
+[data-ui-mode="power"] .nav-item .nav-count { font-family: var(--font-mono); font-size: 10px; font-weight: 500; }
+[data-ui-mode="power"] .sidebar-heading { font-size: 10px; padding: 2px 8px 6px; }
+[data-ui-mode="power"] .tag-item { padding: 3.5px 8px; font-size: 11.5px; }
+[data-ui-mode="power"] .tag-item .nav-count { font-family: var(--font-mono); font-size: 10px; }
+[data-ui-mode="power"] .topbar {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 14px;
+  gap: 10px;
+}
+[data-ui-mode="power"] .searchbox { height: 34px; border-radius: var(--radius-sm); }
+[data-ui-mode="power"] .select-wrap { height: 34px; border-radius: var(--radius-sm); }
+[data-ui-mode="power"] .kbd, [data-ui-mode="power"] .kbd-accent { font-family: var(--font-mono); }
+[data-ui-mode="power"] .view-dashboard, [data-ui-mode="power"] .view-editor { padding: 0 16px 0; }
+[data-ui-mode="power"] .view-trash, [data-ui-mode="power"] .view-settings { padding: 0 16px; }
+[data-ui-mode="power"] .quickcapture { margin-bottom: 12px; }
+[data-ui-mode="power"] .card { padding: 10px 12px 8px; }
+[data-ui-mode="power"] .card-title { font-size: 13px; }
+[data-ui-mode="power"] .card-preview { font-size: 12px; }
+[data-ui-mode="power"] .card-meta { font-family: var(--font-mono); font-size: 10.5px; }
+[data-ui-mode="power"] .editor-top {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  padding: 6px 10px;
+  margin-top: 6px;
+}
+[data-ui-mode="power"] .editor-actions .icon-btn,
+[data-ui-mode="power"] .editor-actions .seg {
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+[data-ui-mode="power"] .editor-area { border-top-color: var(--border); }
+[data-ui-mode="power"] .editor-textarea { line-height: 1.7; }
+[data-ui-mode="power"] .editor-status {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  padding: 5px 12px 6px;
+}
+[data-ui-mode="power"] .status-toggle { font-family: var(--font-mono); }
+[data-ui-mode="power"] .topbar-count { font-family: var(--font-mono); font-size: 11.5px; }
+[data-ui-mode="power"] .stat-tile .st-num { font-family: var(--font-mono); }
+[data-ui-mode="power"] .clip-row .clip-meta { font-family: var(--font-mono); font-size: 10.5px; }
+[data-ui-mode="power"] .sc-keys kbd { font-family: var(--font-mono); }
+
+/* ---------------- RTL: mode columns keep auto-flipping (grid follows
+   document direction), so only the physical borders need the same treatment
+   base.css already gives the classic sidebar. ---------------- */
+[data-ui-mode="power"][dir="rtl"] .sidebar { border-right: none; border-left: 1px solid var(--border); }
