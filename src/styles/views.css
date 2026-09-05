@@ -26,6 +26,12 @@
   line-height: 34px;
   unicode-bidi: plaintext;
 }
+/* the 1-line box can't show a wrapped placeholder — size the empty box to its
+   content so a long placeholder wraps instead of clipping mid-glyph when the
+   window is narrow (960px with the classic sidebar); typed content keeps the
+   existing JS auto-grow */
+.qc-input { field-sizing: content; }
+.qc-input::placeholder { text-overflow: ellipsis; }
 .qc-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
 /* ---------------- Selection mode toolbar ---------------- */
